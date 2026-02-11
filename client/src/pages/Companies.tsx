@@ -28,7 +28,7 @@ import {
   Checkbox,
   Popover,
 } from '@mui/material';
-import { Add, Delete, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
+import { Add, Delete, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered, Description } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { getStageColor as getStageColorUtil, normalizeStageFromExcel } from '../utils/stageColors';
@@ -687,10 +687,12 @@ const Companies: React.FC = () => {
     return () => clearTimeout(timer);
   }, [columnFilters]);
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (): Promise<any[]> => {
     try {
       const response = await api.get('/users', { params: { minimal: true } });
-      setUsers(response.data || []);
+      const list = response.data || [];
+      setUsers(list);
+      return list;
     } catch (error: any) {
       // Si es un error 403, el usuario no tiene permisos para ver usuarios (no es admin)
       // Esto es normal y no debería mostrar un error
@@ -701,6 +703,7 @@ const Companies: React.FC = () => {
         console.error('Error fetching users:', error);
         setUsers([]);
       }
+      return [];
     }
   }, []);
 
@@ -889,52 +892,89 @@ const Companies: React.FC = () => {
     XLSX.writeFile(wb, fileName);
   };
 
+  // Plantilla Excel para importación: mismas columnas que espera el importador
+  const handleDownloadTemplate = () => {
+    const templateHeaders = {
+      'Nombre': '',
+      'Propietario': '',
+      'Contacto': '',
+      'Cargo': '',
+      'Correo contacto': '',
+      'Dominio': '',
+      'Teléfono': '',
+      'Etapa': '',
+      'Origen de lead': '',
+      'Facturación': '',
+      'C.R.': '',
+      'RUC': '',
+      'Correo': '',
+      'Razón social': '',
+      'Dirección': '',
+      'Ciudad': '',
+      'Estado/Provincia': '',
+      'País': '',
+    };
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet([templateHeaders]);
+    ws['!cols'] = [
+      { wch: 28 }, { wch: 22 }, { wch: 22 }, { wch: 20 }, { wch: 22 },
+      { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 14 },
+      { wch: 8 }, { wch: 14 }, { wch: 22 }, { wch: 22 }, { wch: 28 },
+      { wch: 14 }, { wch: 18 }, { wch: 14 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Empresas');
+    XLSX.writeFile(wb, 'Plantilla_importacion_empresas.xlsx');
+  };
+
   const handleImportFromExcel = () => {
     fileInputRef.current?.click();
   };
 
-  // Función auxiliar para buscar usuario por nombre completo (más flexible)
-  const findUserByName = (fullName: string): number | null => {
+  // Función auxiliar para buscar usuario por nombre completo (más flexible).
+  // Si se pasa usersList se usa esa lista (p. ej. la recién cargada en import); si no, se usa el estado users.
+  const findUserByName = (fullName: string, usersList?: any[]): number | null => {
     if (!fullName || fullName.trim() === '' || fullName.toLowerCase() === 'sin asignar') {
       return null;
     }
-    
+    const list = usersList ?? users;
+    if (!list.length) return null;
+
     // Normalizar: eliminar espacios extra y convertir a minúsculas
     const normalizedInput = fullName.trim().toLowerCase().replace(/\s+/g, ' ');
     const nameParts = normalizedInput.split(' ');
-    
+
     if (nameParts.length < 2) {
       return null;
     }
-    
+
     const firstName = nameParts[0];
     const lastName = nameParts.slice(1).join(' ');
-    
+
     // Primero intentar coincidencia exacta (case-insensitive)
-    let foundUser = users.find(
-      (user) =>
+    let foundUser = list.find(
+      (user: any) =>
         user.firstName?.toLowerCase().trim() === firstName &&
         user.lastName?.toLowerCase().trim() === lastName
     );
-    
+
     // Si no encuentra coincidencia exacta, buscar coincidencia parcial
     // Esto maneja casos como "Jack Valdivia Faustino" vs "Jack Valdivia"
     if (!foundUser) {
-      foundUser = users.find((user) => {
+      foundUser = list.find((user: any) => {
         const userFirstName = user.firstName?.toLowerCase().trim() || '';
         const userLastName = user.lastName?.toLowerCase().trim() || '';
-        
+
         // Coincidencia exacta del nombre
         if (userFirstName !== firstName) {
           return false;
         }
-        
+
         // El lastName del usuario debe empezar con el lastName del input
         // O el lastName del input debe empezar con el lastName del usuario
         return userLastName.startsWith(lastName) || lastName.startsWith(userLastName);
       });
     }
-    
+
     return foundUser ? foundUser.id : null;
   };
 
@@ -947,9 +987,11 @@ const Companies: React.FC = () => {
     setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
     
     try {
-      // Asegurar que los usuarios estén cargados antes de procesar
-      if (users.length === 0) {
-        await fetchUsers();
+      // Obtener lista de usuarios para el matching: si ya está en estado la usamos;
+      // si no, la cargamos y usamos la respuesta directa (setState es asíncrono y no estaría disponible aún en el map).
+      let usersForImport = users;
+      if (usersForImport.length === 0) {
+        usersForImport = await fetchUsers();
       }
 
       // Leer el archivo Excel
@@ -958,10 +1000,10 @@ const Companies: React.FC = () => {
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(firstSheet) as any[];
 
-      // Procesar cada fila y crear empresas
+      // Procesar cada fila y crear empresas (usar usersForImport para que el propietario se resuelva correctamente)
       const companiesToCreate = jsonData.map((row) => {
         const propietarioName = (row['Propietario'] || row['Asesor'] || '').toString().trim();
-        const ownerId = propietarioName ? findUserByName(propietarioName) : null;
+        const ownerId = propietarioName ? findUserByName(propietarioName, usersForImport) : null;
 
         const crValue = (row['C.R.'] || row['Cliente Recuperado'] || '').toString().trim().toLowerCase();
         const isRecoveredClient = crValue === 'sí' || crValue === 'si' || crValue === 'yes' || crValue === 'true' || crValue === '1' || crValue === 'x' || crValue === '✓';
@@ -1777,6 +1819,29 @@ const Companies: React.FC = () => {
                     order: { xs: 3, sm: 0 },
                   }}
                 >
+                  <Tooltip title="Descargar plantilla" arrow>
+                    <IconButton
+                      size="small"
+                      onClick={handleDownloadTemplate}
+                      sx={{
+                        border: `1.5px solid ${theme.palette.divider}`,
+                        borderRadius: 1.5,
+                        bgcolor: 'transparent',
+                        color: theme.palette.text.secondary,
+                        p: { xs: 0.75, sm: 0.875 },
+                        '&:hover': {
+                          borderColor: taxiMonterricoColors.green,
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
+                            : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
+                          color: taxiMonterricoColors.green,
+                          boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                        },
+                      }}
+                    >
+                      <Description sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title={importing ? 'Importando...' : 'Importar'} arrow>
                     <IconButton
                       size="small"

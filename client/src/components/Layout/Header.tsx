@@ -35,6 +35,7 @@ import {
   Assessment as AssessmentIcon,
   Description as DescriptionIcon,
   Security as SecurityIcon,
+  Support as SupportIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
@@ -321,6 +322,29 @@ const Header: React.FC = () => {
                 }}
               />
             </Button>
+
+            {/* Tickets - reportar fallos / soporte */}
+            <Tooltip title="Tickets (reportar fallos o solicitudes)">
+              <IconButton
+                size="small"
+                onClick={() => navigate('/tickets')}
+                sx={{
+                  bgcolor: theme.palette.mode === 'dark'
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.05)',
+                  borderRadius: 2.5,
+                  width: 40,
+                  height: 40,
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.12)'
+                      : 'rgba(0, 0, 0, 0.08)',
+                  },
+                }}
+              >
+                <SupportIcon sx={{ fontSize: 24, color: '#637381' }} />
+              </IconButton>
+            </Tooltip>
 
             {/* Modo oscuro */}
             <Tooltip title={mode === 'light' ? 'Modo oscuro' : 'Modo claro'}>
@@ -617,6 +641,29 @@ const Header: React.FC = () => {
       {/* Elementos del lado derecho - Solo cuando NO es horizontal */}
       {!isHorizontal && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginLeft: 'auto' }}>
+        {/* Tickets */}
+        <Tooltip title="Tickets (reportar fallos o solicitudes)">
+          <IconButton
+            size="small"
+            onClick={() => navigate('/tickets')}
+            sx={{
+              bgcolor: theme.palette.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.08)'
+                : 'rgba(0, 0, 0, 0.05)',
+              borderRadius: 2.5,
+              width: 40,
+              height: 40,
+              '&:hover': {
+                bgcolor: theme.palette.mode === 'dark'
+                  ? 'rgba(255, 255, 255, 0.12)'
+                  : 'rgba(0, 0, 0, 0.08)',
+              },
+            }}
+          >
+            <SupportIcon sx={{ fontSize: 24, color: '#637381' }} />
+          </IconButton>
+        </Tooltip>
+
         {/* Modo oscuro */}
         <Tooltip title={mode === 'light' ? 'Modo oscuro' : 'Modo claro'}>
           <IconButton 

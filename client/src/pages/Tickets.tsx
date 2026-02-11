@@ -20,6 +20,7 @@ import {
   Avatar,
   Tooltip,
   Dialog,
+  DialogTitle,
   DialogContent,
   DialogActions,
   CircularProgress,
@@ -39,6 +40,8 @@ import {
   Edit,
   ChevronLeft,
   ChevronRight,
+  AddPhotoAlternate,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
@@ -52,6 +55,7 @@ interface Ticket {
   priority: string;
   contactId?: number;
   assignedToId?: number;
+  images?: string[];
   createdAt?: string;
   AssignedTo?: {
     id: number;
@@ -85,6 +89,19 @@ const Tickets: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(7);
   const [totalTickets, setTotalTickets] = useState(0);
 
+  // Diálogo crear ticket (reportar fallos)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createSubject, setCreateSubject] = useState('');
+  const [createDescription, setCreateDescription] = useState('');
+  const [createImageFiles, setCreateImageFiles] = useState<File[]>([]);
+  const [createImagePreviews, setCreateImagePreviews] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  // Modal detalle del ticket
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
   // Calcular estadísticas (solo de los tickets visibles en la página actual)
   const openTickets = tickets.filter(t => t.status === 'open').length;
   const resolvedTickets = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
@@ -102,6 +119,7 @@ const Tickets: React.FC = () => {
   // Función para traducir estado
   const getStatusLabel = (status: string) => {
     const statusMap: { [key: string]: string } = {
+      'new': 'Nuevo',
       'open': 'Abierto',
       'closed': 'Cerrado',
       'resolved': 'Resuelto',
@@ -121,15 +139,91 @@ const Tickets: React.FC = () => {
     return priorityMap[priority] || priority;
   };
 
-  // Función para vista previa
   const handlePreview = (ticket: Ticket) => {
-    console.log('Preview ticket:', ticket);
+    setSelectedTicket(ticket);
+    setDetailModalOpen(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setDetailModalOpen(false);
+    setSelectedTicket(null);
   };
 
   // Función para abrir modal de edición
   const handleOpen = (ticket?: Ticket) => {
-    // TODO: Implementar modal de edición de ticket
     console.log('Edit ticket:', ticket);
+  };
+
+  const handleOpenCreateDialog = () => {
+    setCreateSubject('');
+    setCreateDescription('');
+    setCreateImageFiles([]);
+    setCreateImagePreviews([]);
+    setCreateError('');
+    setCreateDialogOpen(true);
+  };
+
+  const handleCloseCreateDialog = () => {
+    createImagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    setCreateDialogOpen(false);
+  };
+
+  const handleCreateImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const newFiles = Array.from(files);
+    const valid = newFiles.filter((f) => f.type.startsWith('image/'));
+    if (valid.length > 5) {
+      setCreateError('Máximo 5 imágenes por ticket.');
+      return;
+    }
+    setCreateImageFiles((prev) => [...prev, ...valid].slice(0, 5));
+    const newPreviews = valid.map((f) => URL.createObjectURL(f));
+    setCreateImagePreviews((prev) => [...prev, ...newPreviews].slice(0, 5));
+    setCreateError('');
+  };
+
+  const removeCreateImage = (index: number) => {
+    setCreateImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setCreateImagePreviews((prev) => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleSubmitCreateTicket = async () => {
+    const subject = createSubject.trim();
+    if (!subject) {
+      setCreateError('El título es obligatorio.');
+      return;
+    }
+    setCreating(true);
+    setCreateError('');
+    try {
+      const imagesBase64: string[] = [];
+      for (const file of createImageFiles) {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        imagesBase64.push(dataUrl);
+      }
+      await api.post('/tickets', {
+        subject,
+        description: createDescription.trim() || undefined,
+        status: 'new',
+        priority: 'medium',
+        images: imagesBase64.length > 0 ? imagesBase64 : undefined,
+      });
+      fetchTickets();
+      handleCloseCreateDialog();
+    } catch (error: any) {
+      setCreateError(error.response?.data?.error || error.message || 'Error al crear el ticket.');
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleDelete = (id: number) => {
@@ -483,9 +577,7 @@ const Tickets: React.FC = () => {
               <Button 
                 variant="contained" 
                 startIcon={<Add />} 
-                onClick={() => {
-                  // TODO: Implementar creación de ticket
-                }}
+                onClick={handleOpenCreateDialog}
                 sx={pageStyles.primaryButton}
               >
                 Crear ticket
@@ -616,6 +708,7 @@ const Tickets: React.FC = () => {
                     <TableRow 
                       key={ticket.id} 
                       hover
+                      onClick={() => handlePreview(ticket)}
                       sx={{ 
                         '&:hover': { bgcolor: theme.palette.action.hover },
                         cursor: 'pointer',
@@ -879,6 +972,106 @@ const Tickets: React.FC = () => {
             </Box>
           )}
       </Card>
+
+      {/* Modal detalle del ticket */}
+      <Dialog
+        open={detailModalOpen}
+        onClose={handleCloseDetailModal}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.12)',
+            bgcolor: theme.palette.background.paper,
+          },
+        }}
+      >
+        {selectedTicket && (
+          <>
+            <DialogTitle sx={{ borderBottom: `1px solid ${theme.palette.divider}`, pb: 2 }}>
+              {selectedTicket.subject}
+            </DialogTitle>
+            <DialogContent sx={{ pt: 3 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                <Chip
+                  label={getStatusLabel(selectedTicket.status)}
+                  size="small"
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: '0.75rem',
+                    bgcolor: selectedTicket.status === 'closed' ? (theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[300]) : selectedTicket.status === 'resolved' ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}15`) : selectedTicket.status === 'pending' ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}26` : `${taxiMonterricoColors.orange}15`) : selectedTicket.status === 'open' ? (theme.palette.mode === 'dark' ? `${theme.palette.primary.main}26` : `${theme.palette.primary.main}15`) : theme.palette.grey[100],
+                    color: selectedTicket.status === 'closed' ? theme.palette.text.secondary : selectedTicket.status === 'resolved' ? taxiMonterricoColors.green : selectedTicket.status === 'pending' ? taxiMonterricoColors.orangeDark : selectedTicket.status === 'open' ? theme.palette.primary.main : theme.palette.text.secondary,
+                    border: 'none',
+                    borderRadius: 1,
+                  }}
+                />
+                <Chip
+                  label={getPriorityLabel(selectedTicket.priority)}
+                  size="small"
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: '0.75rem',
+                    bgcolor: selectedTicket.priority === 'urgent' ? (theme.palette.mode === 'dark' ? `${theme.palette.error.main}26` : `${theme.palette.error.main}15`) : selectedTicket.priority === 'high' ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}26` : `${taxiMonterricoColors.orange}15`) : selectedTicket.priority === 'medium' ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orangeLight}26` : `${taxiMonterricoColors.orangeLight}15`) : (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}15`),
+                    color: selectedTicket.priority === 'urgent' ? theme.palette.error.main : selectedTicket.priority === 'high' ? taxiMonterricoColors.orangeDark : selectedTicket.priority === 'medium' ? taxiMonterricoColors.orange : taxiMonterricoColors.green,
+                    border: 'none',
+                    borderRadius: 1,
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5 }}>
+                Descripción
+              </Typography>
+              <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 2, whiteSpace: 'pre-wrap' }}>
+                {selectedTicket.description || 'Sin descripción'}
+              </Typography>
+              <Divider sx={{ my: 2 }} />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                  <strong>Asignado a:</strong> {selectedTicket.AssignedTo ? `${selectedTicket.AssignedTo.firstName} ${selectedTicket.AssignedTo.lastName}` : '--'}
+                </Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                  <strong>Creado por:</strong> {selectedTicket.CreatedBy ? `${selectedTicket.CreatedBy.firstName} ${selectedTicket.CreatedBy.lastName}` : '--'}
+                </Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                  <strong>Fecha de creación:</strong> {selectedTicket.createdAt ? new Date(selectedTicket.createdAt).toLocaleString('es-ES') : '--'}
+                </Typography>
+              </Box>
+              {selectedTicket.images && selectedTicket.images.length > 0 && (
+                <>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1 }}>
+                    Imágenes adjuntas
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {selectedTicket.images.map((src, idx) => (
+                      <Box
+                        key={idx}
+                        component="img"
+                        src={src}
+                        alt={`Adjunto ${idx + 1}`}
+                        sx={{
+                          maxWidth: 200,
+                          maxHeight: 200,
+                          objectFit: 'contain',
+                          borderRadius: 1,
+                          border: `1px solid ${theme.palette.divider}`,
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2, pt: 0 }}>
+              <Button onClick={handleCloseDetailModal} variant="contained" sx={{ bgcolor: taxiMonterricoColors.green, '&:hover': { bgcolor: taxiMonterricoColors.green, filter: 'brightness(1.1)' } }}>
+                Cerrar
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
       {/* Modal de Confirmación de Eliminación */}
       <Dialog
         open={deleteDialogOpen}
@@ -923,6 +1116,125 @@ const Tickets: React.FC = () => {
             startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Delete />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo Crear ticket (reportar fallos) */}
+      <Dialog
+        open={createDialogOpen}
+        onClose={handleCloseCreateDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.12)',
+            bgcolor: theme.palette.background.paper,
+          },
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: `1px solid ${theme.palette.divider}`, pb: 2 }}>
+          Nuevo ticket
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 2 }}>
+            Reporta un fallo o envía una solicitud. Incluye título, descripción y capturas si es posible.
+          </Typography>
+          <TextField
+            label="Título"
+            placeholder="Ej: Error al guardar contacto"
+            value={createSubject}
+            onChange={(e) => setCreateSubject(e.target.value)}
+            fullWidth
+            required
+            sx={{ mb: 2 }}
+            inputProps={{ maxLength: 255 }}
+          />
+          <TextField
+            label="Descripción"
+            placeholder="Describe el problema o la solicitud..."
+            value={createDescription}
+            onChange={(e) => setCreateDescription(e.target.value)}
+            fullWidth
+            multiline
+            rows={4}
+            sx={{ mb: 2 }}
+          />
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1 }}>
+            Imágenes (máx. 5)
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+            {createImagePreviews.map((url, index) => (
+              <Box
+                key={index}
+                sx={{
+                  position: 'relative',
+                  width: 80,
+                  height: 80,
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  border: `1px solid ${theme.palette.divider}`,
+                }}
+              >
+                <img
+                  src={url}
+                  alt={`Preview ${index + 1}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <IconButton
+                  size="small"
+                  onClick={() => removeCreateImage(index)}
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    bgcolor: 'rgba(0,0,0,0.5)',
+                    color: 'white',
+                    '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+                  }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            ))}
+            {createImagePreviews.length < 5 && (
+              <Button
+                component="label"
+                variant="outlined"
+                size="small"
+                startIcon={<AddPhotoAlternate />}
+                sx={{ minHeight: 80, minWidth: 120 }}
+              >
+                Añadir imagen
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  multiple
+                  onChange={handleCreateImageChange}
+                />
+              </Button>
+            )}
+          </Box>
+          {createError && (
+            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+              {createError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 0 }}>
+          <Button onClick={handleCloseCreateDialog} disabled={creating}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmitCreateTicket}
+            disabled={creating || !createSubject.trim()}
+            startIcon={creating ? <CircularProgress size={16} sx={{ color: 'white' }} /> : null}
+            sx={{ bgcolor: taxiMonterricoColors.green, '&:hover': { bgcolor: taxiMonterricoColors.green, filter: 'brightness(1.1)' } }}
+          >
+            {creating ? 'Enviando...' : 'Enviar ticket'}
           </Button>
         </DialogActions>
       </Dialog>

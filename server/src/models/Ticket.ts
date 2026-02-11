@@ -16,6 +16,7 @@ interface TicketAttributes {
   contactId?: number;
   companyId?: number;
   dealId?: number;
+  images?: string[]; // URLs o base64 de capturas para reportar fallos
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -33,6 +34,7 @@ export class Ticket extends Model<TicketAttributes, TicketCreationAttributes> im
   public contactId?: number;
   public companyId?: number;
   public dealId?: number;
+  public images?: string[];
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -105,6 +107,11 @@ Ticket.init(
         model: 'deals',
         key: 'id',
       },
+    },
+    images: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: null,
     },
   },
   {

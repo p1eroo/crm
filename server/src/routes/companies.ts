@@ -813,25 +813,6 @@ router.post('/', async (req: AuthRequest, res) => {
       }
     }
 
-    // Validar que no exista una empresa con el mismo dominio (case-insensitive)
-    if (companyData.domain && companyData.domain.trim() !== '') {
-      const existingCompanyByDomain = await Company.findOne({
-        where: {
-          domain: {
-            [Op.iLike]: companyData.domain.trim(), // Case-insensitive
-          },
-        },
-      });
-
-      if (existingCompanyByDomain) {
-        return res.status(400).json({ 
-          error: 'Ya existe una empresa con este dominio',
-          duplicateField: 'domain',
-          existingCompanyId: existingCompanyByDomain.id,
-        });
-      }
-    }
-
     // Validar que no exista una empresa con el mismo RUC (si se proporciona)
     if (companyData.ruc && companyData.ruc.trim() !== '') {
       const existingCompanyByRuc = await Company.findOne({

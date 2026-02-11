@@ -44,6 +44,23 @@ async function createTicketColumns() {
       }
     }
 
+    // Verificar y crear columna images (JSONB) para capturas al reportar fallos
+    try {
+      const [imgResults] = await sequelize.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'tickets' AND column_name = 'images'
+      `) as [Array<{ column_name: string }>, unknown];
+      if (imgResults.length === 0) {
+        await sequelize.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS images JSONB DEFAULT NULL;`);
+        console.log('✅ Columna images creada en tickets');
+      } else {
+        console.log('✓ Columna images ya existe en tickets');
+      }
+    } catch (error: any) {
+      console.warn('⚠️  Error al crear columna images:', error.message);
+    }
+
     // Verificar y crear columnas
     const columns = [
       { name: 'status', enumType: 'ticket_status_enum', defaultValue: 'new' },
