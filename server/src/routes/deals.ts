@@ -533,6 +533,19 @@ router.put('/:id', async (req: AuthRequest, res) => {
     }
 
     await deal.update(req.body);
+
+    // Si se actualizó la etapa del negocio, sincronizar con la empresa vinculada (el negocio manda)
+    if (deal.companyId != null && req.body.stage != null) {
+      try {
+        await Company.update(
+          { lifecycleStage: req.body.stage },
+          { where: { id: deal.companyId } }
+        );
+      } catch (companyErr: any) {
+        console.error('Error syncing company lifecycleStage from deal:', companyErr);
+      }
+    }
+
     // Si se están actualizando los contactos relacionados
     if (req.body.contactIds && Array.isArray(req.body.contactIds)) {
       const dealInstance = await Deal.findByPk(deal.id);

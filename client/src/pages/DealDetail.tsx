@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { taxiMonterricoColors } from "../theme/colors";
 import { pageStyles } from "../theme/styles";
+import { formatCurrencyPECompact as formatCurrency } from "../utils/currencyUtils";
 import api from "../config/api";
 import {
   RecentActivitiesCard,
@@ -690,14 +691,6 @@ const DealDetail: React.FC = () => {
   const getStageLabel = (stage: string) => {
     const option = stageOptions.find((opt) => opt.value === stage);
     return option ? option.label : stage;
-  };
-
-  const formatCurrency = (value: number) => {
-    if (value >= 1000) {
-      const thousands = value / 1000;
-      return `S/ ${thousands.toFixed(1)}k`;
-    }
-    return `S/ ${value.toFixed(0)}`;
   };
 
   const handleOpenEditDialog = () => {

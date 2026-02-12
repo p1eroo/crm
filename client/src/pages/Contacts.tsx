@@ -34,12 +34,10 @@ import {
   LocationOn,
   FilterList,
   Visibility,
-  FileDownload,
-  UploadFile,
   Edit,
   ChevronLeft,
   ChevronRight,
-  ViewColumn,
+  Description,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import api from "../config/api";
@@ -54,7 +52,7 @@ import { FormDrawer } from "../components/FormDrawer";
 import { StageChipWithProgress } from "../components/StageChipWithProgress";
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from "../components/UnifiedTable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserTie } from "@fortawesome/free-solid-svg-icons";
+import { faUserTie, faFileImport, faFileExport, faFilter } from "@fortawesome/free-solid-svg-icons";
 import EntityPreviewDrawer from "../components/EntityPreviewDrawer";
 import ContactCompanyModal from "../components/ContactCompanyModal";
 import UserAvatar from "../components/UserAvatar";
@@ -177,6 +175,8 @@ const Contacts: React.FC = () => {
     success: 0,
     errors: 0,
     errorList: [] as Array<{ name: string; error: string }>,
+    companiesSuccess: 0,
+    contactsSuccess: 0,
   });
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_users, setUsers] = useState<any[]>([]);
@@ -262,8 +262,45 @@ const Contacts: React.FC = () => {
     XLSX.writeFile(wb, fileName);
   };
 
+  // Plantilla Excel para importación: mismas columnas que espera el importador
+  const handleDownloadTemplate = () => {
+    const templateHeaders = {
+      'Nombre': '',
+      'Empresa': '',
+      'Correo': '',
+      'Teléfono': '',
+      'Cargo': '',
+      'Ciudad': '',
+      'Estado/Provincia': '',
+      'País': '',
+      'Etapa': '',
+    };
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet([templateHeaders]);
+    ws['!cols'] = [
+      { wch: 22 }, { wch: 25 }, { wch: 25 }, { wch: 14 }, { wch: 20 },
+      { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 14 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Contactos');
+    XLSX.writeFile(wb, 'Plantilla_importacion_contactos.xlsx');
+  };
+
   const handleImportFromExcel = () => {
     fileInputRef.current?.click();
+  };
+
+  // Buscar empresa por nombre (case-insensitive)
+  const findCompanyByName = async (name: string): Promise<{ id: number; name: string } | null> => {
+    if (!name || !name.trim()) return null;
+    try {
+      const res = await api.get('/companies', { params: { search: name.trim(), limit: 100 } });
+      const list = res.data?.companies ?? res.data ?? [];
+      const normalized = name.trim().toLowerCase();
+      const found = Array.isArray(list) ? list.find((c: any) => (c.name || '').trim().toLowerCase() === normalized) : null;
+      return found ? { id: found.id, name: found.name } : null;
+    } catch {
+      return null;
+    }
   };
 
   const handleFileChange = async (
@@ -274,137 +311,165 @@ const Contacts: React.FC = () => {
 
     setImporting(true);
     setImportProgressOpen(true);
-    setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
+    setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [], companiesSuccess: 0, contactsSuccess: 0 });
 
     try {
-      // Leer el archivo Excel
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(firstSheet) as any[];
 
-      // Procesar cada fila y crear contactos
-      const contactsToCreate = [];
+      type ContactRow = {
+        companyName: string;
+        firstName: string;
+        lastName: string;
+        email?: string;
+        phone?: string;
+        jobTitle?: string;
+        city?: string;
+        state?: string;
+        country?: string;
+        lifecycleStage: string;
+      };
 
+      const rows: ContactRow[] = [];
       for (const row of jsonData) {
         const fullName = (row["Nombre"] || "").toString().trim();
-
-        // Función para separar nombre y apellido
         let firstName = "";
         let lastName = "";
-
         if (fullName) {
-          // Si tiene espacios, separar normalmente
           if (fullName.includes(" ")) {
             const nameParts = fullName.split(" ");
             firstName = nameParts[0] || "";
             lastName = nameParts.slice(1).join(" ") || "";
           } else {
-            // Si no tiene espacios, separar por letras mayúsculas
-            // Ejemplo: "RafaelHornaCastillo" -> "Rafael" y "Horna Castillo"
             const matches = fullName.match(/([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/g);
             if (matches && matches.length > 0) {
               firstName = matches[0] || "";
               lastName = matches.slice(1).join(" ") || "";
             } else {
-              // Si no se puede separar, poner todo como nombre
               firstName = fullName;
             }
           }
         }
-
-        // Obtener el nombre de la empresa (el backend lo buscará o creará)
         const companyName = (row["Empresa"] || "").toString().trim();
-
-        // Solo agregar si tiene nombre o email
-        if (firstName || (row["Correo"] || "").toString().trim()) {
-          contactsToCreate.push({
+        const hasName = !!(firstName || (row["Correo"] || "").toString().trim());
+        if (hasName) {
+          rows.push({
+            companyName,
             firstName: firstName || "Sin nombre",
             lastName: lastName || "Sin apellido",
             email: (row["Correo"] || "").toString().trim() || undefined,
             phone: (row["Teléfono"] || "").toString().trim() || undefined,
             jobTitle: (row["Cargo"] || "").toString().trim() || undefined,
             city: (row["Ciudad"] || "").toString().trim() || undefined,
-            state:
-              (row["Estado/Provincia"] || row["Estado/Provi"] || "")
-                .toString()
-                .trim() || undefined,
+            state: (row["Estado/Provincia"] || row["Estado/Provi"] || "").toString().trim() || undefined,
             country: (row["País"] || "").toString().trim() || undefined,
             lifecycleStage: normalizeStageFromExcel(
               row["Etapa"] !== undefined && row["Etapa"] !== null ? String(row["Etapa"]).trim() : ""
             ),
-            companyId: companyName || undefined, // Pasar el nombre de la empresa, el backend lo manejará
           });
         }
       }
 
-      // Inicializar el progreso total
-      setImportProgress((prev) => ({
-        ...prev,
-        total: contactsToCreate.length,
-      }));
-
-      // Usar endpoint bulk para importación masiva
-      try {
-        const response = await api.post('/contacts/bulk', {
-          contacts: contactsToCreate,
-          batchSize: 1000, // Procesar en lotes de 1000
-        });
-
-        console.log('Respuesta del backend:', response.data); // Debug
-
-        const { successCount = 0, errorCount = 0, results = [] } = response.data || {};
-
-        // Procesar resultados y actualizar progreso
-        const errorList = (results || [])
-          .filter((r: any) => !r.success)
-          .map((r: any) => ({
-            name: r.name || 'Sin nombre',
-            error: r.error || 'Error desconocido',
-          }));
-
-        console.log('successCount:', successCount, 'errorCount:', errorCount); // Debug
-
-        setImportProgress({
-          current: contactsToCreate.length,
-          total: contactsToCreate.length,
-          success: successCount || 0,
-          errors: errorCount || 0,
-          errorList,
-        });
-      } catch (error: any) {
-        console.error('Error en importación masiva:', error);
-        console.error('Error response:', error.response?.data); // Debug
-        
-        let errorMessage = 'Error al procesar la importación masiva';
-        if (error.response?.data?.error) {
-          errorMessage = error.response.data.error;
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-
-        setImportProgress((prev) => ({
-          ...prev,
-          current: contactsToCreate.length,
-          total: contactsToCreate.length,
-          errors: (error.response?.data?.errorCount || 0) + 1,
-          errorList: [...(prev.errorList || []), {
-            name: 'Importación masiva',
-            error: errorMessage,
-          }],
-        }));
+      const groupKey = (name: string) => (name || "").trim().toLowerCase();
+      const groupsByCompanyName = new Map<string, ContactRow[]>();
+      for (const row of rows) {
+        const key = groupKey(row.companyName);
+        if (!groupsByCompanyName.has(key)) groupsByCompanyName.set(key, []);
+        groupsByCompanyName.get(key)!.push({ ...row });
       }
 
-      // Limpiar el input
+      const totalRows = rows.length;
+      setImportProgress((prev) => ({ ...prev, total: totalRows }));
+
+      let processed = 0;
+      for (const [, contactRows] of Array.from(groupsByCompanyName.entries())) {
+        const companyName = contactRows[0].companyName;
+        const contactEmail = contactRows.find((r) => r.email && String(r.email).includes('@'))?.email;
+        const domainFromContact = contactEmail && typeof contactEmail === 'string'
+          ? (contactEmail.split('@')[1] || '').trim().toLowerCase() || undefined
+          : undefined;
+
+        let companyId: number;
+        try {
+          const existing = await findCompanyByName(companyName);
+          if (existing) {
+            companyId = existing.id;
+          } else {
+            const companyPayload: { name: string; domain?: string } = { name: companyName.trim() };
+            if (domainFromContact) companyPayload.domain = domainFromContact;
+            const companyResponse = await api.post('/companies', companyPayload);
+            companyId = companyResponse.data?.id;
+            setImportProgress((prev) => ({ ...prev, companiesSuccess: prev.companiesSuccess + 1 }));
+          }
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.error || err.message || "Error al crear empresa";
+          for (let i = 0; i < contactRows.length; i++) {
+            const currentProcessed = processed + 1;
+            processed++;
+            setImportProgress((prev) => ({
+              ...prev,
+              current: currentProcessed,
+              errors: prev.errors + 1,
+              errorList: [...prev.errorList, { name: companyName, error: errorMessage }],
+            }));
+          }
+          continue;
+        }
+
+        for (const contactRow of contactRows) {
+          const currentProcessed = processed + 1;
+          const displayName = `${contactRow.firstName} ${contactRow.lastName}`.trim();
+          try {
+            await api.post('/contacts', {
+              firstName: contactRow.firstName,
+              lastName: contactRow.lastName,
+              email: contactRow.email,
+              phone: contactRow.phone,
+              jobTitle: contactRow.jobTitle,
+              city: contactRow.city,
+              state: contactRow.state,
+              country: contactRow.country,
+              lifecycleStage: contactRow.lifecycleStage,
+              companyId,
+            });
+            setImportProgress((prev) => ({
+              ...prev,
+              current: currentProcessed,
+              success: prev.success + 1,
+              contactsSuccess: prev.contactsSuccess + 1,
+            }));
+          } catch (contactErr: any) {
+            const contactErrorMessage = contactErr.response?.data?.error || contactErr.message || "Error al crear contacto";
+            setImportProgress((prev) => ({
+              ...prev,
+              current: currentProcessed,
+              errors: prev.errors + 1,
+              errorList: [
+                ...prev.errorList,
+                { name: `${companyName} - Contacto: ${displayName}`, error: contactErrorMessage },
+              ],
+            }));
+          }
+          processed++;
+        }
+      }
+
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-
-      // Recargar la lista de contactos
-      fetchContacts();
-    } catch (error) {
+      await fetchContacts();
+    } catch (error: any) {
       console.error("Error importing file:", error);
-      setImportProgress((prev) => ({ ...prev, errors: prev.errors + 1 }));
+      setImportProgress((prev) => ({
+        ...prev,
+        errors: prev.errors + 1,
+        errorList: [
+          ...prev.errorList,
+          { name: "Error de procesamiento", error: error.message || "Error desconocido al procesar el archivo" },
+        ],
+      }));
     } finally {
       setImporting(false);
     }
@@ -1294,82 +1359,69 @@ const Contacts: React.FC = () => {
                 <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
               </Select>
             </FormControl>
-            <Tooltip title="Nuevo Contacto" arrow>
-              <IconButton
-                size="small"
-                onClick={() => handleOpen()}
-                sx={{
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
-                  color: "white",
-                  borderRadius: 1.5,
-                  p: { xs: 0.75, sm: 0.875 },
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                  order: { xs: 2, sm: 0 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: '-100%',
-                    width: '100%',
-                    height: '100%',
-                    background: `linear-gradient(90deg, transparent, ${theme.palette.common.white}33, transparent)`,
-                    transition: 'left 0.5s ease',
-                  },
-                  '&:hover': {
-                    transform: 'translateY(-2px) scale(1.05)',
-                    boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
-                    background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
-                    '&::before': {
-                      left: '100%',
-                    },
-                  },
-                  '&:active': {
-                    transform: 'translateY(0) scale(1)',
-                  },
-                }}
-              >
-                <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
-              </IconButton>
-            </Tooltip>
             <Box
               sx={{
                 display: "flex",
                 gap: { xs: 0.5, sm: 0.75 },
                 order: { xs: 3, sm: 0 },
+                alignItems: 'center',
+                flexWrap: 'wrap',
               }}
             >
-              <Tooltip title={importing ? "Importando..." : "Importar"} arrow>
-                <IconButton
-                  size="small"
-                  onClick={handleImportFromExcel}
-                  disabled={importing}
-                  sx={{
-                    border: `1.5px solid ${theme.palette.divider}`,
-                    borderRadius: 1.5,
-                    bgcolor: 'transparent',
-                    color: theme.palette.text.secondary,
-                    p: { xs: 0.75, sm: 0.875 },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? `${taxiMonterricoColors.green}1A` 
-                        : `${taxiMonterricoColors.green}0D`,
-                      color: taxiMonterricoColors.green,
-                      transform: 'translateY(-2px)',
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                    },
-                    '&:disabled': {
-                      opacity: 0.5,
-                    },
-                  }}
-                >
-                  <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
-                </IconButton>
-              </Tooltip>
+              <Button
+                size="small"
+                startIcon={<Description sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+                onClick={handleDownloadTemplate}
+                sx={{
+                  border: `1.5px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  bgcolor: 'transparent',
+                  color: theme.palette.text.secondary,
+                  px: { xs: 1.25, sm: 1.5 },
+                  py: { xs: 0.75, sm: 0.875 },
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? `${taxiMonterricoColors.green}1A` 
+                      : `${taxiMonterricoColors.green}0D`,
+                    color: taxiMonterricoColors.green,
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                  },
+                }}
+              >
+                Plantilla
+              </Button>
+              <Button
+                size="small"
+                startIcon={<FontAwesomeIcon icon={faFileImport} style={{ fontSize: 16 }} />}
+                onClick={handleImportFromExcel}
+                disabled={importing}
+                sx={{
+                  border: `1.5px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  bgcolor: 'transparent',
+                  color: theme.palette.text.secondary,
+                  px: { xs: 1.25, sm: 1.5 },
+                  py: { xs: 0.75, sm: 0.875 },
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? `${taxiMonterricoColors.green}1A` 
+                      : `${taxiMonterricoColors.green}0D`,
+                    color: taxiMonterricoColors.green,
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                  },
+                  '&:disabled': { opacity: 0.5 },
+                }}
+              >
+                {importing ? 'Importando...' : 'Importar'}
+              </Button>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -1377,35 +1429,35 @@ const Contacts: React.FC = () => {
                 accept=".xlsx,.xls"
                 style={{ display: "none" }}
               />
-              <Tooltip title="Exportar" arrow>
-                <IconButton
-                  size="small"
-                  onClick={handleExportToExcel}
-                  sx={{
-                    border: `1.5px solid ${theme.palette.divider}`,
-                    borderRadius: 1.5,
-                    bgcolor: 'transparent',
-                    color: theme.palette.text.secondary,
-                    p: { xs: 0.75, sm: 0.875 },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? `${taxiMonterricoColors.green}1A` 
-                        : `${taxiMonterricoColors.green}0D`,
-                      color: taxiMonterricoColors.green,
-                      transform: 'translateY(-2px)',
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                    },
-                  }}
-                >
-                  <FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-            <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"} arrow>
-              <IconButton
+              <Button
                 size="small"
+                startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
+                onClick={handleExportToExcel}
+                sx={{
+                  border: `1.5px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  bgcolor: 'transparent',
+                  color: theme.palette.text.secondary,
+                  px: { xs: 1.25, sm: 1.5 },
+                  py: { xs: 0.75, sm: 0.875 },
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? `${taxiMonterricoColors.green}1A` 
+                      : `${taxiMonterricoColors.green}0D`,
+                    color: taxiMonterricoColors.green,
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                  },
+                }}
+              >
+                Exportar
+              </Button>
+              <Button
+                size="small"
+                startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
                 onClick={() => setShowColumnFilters(!showColumnFilters)}
                 sx={{
                   border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
@@ -1414,23 +1466,47 @@ const Contacts: React.FC = () => {
                     ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
                     : 'transparent',
                   color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  px: { xs: 1.25, sm: 1.5 },
+                  py: { xs: 0.75, sm: 0.875 },
                   order: { xs: 5, sm: 0 },
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
                     borderColor: taxiMonterricoColors.green,
                     bgcolor: theme.palette.mode === 'dark' 
                       ? `${taxiMonterricoColors.green}33` 
                       : `${taxiMonterricoColors.green}1A`,
                     color: taxiMonterricoColors.green,
-                    transform: 'translateY(-2px)',
                     boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
                   },
                 }}
               >
-                <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
-              </IconButton>
-            </Tooltip>
+                Filtro
+              </Button>
+              <Button
+                size="small"
+                startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+                onClick={() => handleOpen()}
+                sx={{
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                  color: "white",
+                  borderRadius: 1.5,
+                  px: { xs: 1.25, sm: 1.5 },
+                  py: { xs: 0.75, sm: 0.875 },
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                  },
+                }}
+              >
+                Nuevo Contacto
+              </Button>
+            </Box>
           </>
         }
         header={
@@ -3199,7 +3275,7 @@ const Contacts: React.FC = () => {
         onClose={() => {
           if (!importing && importProgress.current === importProgress.total) {
             setImportProgressOpen(false);
-            setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
+            setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [], companiesSuccess: 0, contactsSuccess: 0 });
           }
         }}
         maxWidth="sm"
@@ -3221,8 +3297,7 @@ const Contacts: React.FC = () => {
                   variant="body2"
                   sx={{ mb: 2, color: theme.palette.text.secondary }}
                 >
-                  Procesando {importProgress.current} de {importProgress.total}{" "}
-                  contactos...
+                  Procesando {importProgress.current} de {importProgress.total} filas...
                 </Typography>
                 <LinearProgress
                   variant="determinate"
@@ -3237,23 +3312,11 @@ const Contacts: React.FC = () => {
                     mb: 2,
                   }}
                 />
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    mt: 2,
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    sx={{ color: theme.palette.success.main }}
-                  >
-                    ✓ Exitosos: {importProgress.success}
+                <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2, flexWrap: "wrap", gap: 1 }}>
+                  <Typography variant="caption" sx={{ color: theme.palette.success.main }}>
+                    ✓ Empresas: {importProgress.companiesSuccess} · Contactos: {importProgress.contactsSuccess}
                   </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: theme.palette.error.main }}
-                  >
+                  <Typography variant="caption" sx={{ color: theme.palette.error.main }}>
                     ✗ Errores: {importProgress.errors}
                   </Typography>
                 </Box>
@@ -3261,43 +3324,52 @@ const Contacts: React.FC = () => {
             ) : (
               <Box>
                 <Typography variant="body1" sx={{ mb: 2 }}>
-                  {importProgress.success > 0 || importProgress.errors > 0
-                    ? `Importación completada`
+                  {importProgress.companiesSuccess > 0 || importProgress.contactsSuccess > 0 || importProgress.errors > 0
+                    ? "Importación completada"
                     : "Error al procesar el archivo"}
                 </Typography>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: theme.palette.success.main }}
-                  >
-                    ✓ {importProgress.success} contactos creados exitosamente
-                  </Typography>
+                  {importProgress.companiesSuccess > 0 && (
+                    <Typography variant="body2" sx={{ color: theme.palette.success.main }}>
+                      ✓ {importProgress.companiesSuccess} empresa{importProgress.companiesSuccess !== 1 ? "s" : ""} importada{importProgress.companiesSuccess !== 1 ? "s" : ""} correctamente
+                    </Typography>
+                  )}
+                  {importProgress.contactsSuccess > 0 && (
+                    <Typography variant="body2" sx={{ color: theme.palette.success.main }}>
+                      ✓ {importProgress.contactsSuccess} contacto{importProgress.contactsSuccess !== 1 ? "s" : ""} importado{importProgress.contactsSuccess !== 1 ? "s" : ""} correctamente
+                    </Typography>
+                  )}
                   {importProgress.errors > 0 && (
-                    <>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: theme.palette.error.main }}
-                      >
-                        ✗ {importProgress.errors} contactos con errores:
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body2" sx={{ color: theme.palette.error.main, mb: 1 }}>
+                        ✗ {importProgress.errors} fila{importProgress.errors !== 1 ? "s" : ""} con errores:
                       </Typography>
-                      {importProgress.errorList && importProgress.errorList.length > 0 && (
-                        <Box sx={{ mt: 1, maxHeight: 200, overflowY: 'auto' }}>
-                          {importProgress.errorList.map((err, index) => (
-                            <Typography
-                              key={index}
-                              variant="body2"
-                              sx={{ 
-                                color: theme.palette.error.main,
-                                fontSize: '0.875rem',
-                                mb: 0.5,
-                              }}
-                            >
-                              • {err.name}: {err.error}
-                            </Typography>
-                          ))}
-                        </Box>
-                      )}
-                    </>
+                      <Box
+                        sx={{
+                          maxHeight: 200,
+                          overflowY: "auto",
+                          pl: 2,
+                          border: `1px solid ${theme.palette.error.light}`,
+                          borderRadius: 1,
+                          p: 1,
+                          bgcolor: (theme.palette.error.light as string) + "10",
+                        }}
+                      >
+                        {importProgress.errorList.map((err, index) => (
+                          <Typography
+                            key={index}
+                            variant="caption"
+                            sx={{
+                              color: theme.palette.error.main,
+                              display: "block",
+                              mb: 0.5,
+                            }}
+                          >
+                            • <strong>{err.name}</strong>: {err.error}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
                   )}
                 </Box>
               </Box>
@@ -3315,6 +3387,8 @@ const Contacts: React.FC = () => {
                   success: 0,
                   errors: 0,
                   errorList: [],
+                  companiesSuccess: 0,
+                  contactsSuccess: 0,
                 });
               }}
               variant="contained"

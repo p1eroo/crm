@@ -54,7 +54,7 @@ const panelContentSx = (theme: Theme) => ({
   overflow: 'auto',
   overflowX: 'hidden',
   mx: -3,
-  py: 3,
+  pt: 1.5,
   pb: 4,
   mb: -3,
   maxWidth: 710,
@@ -118,8 +118,8 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
         PaperProps={{ sx: panelPaperProps(theme) }}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 4, py: 3, flexShrink: 0 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 4, pt: 3, pb: 1.5, flexShrink: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: taxiMonterricoColors.greenLight }}>
               {title}
             </Typography>
             <IconButton onClick={onClose} size="small" aria-label="Cerrar">

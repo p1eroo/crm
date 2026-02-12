@@ -51,6 +51,7 @@ import api from '../config/api';
 import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import { taxiMonterricoColors } from '../theme/colors';
+import { formatCurrencyPE, formatCurrencyPEDecimals } from '../utils/currencyUtils';
 import * as XLSX from 'xlsx';
 
 interface DashboardStats {
@@ -456,7 +457,7 @@ const Dashboard: React.FC = () => {
     
     // 1. Hoja de KPIs
     const kpiData = [
-      { Métrica: 'Presupuesto', Valor: `S/ ${monthlyBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` },
+      { Métrica: 'Presupuesto', Valor: formatCurrencyPE(monthlyBudget) },
       { Métrica: 'Órdenes en Línea', Valor: ordersInLine },
       { Métrica: 'Empresas', Valor: newCompanies },
       { Métrica: 'KPI Total Equipo', Valor: `${teamKPI.toFixed(1)}%` },
@@ -1382,7 +1383,7 @@ const Dashboard: React.FC = () => {
                       color: '#004B50',
                     }}
                   >
-                    S/ {monthlyBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    {formatCurrencyPE(monthlyBudget)}
                   </Typography>
                 </Box>
               </Box>
@@ -1855,7 +1856,7 @@ const Dashboard: React.FC = () => {
                   formatter={(value: any) => {
                     const numValue = typeof value === 'number' ? value : Number(value);
                     return numValue !== undefined && !isNaN(numValue) 
-                      ? [`S/ ${numValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Ventas'] 
+                      ? [formatCurrencyPEDecimals(numValue), 'Ventas'] 
                       : ['', 'Ventas'];
                   }}
                   labelFormatter={(label: any) => selectedMonth !== null ? `Día ${label}` : label}
@@ -1872,7 +1873,7 @@ const Dashboard: React.FC = () => {
                     strokeWidth={2}
                     strokeDasharray="5 5"
                     label={{ 
-                      value: `Presupuesto: S/ ${selectedMonthBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
+                      value: `Presupuesto: ${formatCurrencyPE(selectedMonthBudget)}`, 
                       position: "right",
                       fill: taxiMonterricoColors.green,
                       fontSize: 12,
@@ -2045,7 +2046,7 @@ const Dashboard: React.FC = () => {
                                 fontWeight: 800,
                               }}
                             >
-                              S/ {value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              {formatCurrencyPE(value)}
                             </Typography>
                           </Box>
                         </Box>
@@ -2756,7 +2757,7 @@ const Dashboard: React.FC = () => {
                               fontWeight: 800,
                             }}
                           >
-                            S/ {value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            {formatCurrencyPE(value)}
                           </Typography>
                         </Box>
                       </Box>
@@ -2895,7 +2896,7 @@ const Dashboard: React.FC = () => {
                   formatter={(value: any) => {
                     const numValue = typeof value === 'number' ? value : Number(value);
                     return numValue !== undefined && !isNaN(numValue) 
-                      ? [`S/ ${numValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Ventas'] 
+                      ? [formatCurrencyPEDecimals(numValue), 'Ventas'] 
                       : ['', 'Ventas'];
                   }}
                   labelFormatter={(label: any) => selectedMonth !== null ? `Día ${label}` : label}
@@ -2912,7 +2913,7 @@ const Dashboard: React.FC = () => {
                     strokeWidth={2}
                     strokeDasharray="5 5"
                     label={{ 
-                      value: `Presupuesto: S/ ${selectedMonthBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
+                      value: `Presupuesto: ${formatCurrencyPE(selectedMonthBudget)}`, 
                       position: "right",
                       fill: taxiMonterricoColors.green,
                       fontSize: 12,

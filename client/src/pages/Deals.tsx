@@ -32,11 +32,12 @@ import { useAuth } from '../context/AuthContext';
 import * as XLSX from 'xlsx';
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHandshake } from "@fortawesome/free-solid-svg-icons";
+import { faHandshake, faFilter } from "@fortawesome/free-solid-svg-icons";
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 import UserAvatar from '../components/UserAvatar';
 import { FormDrawer } from '../components/FormDrawer';
 import { DealFormContent, getInitialDealFormData, type DealFormData } from '../components/DealFormContent';
+import { formatCurrencyPE, formatCurrencyPECompact } from '../utils/currencyUtils';
 
 interface Deal {
   id: number;
@@ -142,17 +143,7 @@ const Deals: React.FC = () => {
     return isNaN(num) ? 0 : num;
   };
 
-  // Función helper para formatear valores monetarios
-  const formatCurrency = (value: number): string => {
-    if (value >= 1000000) {
-      const millions = value / 1000000;
-      return millions % 1 === 0 ? `S/ ${millions.toFixed(0)}M` : `S/ ${millions.toFixed(1)}M`;
-    } else if (value >= 1000) {
-      const thousands = value / 1000;
-      return thousands % 1 === 0 ? `S/ ${thousands.toFixed(0)}k` : `S/ ${thousands.toFixed(1)}k`;
-    }
-    return `S/ ${value.toFixed(0)}`;
-  };
+  const formatCurrency = formatCurrencyPECompact;
 
   // Opciones de etapa según las imágenes proporcionadas
   const stageOptions = [
@@ -390,7 +381,7 @@ const Deals: React.FC = () => {
   const handleExportToExcel = () => {
     const exportData = deals.map((deal) => ({
       'Nombre': deal.name || '--',
-      'Monto': deal.amount ? `S/ ${deal.amount.toLocaleString()}` : '--',
+      'Monto': deal.amount != null ? formatCurrencyPE(deal.amount) : '--',
       'Etapa': getStageLabel(deal.stage) || '--',
       'Probabilidad': deal.probability ? `${deal.probability}%` : '--',
       'Contacto': deal.Contact ? `${deal.Contact.firstName} ${deal.Contact.lastName}` : '--',
@@ -796,7 +787,7 @@ const Deals: React.FC = () => {
           
           <Button
             size="small"
-            startIcon={<FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />}
+            startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
             onClick={() => setShowColumnFilters(!showColumnFilters)}
             sx={{
               border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
@@ -820,7 +811,7 @@ const Deals: React.FC = () => {
               },
             }}
           >
-            Filtros
+            Filtro
           </Button>
           
           <Box sx={{ 
@@ -1164,12 +1155,12 @@ const Deals: React.FC = () => {
                     <Typography 
                       variant="body2" 
                       sx={{ 
-                        color: theme.palette.text.primary,
-                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                        color: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green,
+                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
                         fontWeight: 500,
                       }}
                     >
-                    S/ {deal.amount.toLocaleString()}
+                    {formatCurrencyPE(deal.amount)}
                     </Typography>
                 </Box>
                 <Box

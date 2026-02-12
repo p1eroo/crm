@@ -12,6 +12,8 @@ export interface CompanyFormData {
   phone: string;
   email: string;
   leadSource: string;
+  dealName: string;
+  dealCloseDate: string;
   lifecycleStage: string;
   estimatedRevenue: string | number;
   ruc: string;
@@ -33,6 +35,8 @@ export const getInitialFormData = (editingCompany: any): CompanyFormData => {
       phone: editingCompany.phone || '',
       email: editingCompany.email || '',
       leadSource: editingCompany.leadSource || '',
+      dealName: editingCompany.dealName ?? editingCompany.name ?? '',
+      dealCloseDate: editingCompany.dealCloseDate ?? '',
       lifecycleStage: editingCompany.lifecycleStage || 'lead',
       estimatedRevenue: editingCompany.estimatedRevenue || '',
       ruc: editingCompany.ruc || '',
@@ -46,7 +50,7 @@ export const getInitialFormData = (editingCompany: any): CompanyFormData => {
   }
   return {
     name: '', domain: '', linkedin: '', companyname: '', phone: '', email: '',
-    leadSource: '', lifecycleStage: 'lead', estimatedRevenue: '', ruc: '',
+    leadSource: '', dealName: '', dealCloseDate: '', lifecycleStage: 'lead', estimatedRevenue: '', ruc: '',
     address: '', city: '', state: '', country: '', isRecoveredClient: false, ownerId: '',
   };
 };
@@ -118,6 +122,12 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
             size="small"
             value={formData.ruc}
             onChange={(e) => onRucChange(e, formData)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && formData.ruc?.length === 11 && !loadingRuc) {
+                e.preventDefault();
+                onSearchRuc();
+              }
+            }}
             error={!!rucError || !!rucValidationError}
             helperText={rucError || rucValidationError}
             inputProps={{ maxLength: 11, style: { fontSize: '1rem' } }}
@@ -199,46 +209,6 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
             <MenuItem value="masivo">Masivo</MenuItem>
           </TextField>
         </Box>
-        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Etapa del Ciclo de Vida</Typography>
-        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Facturación</Typography>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField
-            select
-            size="small"
-            value={formData.lifecycleStage}
-            onChange={(e) => onFormDataChange({ lifecycleStage: e.target.value })}
-            fullWidth
-            inputProps={{ style: { fontSize: '1rem' } }}
-            InputProps={{ sx: { '& input': { py: 1.05 } } }}
-            SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
-          >
-            <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-            <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-            <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-            <MenuItem value="lead">Lead</MenuItem>
-            <MenuItem value="contacto">Contacto</MenuItem>
-            <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-            <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-            <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
-            <MenuItem value="negociacion">Negociación</MenuItem>
-            <MenuItem value="licitacion">Licitación</MenuItem>
-            <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
-            <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-            <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
-            <MenuItem value="activo">Activo</MenuItem>
-          </TextField>
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField
-            size="small"
-            type="number"
-            value={formData.estimatedRevenue}
-            onChange={(e) => onFormDataChange({ estimatedRevenue: e.target.value })}
-            fullWidth
-            inputProps={{ style: { fontSize: '1rem' } }}
-            InputProps={{ startAdornment: <InputAdornment position="start">S/</InputAdornment>, sx: { '& input': { py: 1.05 } } }}
-          />
-        </Box>
         {(user?.role === 'admin' || user?.role === 'jefe_comercial') ? (
           <>
             <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Propietario</Typography>
@@ -296,6 +266,78 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
             </Box>
           </>
         )}
+        <Typography variant="h6" sx={{ color: taxiMonterricoColors.greenLight, fontWeight: 600, px: 0, my: 1, gridColumn: '1 / -1', mt: 2 }}>Nuevo negocio</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Nombre del negocio</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Etapa</Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField
+            size="small"
+            value={formData.dealName}
+            onChange={(e) => onFormDataChange({ dealName: e.target.value })}
+            fullWidth
+            inputProps={{ style: { fontSize: '1rem' } }}
+            InputProps={{ sx: { '& input': { py: 1.05 } } }}
+          />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField
+            select
+            size="small"
+            value={formData.lifecycleStage}
+            onChange={(e) => onFormDataChange({ lifecycleStage: e.target.value })}
+            fullWidth
+            inputProps={{ style: { fontSize: '1rem' } }}
+            InputProps={{ sx: { '& input': { py: 1.05 } } }}
+            SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
+          >
+            <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+            <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+            <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+            <MenuItem value="lead">Lead</MenuItem>
+            <MenuItem value="contacto">Contacto</MenuItem>
+            <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+            <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+            <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+            <MenuItem value="negociacion">Negociación</MenuItem>
+            <MenuItem value="licitacion">Licitación</MenuItem>
+            <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+            <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+            <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+            <MenuItem value="activo">Activo</MenuItem>
+          </TextField>
+        </Box>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Facturación</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Fecha de Cierre</Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField
+            size="small"
+            type="number"
+            value={formData.estimatedRevenue}
+            onChange={(e) => onFormDataChange({ estimatedRevenue: e.target.value })}
+            fullWidth
+            inputProps={{ style: { fontSize: '1rem' } }}
+            InputProps={{ startAdornment: <InputAdornment position="start">S/</InputAdornment>, sx: { '& input': { py: 1.05 } } }}
+          />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField
+            size="small"
+            type="date"
+            value={formData.dealCloseDate}
+            onChange={(e) => onFormDataChange({ dealCloseDate: e.target.value })}
+            fullWidth
+            inputProps={{ style: { fontSize: '1rem' }, max: '9999-12-31' }}
+            InputProps={{
+              sx: {
+                '& input': { py: 1.05 },
+                ...(theme.palette.mode === 'dark' && {
+                  '& input::-webkit-calendar-picker-indicator': { filter: 'invert(1)', opacity: 1 },
+                }),
+              },
+            }}
+            InputLabelProps={{ shrink: true }}
+          />
+        </Box>
       </Box>
     </Box>
   );

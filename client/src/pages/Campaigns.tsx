@@ -31,6 +31,7 @@ import {
 import { Add, Delete, Search, Campaign as CampaignIcon, TrendingUp, Computer, Visibility, CheckCircle } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { formatCurrencyPE } from '../utils/currencyUtils';
 import { pageStyles } from '../theme/styles';
 
 interface Campaign {
@@ -590,7 +591,7 @@ const Campaigns: React.FC = () => {
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
                     {campaign.budget ? (
                       <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, fontWeight: 500 }}>
-                        ${campaign.budget.toLocaleString()}
+                        {formatCurrencyPE(campaign.budget)}
                       </Typography>
                     ) : (
                       <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
@@ -601,7 +602,7 @@ const Campaigns: React.FC = () => {
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
                     {campaign.spent ? (
                       <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, fontWeight: 500 }}>
-                        ${campaign.spent.toLocaleString()}
+                        {formatCurrencyPE(campaign.spent)}
                       </Typography>
                     ) : (
                       <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>

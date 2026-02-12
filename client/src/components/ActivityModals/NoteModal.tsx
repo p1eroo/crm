@@ -28,6 +28,7 @@ import RichTextEditor from "../RichTextEditor";
 import { taxiMonterricoColors } from "../../theme/colors";
 import { pageStyles } from "../../theme/styles";
 import api from "../../config/api";
+import { formatCurrencyPE } from "../../utils/currencyUtils";
 
 interface User {
   id: number;
@@ -1404,7 +1405,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
                                   primary={dealItem.name}
                                   secondary={`${
                                     dealItem.amount
-                                      ? `S/ ${dealItem.amount.toLocaleString("es-ES")}`
+                                      ? formatCurrencyPE(dealItem.amount)
                                       : ""
                                   } ${dealItem.stage || ""}`}
                                   primaryTypographyProps={{
@@ -1627,7 +1628,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
                                     primary={dealItem.name}
                                     secondary={`${
                                       dealItem.amount
-                                        ? `S/ ${dealItem.amount.toLocaleString("es-ES")}`
+                                        ? formatCurrencyPE(dealItem.amount)
                                         : ""
                                     } ${dealItem.stage || ""}`}
                                     primaryTypographyProps={{

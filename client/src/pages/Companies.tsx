@@ -28,7 +28,7 @@ import {
   Checkbox,
   Popover,
 } from '@mui/material';
-import { Add, Delete, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered, Description } from '@mui/icons-material';
+import { Add, Delete, Visibility, FilterList, Close, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight, MoreVert, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered, Description } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { getStageColor as getStageColorUtil, normalizeStageFromExcel } from '../utils/stageColors';
@@ -39,12 +39,15 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { FormDrawer } from '../components/FormDrawer';
 import RichTextEditor from '../components/RichTextEditor';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFileImport, faFileExport, faFilter } from '@fortawesome/free-solid-svg-icons';
 import { Building2 } from "lucide-react";
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import { CompanyFormContent, getInitialFormData, type CompanyFormData } from '../components/CompanyFormContent';
+import { formatCurrencyPE } from '../utils/currencyUtils';
 
 interface Company {
   id: number;
@@ -109,6 +112,8 @@ const Companies: React.FC = () => {
     success: 0,
     errors: 0,
     errorList: [] as Array<{ name: string; error: string }>,
+    companiesSuccess: 0,
+    contactsSuccess: 0,
   });
   const nameValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const rucValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -848,8 +853,8 @@ const Companies: React.FC = () => {
       'Estado/Provincia': company.state || '--',
       'País': company.country || '--',
       'Etapa': company.lifecycleStage || '--',
-      'Facturación': company.estimatedRevenue 
-        ? `S/ ${Number(company.estimatedRevenue).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      'Facturación': company.estimatedRevenue != null
+        ? formatCurrencyPE(Number(company.estimatedRevenue))
         : '--',
       'Estado': company.lifecycleStage === 'cierre_ganado' ? 'Activo' : 'Inactivo',
       'Fecha de Creación': (company as any).createdAt ? new Date((company as any).createdAt).toLocaleDateString('es-ES') : '--',
@@ -984,7 +989,7 @@ const Companies: React.FC = () => {
 
     setImporting(true);
     setImportProgressOpen(true);
-    setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
+    setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [], companiesSuccess: 0, contactsSuccess: 0 });
     
     try {
       // Obtener lista de usuarios para el matching: si ya está en estado la usamos;
@@ -1053,97 +1058,126 @@ const Companies: React.FC = () => {
         };
       }).filter(company => company.name !== 'Sin nombre'); // Filtrar filas vacías
 
-      // Inicializar el progreso total
-      const totalCompanies = companiesToCreate.length;
-      setImportProgress(prev => ({ ...prev, total: totalCompanies }));
+      // Agrupar filas por nombre de empresa (mismo nombre = una sola empresa, varios contactos)
+      const groupKey = (name: string) => (name || '').trim().toLowerCase();
+      const groupsByCompanyName = new Map<string, typeof companiesToCreate>();
+      for (const row of companiesToCreate) {
+        const key = groupKey(row.name);
+        if (!groupsByCompanyName.has(key)) groupsByCompanyName.set(key, []);
+        groupsByCompanyName.get(key)!.push({ ...row });
+      }
 
-      // Procesar en lotes pequeños usando el endpoint individual
-      const BATCH_SIZE = 50; // Procesar 50 empresas por lote
+      const totalRows = companiesToCreate.length;
+      setImportProgress(prev => ({ ...prev, total: totalRows }));
 
-      for (let i = 0; i < companiesToCreate.length; i += BATCH_SIZE) {
-        const batch = companiesToCreate.slice(i, i + BATCH_SIZE);
-        
-        // Procesar cada empresa del lote en paralelo (con límite de concurrencia)
-        const batchPromises = batch.map(async (company) => {
-          try {
-            // Extraer datos del contacto antes de crear la empresa
-            const contactName = (company as any)._contactName;
-            const contactJobTitle = (company as any)._contactJobTitle;
-            const contactEmail = (company as any)._contactEmail;
-            delete (company as any)._contactName;
-            delete (company as any)._contactJobTitle;
-            delete (company as any)._contactEmail;
+      // Buscar empresa por nombre (case-insensitive)
+      const findCompanyByName = async (name: string): Promise<{ id: number; name: string } | null> => {
+        if (!name || !name.trim()) return null;
+        try {
+          const res = await api.get('/companies', { params: { search: name.trim(), limit: 100 } });
+          const list = res.data?.companies ?? res.data ?? [];
+          const normalized = name.trim().toLowerCase();
+          const found = Array.isArray(list) ? list.find((c: any) => (c.name || '').trim().toLowerCase() === normalized) : null;
+          return found ? { id: found.id, name: found.name } : null;
+        } catch {
+          return null;
+        }
+      };
 
-            // Crear la empresa
-            const companyResponse = await api.post('/companies', company);
-            const createdCompany = companyResponse.data;
+      let processed = 0;
+      for (const [, rows] of Array.from(groupsByCompanyName.entries())) {
+        const firstRow = rows[0];
+        const companyName = firstRow.name;
 
-            // Si hay datos del contacto, crear el contacto asociado
-            if (contactName && contactName.trim()) {
-              try {
-                // Separar nombre y apellido
-                const nameParts = contactName.trim().split(' ');
-                const firstName = nameParts[0] || 'Sin nombre';
-                const lastName = nameParts.slice(1).join(' ') || 'Sin apellido';
+        // Datos de empresa a usar (solo del primer registro del grupo)
+        const companyPayload = {
+          name: firstRow.name,
+          domain: firstRow.domain,
+          companyname: firstRow.companyname,
+          phone: firstRow.phone,
+          email: firstRow.email,
+          leadSource: firstRow.leadSource,
+          ruc: firstRow.ruc,
+          address: firstRow.address,
+          city: firstRow.city,
+          state: firstRow.state,
+          country: firstRow.country,
+          lifecycleStage: firstRow.lifecycleStage,
+          estimatedRevenue: firstRow.estimatedRevenue,
+          isRecoveredClient: firstRow.isRecoveredClient,
+          ownerId: firstRow.ownerId,
+        };
 
-                console.log(`📝 Creando contacto para empresa ${createdCompany.name}:`, {
-                  firstName,
-                  lastName,
-                  jobTitle: contactJobTitle,
-                  email: contactEmail,
-                  companyId: createdCompany.id,
-                });
+        let companyId: number;
 
-                await api.post('/contacts', {
-                  firstName,
-                  lastName,
-                  email: contactEmail || undefined,
-                  jobTitle: contactJobTitle || undefined,
-                  companyId: createdCompany.id,
-                  lifecycleStage: 'lead',
-                });
-
-                console.log(`✅ Contacto creado exitosamente para ${createdCompany.name}`);
-              } catch (contactError: any) {
-                const contactErrorMessage = contactError.response?.data?.error || contactError.message || 'Error desconocido al crear contacto';
-                console.error(`❌ Error creando contacto para empresa ${createdCompany.name}:`, contactError);
-                console.error(`❌ Detalles del error:`, contactError.response?.data);
-                
-                // Agregar el error a la lista de errores para que el usuario lo vea
-                setImportProgress(prev => ({
-                  ...prev,
-                  errors: prev.errors + 1,
-                  errorList: [...prev.errorList, {
-                    name: `${createdCompany.name} - Contacto: ${contactName}`,
-                    error: contactErrorMessage,
-                  }],
-                }));
-              }
-            } else {
-              console.log(`⚠️ No se creó contacto para ${createdCompany.name} - nombre de contacto vacío`);
-            }
-
+        try {
+          const existing = await findCompanyByName(companyName);
+          if (existing) {
+            companyId = existing.id;
+          } else {
+            const companyResponse = await api.post('/companies', companyPayload);
+            const created = companyResponse.data;
+            companyId = created.id;
+            setImportProgress(prev => ({ ...prev, companiesSuccess: prev.companiesSuccess + 1 }));
+          }
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.error || err.message || 'Error al crear empresa';
+          for (let i = 0; i < rows.length; i++) {
+            const currentProcessed = processed + 1;
+            processed++;
             setImportProgress(prev => ({
               ...prev,
-              current: prev.current + 1,
-              success: prev.success + 1,
-            }));
-          } catch (error: any) {
-            const errorMessage = error.response?.data?.error || error.message || 'Error desconocido';
-            setImportProgress(prev => ({
-              ...prev,
-              current: prev.current + 1,
+              current: currentProcessed,
               errors: prev.errors + 1,
-              errorList: [...prev.errorList, {
-                name: company.name || 'Sin nombre',
-                error: errorMessage,
-              }],
+              errorList: [...prev.errorList, { name: companyName, error: errorMessage }],
             }));
           }
-        });
+          continue;
+        }
 
-        // Esperar a que termine el lote antes de continuar (evita sobrecargar el servidor)
-        await Promise.all(batchPromises);
+        // Crear un contacto por cada fila del grupo que tenga datos de contacto
+        for (const row of rows) {
+          const currentProcessed = processed + 1;
+          const contactName = (row as any)._contactName;
+          const contactJobTitle = (row as any)._contactJobTitle;
+          const contactEmail = (row as any)._contactEmail;
+
+          if (contactName && contactName.trim()) {
+            try {
+              const nameParts = contactName.trim().split(' ');
+              const firstName = nameParts[0] || 'Sin nombre';
+              const lastName = nameParts.slice(1).join(' ') || 'Sin apellido';
+              await api.post('/contacts', {
+                firstName,
+                lastName,
+                email: contactEmail || undefined,
+                jobTitle: contactJobTitle || undefined,
+                companyId,
+                lifecycleStage: 'lead',
+              });
+              setImportProgress(prev => ({
+                ...prev,
+                current: currentProcessed,
+                success: prev.success + 1,
+                contactsSuccess: prev.contactsSuccess + 1,
+              }));
+            } catch (contactErr: any) {
+              const contactErrorMessage = contactErr.response?.data?.error || contactErr.message || 'Error al crear contacto';
+              setImportProgress(prev => ({
+                ...prev,
+                current: currentProcessed,
+                errors: prev.errors + 1,
+                errorList: [...prev.errorList, {
+                  name: `${companyName} - Contacto: ${contactName}`,
+                  error: contactErrorMessage,
+                }],
+              }));
+            }
+          } else {
+            setImportProgress(prev => ({ ...prev, current: currentProcessed, success: prev.success + 1 }));
+          }
+          processed++;
+        }
       }
 
       // El progreso final ya se actualiza automáticamente con cada setImportProgress
@@ -1817,86 +1851,91 @@ const Companies: React.FC = () => {
                     display: "flex",
                     gap: { xs: 0.5, sm: 0.75 },
                     order: { xs: 3, sm: 0 },
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
                   }}
                 >
-                  <Tooltip title="Descargar plantilla" arrow>
-                    <IconButton
-                      size="small"
-                      onClick={handleDownloadTemplate}
-                      sx={{
-                        border: `1.5px solid ${theme.palette.divider}`,
-                        borderRadius: 1.5,
-                        bgcolor: 'transparent',
-                        color: theme.palette.text.secondary,
-                        p: { xs: 0.75, sm: 0.875 },
-                        '&:hover': {
-                          borderColor: taxiMonterricoColors.green,
-                          bgcolor: theme.palette.mode === 'dark' 
-                            ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
-                            : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
-                          color: taxiMonterricoColors.green,
-                          boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                        },
-                      }}
-                    >
-                      <Description sx={{ fontSize: { xs: 16, sm: 18 } }} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={importing ? 'Importando...' : 'Importar'} arrow>
-                    <IconButton
-                      size="small"
-                      onClick={handleImportFromExcel}
-                      disabled={importing}
-                      sx={{
-                        border: `1.5px solid ${theme.palette.divider}`,
-                        borderRadius: 1.5,
-                        bgcolor: 'transparent',
-                        color: theme.palette.text.secondary,
-                        p: { xs: 0.75, sm: 0.875 },
-                        '&:hover': {
-                          borderColor: taxiMonterricoColors.green,
-                          bgcolor: theme.palette.mode === 'dark' 
-                            ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
-                            : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
-                          color: taxiMonterricoColors.green,
-                          boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                        },
-                        '&:disabled': {
-                          opacity: 0.5,
-                        },
-                      }}
-                    >
-                      <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
-                    </IconButton>
-                  </Tooltip>
-                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
-                  <Tooltip title="Exportar" arrow>
-                    <IconButton
-                      size="small"
-                      onClick={handleExportToExcel}
-                      sx={{
-                        border: `1.5px solid ${theme.palette.divider}`,
-                        borderRadius: 1.5,
-                        bgcolor: 'transparent',
-                        color: theme.palette.text.secondary,
-                        p: { xs: 0.75, sm: 0.875 },
-                        '&:hover': {
-                          borderColor: taxiMonterricoColors.green,
-                          bgcolor: theme.palette.mode === 'dark' 
-                            ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
-                            : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
-                          color: taxiMonterricoColors.green,
-                          boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                        },
-                      }}
-                    >
-                      <FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-                <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"} arrow>
-                  <IconButton
+                  <Button
                     size="small"
+                    startIcon={<Description sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+                    onClick={handleDownloadTemplate}
+                    sx={{
+                      border: `1.5px solid ${theme.palette.divider}`,
+                      borderRadius: 1.5,
+                      bgcolor: 'transparent',
+                      color: theme.palette.text.secondary,
+                      px: { xs: 1.25, sm: 1.5 },
+                      py: { xs: 0.75, sm: 0.875 },
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
+                          : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
+                        color: taxiMonterricoColors.green,
+                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                      },
+                    }}
+                  >
+                    Plantilla
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<FontAwesomeIcon icon={faFileImport} style={{ fontSize: 16 }} />}
+                    onClick={handleImportFromExcel}
+                    disabled={importing}
+                    sx={{
+                      border: `1.5px solid ${theme.palette.divider}`,
+                      borderRadius: 1.5,
+                      bgcolor: 'transparent',
+                      color: theme.palette.text.secondary,
+                      px: { xs: 1.25, sm: 1.5 },
+                      py: { xs: 0.75, sm: 0.875 },
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
+                          : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
+                        color: taxiMonterricoColors.green,
+                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                      },
+                      '&:disabled': { opacity: 0.5 },
+                    }}
+                  >
+                    {importing ? 'Importando...' : 'Importar'}
+                  </Button>
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+                  <Button
+                    size="small"
+                    startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
+                    onClick={handleExportToExcel}
+                    sx={{
+                      border: `1.5px solid ${theme.palette.divider}`,
+                      borderRadius: 1.5,
+                      bgcolor: 'transparent',
+                      color: theme.palette.text.secondary,
+                      px: { xs: 1.25, sm: 1.5 },
+                      py: { xs: 0.75, sm: 0.875 },
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
+                          : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
+                        color: taxiMonterricoColors.green,
+                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                      },
+                    }}
+                  >
+                    Exportar
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
                     onClick={() => setShowColumnFilters(!showColumnFilters)}
                     sx={{
                       border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
@@ -1905,8 +1944,11 @@ const Companies: React.FC = () => {
                         ? (theme.palette.mode === 'dark' ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.15) : hexToRgba(taxiMonterricoColors.greenEmerald, 0.08))
                         : 'transparent',
                       color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
-                      p: { xs: 0.75, sm: 0.875 },
+                      px: { xs: 1.25, sm: 1.5 },
+                      py: { xs: 0.75, sm: 0.875 },
                       order: { xs: 5, sm: 0 },
+                      textTransform: 'none',
+                      fontWeight: 600,
                       '&:hover': {
                         borderColor: taxiMonterricoColors.green,
                         bgcolor: theme.palette.mode === 'dark' 
@@ -1917,29 +1959,31 @@ const Companies: React.FC = () => {
                       },
                     }}
                   >
-                    <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Nueva Empresa" arrow>
-                  <IconButton
+                    Filtro
+                  </Button>
+                  <Button
                     size="small"
+                    startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                     onClick={() => handleOpen()}
                     sx={{
                       background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
                       color: "white",
                       borderRadius: 1.5,
-                      p: { xs: 0.75, sm: 0.875 },
+                      px: { xs: 1.25, sm: 1.5 },
+                      py: { xs: 0.75, sm: 0.875 },
                       boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                       order: { xs: 2, sm: 0 },
+                      textTransform: 'none',
+                      fontWeight: 600,
                       '&:hover': {
                         boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
                         background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
                       },
                     }}
                   >
-                    <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
-                  </IconButton>
-                </Tooltip>
+                    Nueva Empresa
+                  </Button>
+                </Box>
             </>
           }
           header={
@@ -2458,14 +2502,14 @@ const Companies: React.FC = () => {
                     variant="body2" 
                     sx={{ 
                       color: company.estimatedRevenue 
-                        ? taxiMonterricoColors.green
+                        ? (theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green)
                         : theme.palette.text.primary,
                       fontSize: { xs: '0.75rem', md: '0.8125rem' },
                       fontWeight: 500,
                     }}
                   >
-                    {company.estimatedRevenue 
-                      ? `S/ ${Number(company.estimatedRevenue).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    {company.estimatedRevenue != null
+                      ? formatCurrencyPE(Number(company.estimatedRevenue))
                       : '--'}
                   </Typography>
                 </Box>
@@ -3271,7 +3315,7 @@ const Companies: React.FC = () => {
         onClose={() => {
           if (!importing && importProgress.current === importProgress.total) {
             setImportProgressOpen(false);
-            setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
+            setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [], companiesSuccess: 0, contactsSuccess: 0 });
           }
         }}
         maxWidth="sm"
@@ -3290,7 +3334,7 @@ const Companies: React.FC = () => {
             {importing ? (
               <>
                 <Typography variant="body2" sx={{ mb: 2, color: theme.palette.text.secondary }}>
-                  Procesando {importProgress.current} de {importProgress.total} empresas...
+                  Procesando {importProgress.current} de {importProgress.total} filas...
                 </Typography>
                 <LinearProgress 
                   variant="determinate" 
@@ -3301,9 +3345,9 @@ const Companies: React.FC = () => {
                     mb: 2,
                   }}
                 />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, flexWrap: 'wrap', gap: 1 }}>
                   <Typography variant="caption" sx={{ color: theme.palette.success.main }}>
-                    ✓ Exitosos: {importProgress.success}
+                    ✓ Empresas: {importProgress.companiesSuccess} · Contactos: {importProgress.contactsSuccess}
                   </Typography>
                   <Typography variant="caption" sx={{ color: theme.palette.error.main }}>
                     ✗ Errores: {importProgress.errors}
@@ -3313,18 +3357,25 @@ const Companies: React.FC = () => {
             ) : (
               <Box>
                 <Typography variant="body1" sx={{ mb: 2 }}>
-                  {importProgress.success > 0 || importProgress.errors > 0
+                  {importProgress.companiesSuccess > 0 || importProgress.contactsSuccess > 0 || importProgress.errors > 0
                     ? `Importación completada`
                     : 'Error al procesar el archivo'}
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Typography variant="body2" sx={{ color: theme.palette.success.main }}>
-                    ✓ {importProgress.success} empresas creadas exitosamente
-                  </Typography>
+                  {importProgress.companiesSuccess > 0 && (
+                    <Typography variant="body2" sx={{ color: theme.palette.success.main }}>
+                      ✓ {importProgress.companiesSuccess} empresa{importProgress.companiesSuccess !== 1 ? 's' : ''} importada{importProgress.companiesSuccess !== 1 ? 's' : ''} correctamente
+                    </Typography>
+                  )}
+                  {importProgress.contactsSuccess > 0 && (
+                    <Typography variant="body2" sx={{ color: theme.palette.success.main }}>
+                      ✓ {importProgress.contactsSuccess} contacto{importProgress.contactsSuccess !== 1 ? 's' : ''} importado{importProgress.contactsSuccess !== 1 ? 's' : ''} correctamente
+                    </Typography>
+                  )}
                   {importProgress.errors > 0 && (
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="body2" sx={{ color: theme.palette.error.main, mb: 1 }}>
-                        ✗ {importProgress.errors} empresas con errores:
+                        ✗ {importProgress.errors} fila{importProgress.errors !== 1 ? 's' : ''} con errores:
                       </Typography>
                       <Box sx={{ 
                         maxHeight: 200, 
@@ -3361,7 +3412,7 @@ const Companies: React.FC = () => {
             <Button 
               onClick={() => {
                 setImportProgressOpen(false);
-                setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
+                setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [], companiesSuccess: 0, contactsSuccess: 0 });
               }}
               variant="contained"
               sx={pageStyles.saveButton}

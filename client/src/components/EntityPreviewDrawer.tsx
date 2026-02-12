@@ -33,6 +33,7 @@ import { faUserTie, faHandshake, faSackDollar } from '@fortawesome/free-solid-sv
 import { Building2 } from 'lucide-react';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { formatCurrencyPE } from '../utils/currencyUtils';
 
 interface EntityPreviewDrawerProps {
   open: boolean;
@@ -711,7 +712,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                     textAlign: 'left',
                   }}
                 >
-                  S/ {entity.amount.toLocaleString()}
+                  {formatCurrencyPE(entity.amount)}
                 </Typography>
               </Box>
             )}
@@ -1813,7 +1814,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                               >
                                 {deal.amount != null && (
                                   <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem', textAlign: 'left' }}>
-                                    Monto: S/ {Number(deal.amount).toLocaleString()}
+                                    Monto: {formatCurrencyPE(Number(deal.amount))}
                                   </Typography>
                                 )}
                                 {deal.closeDate && (

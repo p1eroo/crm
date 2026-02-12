@@ -37,6 +37,7 @@ import { useTheme } from '@mui/material/styles';
 import { PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import UserAvatar from '../components/UserAvatar';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
+import { formatCurrencyPEDecimals } from '../utils/currencyUtils';
 
 interface User {
   id: number;
@@ -847,7 +848,7 @@ const ReportDetail: React.FC = () => {
                         formatter={(value: number | undefined) => {
                           const numValue = typeof value === 'number' ? value : Number(value || 0);
                           return numValue !== undefined && !isNaN(numValue) 
-                            ? [`S/ ${numValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Ingresos'] 
+                            ? [formatCurrencyPEDecimals(numValue), 'Ingresos'] 
                             : ['', 'Ingresos'];
                         }}
                         labelFormatter={(label: any) => label}

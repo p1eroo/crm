@@ -31,6 +31,7 @@ import type { ApexOptions } from 'apexcharts';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { getStageColor as getStageColorUtil } from '../utils/stageColors';
+import { formatCurrencyPE } from '../utils/currencyUtils';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -1705,7 +1706,7 @@ const Reports: React.FC = () => {
                             color: taxiMonterricoColors.green,
                           }}
                         >
-                          {c.estimatedRevenue != null ? Number(c.estimatedRevenue).toLocaleString('es-PE') : '—'}
+                          {c.estimatedRevenue != null ? formatCurrencyPE(Number(c.estimatedRevenue)) : '—'}
                         </Typography>
                       </Box>
                     </Box>
@@ -2240,7 +2241,7 @@ const Reports: React.FC = () => {
                             {userStats ? `${userStats.wonDeals || 0} ${userStats.wonDeals === 1 ? 'venta' : 'ventas'}` : '0 ventas'}
                           </TableCell>
                           <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 1.5, md: 2 }, pr: { xs: 2, md: 3 }, fontWeight: 500, fontSize: { xs: '0.75rem', md: '0.875rem' }, color: theme.palette.text.primary }}>
-                            {userStats ? `S/ ${(userStats.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : 'S/ 0'}
+                            {userStats ? formatCurrencyPE(userStats.wonDealsValue || 0) : formatCurrencyPE(0)}
                           </TableCell>
                         </TableRow>
                       );

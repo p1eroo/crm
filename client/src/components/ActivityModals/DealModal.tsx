@@ -24,6 +24,7 @@ import { companyLabels } from "../../constants/companyLabels";
 import { pageStyles } from "../../theme/styles";
 import { FormDrawer } from "../FormDrawer";
 import { DealFormContent, getInitialDealFormData, type DealFormData } from "../DealFormContent";
+import { formatCurrencyPE } from "../../utils/currencyUtils";
 
 interface User {
   id: number;
@@ -783,8 +784,8 @@ const DealModal: React.FC<DealModalProps> = ({
                               </Typography>
                             </Box>
                             <Typography variant="caption" color="text.secondary">
-                              {deal.amount
-                                ? `S/ ${deal.amount.toLocaleString("es-ES")}`
+                              {deal.amount != null
+                                ? formatCurrencyPE(deal.amount)
                                 : "Sin monto"}{" "}
                               • {deal.stage ? stageLabelFn(deal.stage) : "Sin etapa"}
                             </Typography>

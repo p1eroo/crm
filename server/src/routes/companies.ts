@@ -39,6 +39,8 @@ const cleanCompany = (company: any, includeSensitive: boolean = false): any => {
   if (companyData.ownerId != null) cleaned.ownerId = companyData.ownerId;
   if (companyData.linkedin != null) cleaned.linkedin = companyData.linkedin;
   if (companyData.numberOfEmployees != null) cleaned.numberOfEmployees = companyData.numberOfEmployees;
+  if (companyData.dealName != null) cleaned.dealName = companyData.dealName;
+  if (companyData.dealCloseDate != null) cleaned.dealCloseDate = companyData.dealCloseDate;
 
   // Solo incluir datos sensibles si se solicita explícitamente (para detalle completo)
   if (includeSensitive) {
@@ -758,6 +760,17 @@ router.get('/:id', async (req, res) => {
     // Convertir el Map a array
     companyData.Contacts = Array.from(contactsMap.values());
 
+    // Nombre y fecha de cierre del primer negocio (Deal) asociado por companyId para el formulario
+    const firstDeal = await Deal.findOne({
+      where: { companyId: req.params.id },
+      order: [['id', 'ASC']],
+      attributes: ['name', 'closeDate'],
+    });
+    companyData.dealName = firstDeal?.name ?? undefined;
+    companyData.dealCloseDate = firstDeal?.closeDate
+      ? new Date(firstDeal.closeDate).toISOString().slice(0, 10)
+      : undefined;
+
     res.json(cleanCompany(companyData, true));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -837,6 +850,27 @@ router.post('/', async (req: AuthRequest, res) => {
       ],
     });
 
+    // Crear negocio (Deal) asociado con la misma etapa, facturación y propietario (empresa y negocio comparten valores)
+    const dealOwnerId = company.ownerId ?? req.userId;
+    const dealName = (req.body.dealName != null && String(req.body.dealName).trim() !== '') ? String(req.body.dealName).trim() : company.name;
+    const dealCloseDate = req.body.dealCloseDate && String(req.body.dealCloseDate).trim() ? new Date(String(req.body.dealCloseDate).trim()) : null;
+    if (dealOwnerId) {
+      try {
+        await Deal.create({
+          name: dealName,
+          amount: company.estimatedRevenue != null ? Number(company.estimatedRevenue) : 0,
+          stage: company.lifecycleStage || 'lead',
+          ownerId: dealOwnerId,
+          companyId: company.id,
+          pipelineId: 1,
+          ...(dealCloseDate && !isNaN(dealCloseDate.getTime()) && { closeDate: dealCloseDate }),
+        });
+      } catch (dealErr: any) {
+        console.error('Error creating deal for company:', dealErr);
+        // No fallar la creación de la empresa si falla el negocio
+      }
+    }
+
     // Registrar log
     if (req.userId) {
       await logSystemAction(
@@ -909,6 +943,40 @@ router.put('/:id', async (req: AuthRequest, res) => {
 
     if (!updatedCompany) {
       return res.status(404).json({ error: 'Empresa no encontrada después de la actualización' });
+    }
+
+    // Sincronizar negocio(s) con la empresa: misma etapa, facturación y propietario (la empresa jala los valores del negocio en la UI; aquí los mantenemos alineados)
+    const dealOwnerId = updatedCompany.ownerId ?? req.userId;
+    const dealName = (req.body.dealName != null && String(req.body.dealName).trim() !== '') ? String(req.body.dealName).trim() : updatedCompany.name;
+    const dealCloseDateRaw = req.body.dealCloseDate && String(req.body.dealCloseDate).trim();
+    const dealCloseDate = dealCloseDateRaw ? (() => { const d = new Date(dealCloseDateRaw); return !isNaN(d.getTime()) ? d : null; })() : null;
+    if (dealOwnerId != null) {
+      try {
+        const existingDeals = await Deal.findAll({
+          where: { companyId: company.id },
+          order: [['id', 'ASC']],
+          limit: 1,
+        });
+        const stage = updatedCompany.lifecycleStage || 'lead';
+        const amount = updatedCompany.estimatedRevenue != null ? Number(updatedCompany.estimatedRevenue) : 0;
+        const dealPayload: { name: string; stage: string; amount: number; ownerId: number; closeDate?: Date | null } = { name: dealName, stage, amount, ownerId: dealOwnerId };
+        if (dealCloseDate !== undefined) dealPayload.closeDate = dealCloseDate;
+        if (existingDeals.length > 0) {
+          await existingDeals[0].update(dealPayload);
+        } else {
+          await Deal.create({
+            name: dealName,
+            amount,
+            stage,
+            ownerId: dealOwnerId,
+            companyId: company.id,
+            pipelineId: 1,
+            ...(dealCloseDate && { closeDate: dealCloseDate }),
+          });
+        }
+      } catch (dealErr: any) {
+        console.error('Error syncing deal for company:', dealErr);
+      }
     }
 
     // Registrar log

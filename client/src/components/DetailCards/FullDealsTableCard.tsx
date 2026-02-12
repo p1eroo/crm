@@ -30,6 +30,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { taxiMonterricoColors } from "../../theme/colors";
+import { formatCurrencyPE } from "../../utils/currencyUtils";
 
 interface Deal {
   id: number;
@@ -535,12 +536,8 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontSize: "0.875rem", color: "#2E7D32" }}>
-                      {deal.amount
-                        ? typeof deal.amount === "number"
-                          ? `S/ ${deal.amount.toLocaleString("es-ES")}`
-                          : `S/ ${parseFloat(
-                              String(deal.amount)
-                            ).toLocaleString("es-ES")}`
+                      {deal.amount != null
+                        ? formatCurrencyPE(typeof deal.amount === "number" ? deal.amount : parseFloat(String(deal.amount)) || 0)
                         : "--"}
                     </Typography>
                   </TableCell>

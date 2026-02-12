@@ -81,6 +81,7 @@ import api from "../config/api";
 import axios from "axios";
 import { taxiMonterricoColors, hexToRgba } from "../theme/colors";
 import { pageStyles } from "../theme/styles";
+import { formatCurrencyPE } from "../utils/currencyUtils";
 import { companyLabels } from "../constants/companyLabels";
 import {
   RecentActivitiesCard,
@@ -5243,8 +5244,8 @@ const TaskDetail: React.FC = () => {
                           {deal.name}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {deal.amount
-                            ? `S/ ${deal.amount.toLocaleString("es-ES")}`
+                          {deal.amount != null
+                            ? formatCurrencyPE(deal.amount)
                             : "Sin monto"}{" "}
                           • {deal.stage || "Sin etapa"}
                         </Typography>
@@ -6028,10 +6029,8 @@ const TaskDetail: React.FC = () => {
                                 <ListItemText
                                   primary={dealItem.name}
                                   secondary={`${
-                                    dealItem.amount
-                                      ? `S/ ${dealItem.amount.toLocaleString(
-                                          "es-ES"
-                                        )}`
+                                    dealItem.amount != null
+                                      ? formatCurrencyPE(dealItem.amount)
                                       : ""
                                   } ${dealItem.stage || ""}`}
                                   primaryTypographyProps={{
@@ -6253,10 +6252,8 @@ const TaskDetail: React.FC = () => {
                                   <ListItemText
                                     primary={dealItem.name}
                                     secondary={`${
-                                      dealItem.amount
-                                        ? `S/ ${dealItem.amount.toLocaleString(
-                                            "es-ES"
-                                          )}`
+                                      dealItem.amount != null
+                                        ? formatCurrencyPE(dealItem.amount)
                                         : ""
                                     } ${dealItem.stage || ""}`}
                                     primaryTypographyProps={{
