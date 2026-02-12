@@ -997,9 +997,6 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
                 },
               }}
             >
-              <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-              <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-              <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
               <MenuItem value="lead">Lead</MenuItem>
               <MenuItem value="contacto">Contacto</MenuItem>
               <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
@@ -1015,6 +1012,8 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
               <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
               <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
               <MenuItem value="activo">Activo</MenuItem>
+              <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+              <MenuItem value="lead_inactivo">Inactivo</MenuItem>
             </TextField>
             {/* Facturación */}
             <TextField

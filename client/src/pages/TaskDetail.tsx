@@ -328,11 +328,7 @@ const TaskDetail: React.FC = () => {
   const [availableCompanies, setAvailableCompanies] = useState<any[]>([]);
   const [availableContacts, setAvailableContacts] = useState<any[]>([]);
 
-  // Opciones de etapa
   const stageOptions = [
-    { value: "lead_inactivo", label: "Lead Inactivo" },
-    { value: "cliente_perdido", label: "Cliente perdido" },
-    { value: "cierre_perdido", label: "Cierre Perdido" },
     { value: "lead", label: "Lead" },
     { value: "contacto", label: "Contacto" },
     { value: "reunion_agendada", label: "Reunión Agendada" },
@@ -344,6 +340,8 @@ const TaskDetail: React.FC = () => {
     { value: "cierre_ganado", label: "Cierre Ganado" },
     { value: "firma_contrato", label: "Firma de Contrato" },
     { value: "activo", label: "Activo" },
+    { value: "cierre_perdido", label: "Cierre Perdido" },
+    { value: "lead_inactivo", label: "Inactivo" },
   ];
   const [formData, setFormData] = useState({
     title: "",
@@ -4346,9 +4344,6 @@ const TaskDetail: React.FC = () => {
                     },
                   }}
                 >
-                  <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-                  <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-                  <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
                   <MenuItem value="lead">Lead</MenuItem>
                   <MenuItem value="contacto">Contacto</MenuItem>
                   <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
@@ -4364,6 +4359,8 @@ const TaskDetail: React.FC = () => {
                   <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
                   <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
                   <MenuItem value="activo">Activo</MenuItem>
+                  <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                  <MenuItem value="lead_inactivo">Inactivo</MenuItem>
                 </TextField>
               </Box>
             </Box>
@@ -4766,9 +4763,6 @@ const TaskDetail: React.FC = () => {
                   },
                 }}
               >
-                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
                 <MenuItem value="lead">Lead</MenuItem>
                 <MenuItem value="contacto">Contacto</MenuItem>
                 <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
@@ -4784,6 +4778,8 @@ const TaskDetail: React.FC = () => {
                 <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
                 <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
                 <MenuItem value="activo">Activo</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                <MenuItem value="lead_inactivo">Inactivo</MenuItem>
               </TextField>
             </Box>
           ) : (

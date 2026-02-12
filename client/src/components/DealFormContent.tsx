@@ -46,11 +46,10 @@ export const stageOptions = [
   { value: "licitacion", label: "Licitación" },
   { value: "licitacion_etapa_final", label: "Licitación Etapa Final" },
   { value: "cierre_ganado", label: "Cierre Ganado" },
-  { value: "cierre_perdido", label: "Cierre Perdido" },
   { value: "firma_contrato", label: "Firma de Contrato" },
   { value: "activo", label: "Activo" },
-  { value: "cliente_perdido", label: "Cliente Perdido" },
-  { value: "lead_inactivo", label: "Lead Inactivo" },
+  { value: "cierre_perdido", label: "Cierre Perdido" },
+  { value: "lead_inactivo", label: "Inactivo" },
 ];
 
 export type DealFormContentProps = {

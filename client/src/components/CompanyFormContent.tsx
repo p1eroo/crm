@@ -290,9 +290,6 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
             InputProps={{ sx: { '& input': { py: 1.05 } } }}
             SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
           >
-            <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-            <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-            <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
             <MenuItem value="lead">Lead</MenuItem>
             <MenuItem value="contacto">Contacto</MenuItem>
             <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
@@ -304,6 +301,8 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
             <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
             <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
             <MenuItem value="activo">Activo</MenuItem>
+            <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+            <MenuItem value="lead_inactivo">Inactivo</MenuItem>
           </TextField>
         </Box>
         <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Facturación</Typography>

@@ -118,9 +118,8 @@ const Deals: React.FC = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDeal, setPreviewDeal] = useState<Deal | null>(null);
   
-  // Etapas del pipeline
+  // Etapas del pipeline (orden como en funnel por cantidad)
   const stages = [
-    { id: 'lead_inactivo', label: 'Lead Inactivo', color: theme.palette.text.secondary },
     { id: 'lead', label: 'Lead', color: theme.palette.primary.main },
     { id: 'contacto', label: 'Contacto', color: theme.palette.primary.light },
     { id: 'reunion_agendada', label: 'Reunión Agendada', color: taxiMonterricoColors.greenLight },
@@ -132,8 +131,8 @@ const Deals: React.FC = () => {
     { id: 'cierre_ganado', label: 'Cierre Ganado', color: taxiMonterricoColors.greenLight },
     { id: 'firma_contrato', label: 'Firma de Contrato', color: taxiMonterricoColors.green },
     { id: 'activo', label: 'Activo', color: taxiMonterricoColors.green },
-    { id: 'cliente_perdido', label: 'Cliente Perdido', color: theme.palette.error.light },
     { id: 'cierre_perdido', label: 'Cierre Perdido', color: theme.palette.error.main },
+    { id: 'lead_inactivo', label: 'Inactivo', color: theme.palette.text.secondary },
   ];
 
   // Función helper para convertir amount a número de forma segura
@@ -145,11 +144,7 @@ const Deals: React.FC = () => {
 
   const formatCurrency = formatCurrencyPECompact;
 
-  // Opciones de etapa según las imágenes proporcionadas
   const stageOptions = [
-    { value: 'lead_inactivo', label: 'Lead Inactivo' },
-    { value: 'cliente_perdido', label: 'Cliente perdido' },
-    { value: 'cierre_perdido', label: 'Cierre Perdido' },
     { value: 'lead', label: 'Lead' },
     { value: 'contacto', label: 'Contacto' },
     { value: 'reunion_agendada', label: 'Reunión Agendada' },
@@ -161,12 +156,15 @@ const Deals: React.FC = () => {
     { value: 'cierre_ganado', label: 'Cierre Ganado' },
     { value: 'firma_contrato', label: 'Firma de Contrato' },
     { value: 'activo', label: 'Activo' },
+    { value: 'cierre_perdido', label: 'Cierre Perdido' },
+    { value: 'lead_inactivo', label: 'Inactivo' },
   ];
 
-  // Función para obtener el label de la etapa
   const getStageLabel = (stage: string) => {
     const option = stageOptions.find(opt => opt.value === stage);
-    return option ? option.label : stage;
+    if (option) return option.label;
+    if (stage === 'cliente_perdido') return 'Cierre Perdido';
+    return stage;
   };
 
   // Calcular paginación desde el servidor
@@ -1855,6 +1853,8 @@ const Deals: React.FC = () => {
               const stageDeals = deals.filter((deal) => deal.stage === stage.id);
               const stageTotal = stageDeals.reduce((sum, deal) => sum + (parseAmount(deal.amount) || 0), 0);
               const dealsCount = stageDeals.length;
+              const stagePercent = getStageProgress(stage.id);
+              const percentLabel = `${stagePercent}%`;
 
               return (
                 <Box
@@ -1886,7 +1886,7 @@ const Deals: React.FC = () => {
                     }}
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', minWidth: 0 }}>
                         <Box
                           sx={{
                             width: 8,
@@ -1905,6 +1905,16 @@ const Deals: React.FC = () => {
                           }}
                         >
                           {stage.label}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {percentLabel}
                         </Typography>
                       </Box>
                       <Chip

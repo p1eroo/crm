@@ -535,11 +535,11 @@ const ContactDetail: React.FC = () => {
       licitacion: "Licitación",
       licitacion_etapa_final: "Licitación Etapa Final",
       cierre_ganado: "Cierre Ganado",
-      cierre_perdido: "Cierre Perdido",
       firma_contrato: "Firma de Contrato",
       activo: "Activo",
-      cliente_perdido: "Cliente perdido",
-      lead_inactivo: "Lead Inactivo",
+      cierre_perdido: "Cierre Perdido",
+      lead_inactivo: "Inactivo",
+      cliente_perdido: "Cierre Perdido",
     };
     return labels[stage] || stage;
   };
@@ -1755,9 +1755,6 @@ const ContactDetail: React.FC = () => {
                         MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } },
                       }}
                     >
-                      <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-                      <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-                      <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
                       <MenuItem value="lead">Lead</MenuItem>
                       <MenuItem value="contacto">Contacto</MenuItem>
                       <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
@@ -1769,6 +1766,8 @@ const ContactDetail: React.FC = () => {
                       <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
                       <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
                       <MenuItem value="activo">Activo</MenuItem>
+                      <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                      <MenuItem value="lead_inactivo">Inactivo</MenuItem>
                     </TextField>
                   </Box>
                 </Box>

@@ -1623,11 +1623,11 @@ const Companies: React.FC = () => {
       'licitacion': 'Licitación',
       'licitacion_etapa_final': 'Licitación Etapa Final',
       'cierre_ganado': 'Cierre Ganado',
-      'cierre_perdido': 'Cierre Perdido',
       'firma_contrato': 'Firma de Contrato',
       'activo': 'Activo',
-      'cliente_perdido': 'Cliente perdido',
-      'lead_inactivo': 'Lead Inactivo',
+      'cierre_perdido': 'Cierre Perdido',
+      'lead_inactivo': 'Inactivo',
+      'cliente_perdido': 'Cierre Perdido',
     };
     return labels[stage] || stage;
   };
@@ -1637,9 +1637,6 @@ const Companies: React.FC = () => {
   };
 
   const stageOptions = [
-    { value: 'lead_inactivo', label: 'Lead Inactivo' },
-    { value: 'cliente_perdido', label: 'Cliente perdido' },
-    { value: 'cierre_perdido', label: 'Cierre Perdido' },
     { value: 'lead', label: 'Lead' },
     { value: 'contacto', label: 'Contacto' },
     { value: 'reunion_agendada', label: 'Reunión Agendada' },
@@ -1651,13 +1648,12 @@ const Companies: React.FC = () => {
     { value: 'cierre_ganado', label: 'Cierre Ganado' },
     { value: 'firma_contrato', label: 'Firma de Contrato' },
     { value: 'activo', label: 'Activo' },
+    { value: 'cierre_perdido', label: 'Cierre Perdido' },
+    { value: 'lead_inactivo', label: 'Inactivo' },
   ];
 
-  // Orden de las etapas según porcentaje
+  // Orden de las etapas según porcentaje (como en funnel)
   const stageOrder = [
-    'lead_inactivo', // -5%
-    'cliente_perdido', // -1%
-    'cierre_perdido', // -1%
     'lead', // 0%
     'contacto', // 10%
     'reunion_agendada', // 30%
@@ -1669,6 +1665,8 @@ const Companies: React.FC = () => {
     'cierre_ganado', // 90%
     'firma_contrato', // 95%
     'activo', // 100%
+    'cierre_perdido', // -1%
+    'lead_inactivo', // -5%
   ];
 
   // Opciones de columnas disponibles

@@ -73,8 +73,8 @@ const STAGE_LABELS: Record<string, string> = {
   cierre_perdido: 'Cierre Perdido',
   firma_contrato: 'Firma de Contrato',
   activo: 'Activo',
-  cliente_perdido: 'Cliente perdido',
-  lead_inactivo: 'Lead Inactivo',
+  cliente_perdido: 'Cierre Perdido',
+  lead_inactivo: 'Inactivo',
   won: 'Ganado',
   'closed won': 'Ganado',
   lost: 'Perdido',
@@ -124,7 +124,7 @@ const ACTIVITY_BAR_COLORS = [
 const COMPANY_STAGE_ORDER = [
   'lead', 'contacto', 'reunion_agendada', 'reunion_efectiva',
   'propuesta_economica', 'negociacion', 'licitacion', 'licitacion_etapa_final',
-  'cierre_ganado', 'firma_contrato', 'activo', 'cierre_perdido', 'cliente_perdido', 'lead_inactivo',
+  'cierre_ganado', 'firma_contrato', 'activo', 'cierre_perdido', 'lead_inactivo',
 ];
 
 const Reports: React.FC = () => {

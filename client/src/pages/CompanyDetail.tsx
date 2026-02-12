@@ -554,11 +554,11 @@ const CompanyDetail: React.FC = () => {
       licitacion: "Licitación",
       licitacion_etapa_final: "Licitación Etapa Final",
       cierre_ganado: "Cierre Ganado",
-      cierre_perdido: "Cierre Perdido",
       firma_contrato: "Firma de Contrato",
       activo: "Activo",
-      cliente_perdido: "Cliente perdido",
-      lead_inactivo: "Lead Inactivo",
+      cierre_perdido: "Cierre Perdido",
+      lead_inactivo: "Inactivo",
+      cliente_perdido: "Cierre Perdido",
     };
     return labels[stage] || stage;
   };
