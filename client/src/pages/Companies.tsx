@@ -843,7 +843,7 @@ const Companies: React.FC = () => {
       'Contacto': company.name || '--',
       'Dominio': company.domain || '--',
       'Razón social': company.companyname || '--',
-      'Teléfono': company.phone || '--',
+      'Teléfono empresa': company.phone || '--',
       'Correo': (company as any).email || '--',
       'Origen de lead': getLeadSourceLabel((company as any).leadSource),
       'RUC': company.ruc || '--',
@@ -870,7 +870,7 @@ const Companies: React.FC = () => {
       { wch: 30 }, // Nombre
       { wch: 25 }, // Dominio
       { wch: 20 }, // Razón social
-      { wch: 15 }, // Teléfono
+      { wch: 18 }, // Teléfono empresa
       { wch: 25 }, // Correo
       { wch: 20 }, // Origen de lead
       { wch: 15 }, // RUC
@@ -905,8 +905,9 @@ const Companies: React.FC = () => {
       'Contacto': '',
       'Cargo': '',
       'Correo contacto': '',
+      'Teléfono contacto': '',
       'Dominio': '',
-      'Teléfono': '',
+      'Teléfono empresa': '',
       'Etapa': '',
       'Origen de lead': '',
       'Facturación': '',
@@ -923,7 +924,7 @@ const Companies: React.FC = () => {
     const ws = XLSX.utils.json_to_sheet([templateHeaders]);
     ws['!cols'] = [
       { wch: 28 }, { wch: 22 }, { wch: 22 }, { wch: 20 }, { wch: 22 },
-      { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 14 },
+      { wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 14 },
       { wch: 8 }, { wch: 14 }, { wch: 22 }, { wch: 22 }, { wch: 28 },
       { wch: 14 }, { wch: 18 }, { wch: 14 },
     ];
@@ -1018,6 +1019,7 @@ const Companies: React.FC = () => {
         const contactJobTitleRaw = (row['Cargo'] || row['Cargo Contacto'] || '').toString().trim();
         const contactJobTitle = (contactJobTitleRaw === '0' || contactJobTitleRaw === '') ? undefined : contactJobTitleRaw;
         const contactEmail = (row['Correo contacto'] || row['Email contacto'] || '').toString().trim() || undefined;
+        const contactPhone = (row['Teléfono contacto'] || '').toString().trim() || undefined;
 
         // Dominio: columna "Dominio" o, si está vacía, extraer del correo del contacto (parte después de @)
         const domainFromColumn = (row['Dominio'] || '').toString().trim() || undefined;
@@ -1034,7 +1036,7 @@ const Companies: React.FC = () => {
           name: (row['Nombre'] || '').toString().trim() || 'Sin nombre',
           domain,
           companyname: (row['Razón social'] || '').toString().trim() || undefined,
-          phone: (row['Teléfono'] || '').toString().trim() || undefined,
+          phone: (row['Teléfono empresa'] || row['Teléfono'] || '').toString().trim() || undefined,
           email: (row['Correo'] || '').toString().trim() || undefined,
           leadSource: normalizeLeadSource((row['Origen de lead'] || '').toString()),
           ruc: (row['RUC'] || '').toString().trim() || undefined,
@@ -1055,6 +1057,7 @@ const Companies: React.FC = () => {
           _contactName: contactName || undefined,
           _contactJobTitle: contactJobTitle || undefined,
           _contactEmail: contactEmail,
+          _contactPhone: contactPhone,
         };
       }).filter(company => company.name !== 'Sin nombre'); // Filtrar filas vacías
 
@@ -1141,6 +1144,7 @@ const Companies: React.FC = () => {
           const contactName = (row as any)._contactName;
           const contactJobTitle = (row as any)._contactJobTitle;
           const contactEmail = (row as any)._contactEmail;
+          const contactPhone = (row as any)._contactPhone;
 
           if (contactName && contactName.trim()) {
             try {
@@ -1151,6 +1155,7 @@ const Companies: React.FC = () => {
                 firstName,
                 lastName,
                 email: contactEmail || undefined,
+                phone: contactPhone || undefined,
                 jobTitle: contactJobTitle || undefined,
                 companyId,
                 lifecycleStage: 'lead',

@@ -159,6 +159,7 @@ const Reports: React.FC = () => {
   const [chartAdvisorFilter, setChartAdvisorFilter] = useState<number | null>(null);
   const [chartOriginFilter, setChartOriginFilter] = useState<string | null>(null);
   const [chartPeriodFilter, setChartPeriodFilter] = useState<string>('');
+  const [chartRecoveredClientFilter, setChartRecoveredClientFilter] = useState<string>('');
   const [etapaFilterAnchorEl, setEtapaFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [chartCompaniesByUser, setChartCompaniesByUser] = useState<Record<number, Array<{ stage: string; count: number }>>>({});
   const [chartDealsAdvisorFilter, setChartDealsAdvisorFilter] = useState<number | null>(null);
@@ -217,6 +218,9 @@ const Reports: React.FC = () => {
       if (chartPeriodFilter && ['day', 'week', 'month', 'year'].includes(chartPeriodFilter)) {
         params.set('period', chartPeriodFilter);
       }
+      if (chartRecoveredClientFilter === 'true' || chartRecoveredClientFilter === 'false') {
+        params.set('recoveredClient', chartRecoveredClientFilter);
+      }
       const url = `/reports/companies-by-user${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await api.get<{ byUser: Record<number, Array<{ stage: string; count: number }>> }>(url);
       setChartCompaniesByUser(response.data?.byUser || {});
@@ -224,7 +228,7 @@ const Reports: React.FC = () => {
       console.error('Error al cargar empresas para gráfico:', err);
       setChartCompaniesByUser({});
     }
-  }, [chartAdvisorFilter, chartOriginFilter, chartPeriodFilter]);
+  }, [chartAdvisorFilter, chartOriginFilter, chartPeriodFilter, chartRecoveredClientFilter]);
 
   useEffect(() => {
     fetchChartCompaniesByUser();
@@ -239,6 +243,7 @@ const Reports: React.FC = () => {
       if (chartAdvisorFilter != null) params.set('userId', String(chartAdvisorFilter));
       if (chartOriginFilter !== null) params.set('leadSource', chartOriginFilter === '' ? '__null__' : chartOriginFilter);
       if (chartPeriodFilter && ['day', 'week', 'month', 'year'].includes(chartPeriodFilter)) params.set('period', chartPeriodFilter);
+      if (chartRecoveredClientFilter === 'true' || chartRecoveredClientFilter === 'false') params.set('recoveredClient', chartRecoveredClientFilter);
       params.set('page', String(page));
       params.set('limit', String(companiesModalLimit));
       const response = await api.get<{ companies: Array<{ id: number; name: string; companyname?: string | null; lifecycleStage: string; ownerId?: number | null; estimatedRevenue?: number | null }>; total: number; page: number; totalPages: number }>(`/reports/companies-list?${params.toString()}`);
@@ -593,8 +598,9 @@ const Reports: React.FC = () => {
       {/* Card: Conteo por etapa de empresas (gráfico Pie Chart.js) - mismo diseño que bloque Asesores */}
       <Card
         sx={{
-          maxWidth: { xs: 660, md: 800 },
-          flex: { md: '0 0 auto' },
+          maxWidth: { xs: 660, md: 820 },
+          flex: { md: '1 1 52%' },
+          minWidth: 0,
           borderRadius: 3,
           boxShadow: theme.palette.mode === 'dark'
             ? '0 4px 16px rgba(0,0,0,0.3)'
@@ -902,6 +908,52 @@ const Reports: React.FC = () => {
                   })}
                 </Box>
               </Popover>
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, flex: { xs: '1 1 auto', md: '0 0 auto' }, minWidth: { md: 0 } }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                Cliente recuperado
+              </Typography>
+              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 }, maxWidth: { sm: 140 }, width: { md: 140 } }}>
+                <Select
+                  value={chartRecoveredClientFilter}
+                  onChange={(e) => setChartRecoveredClientFilter(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    borderRadius: 1.5,
+                    bgcolor: reportsCardBg,
+                    fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                    border: `1.5px solid ${theme.palette.divider}`,
+                    color: theme.palette.text.primary,
+                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
+                    },
+                    '&.Mui-focused': {
+                      borderColor: taxiMonterricoColors.green,
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                    },
+                    '& .MuiSelect-select': { py: 1 },
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        bgcolor: reportsCardBg,
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 1.5,
+                        mt: 1,
+                        '& .MuiMenuItem-root': { color: theme.palette.text.primary },
+                      },
+                    },
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>Todos</em>
+                  </MenuItem>
+                  <MenuItem value="true">Sí</MenuItem>
+                  <MenuItem value="false">No</MenuItem>
+                </Select>
+              </FormControl>
             </Box>
           </Box>
         </Box>

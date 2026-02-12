@@ -17,6 +17,7 @@ router.get('/companies-by-user', async (req: AuthRequest, res) => {
     const userId = req.query.userId != null ? Number(req.query.userId) : null;
     const leadSourceParam = req.query.leadSource as string | undefined;
     const periodParam = req.query.period as string | undefined;
+    const recoveredClientParam = req.query.recoveredClient as string | undefined;
 
     let leadSourceCondition = '';
     const replacements: Record<string, unknown> = {};
@@ -49,6 +50,12 @@ router.get('/companies-by-user', async (req: AuthRequest, res) => {
       periodCondition = ' AND c."createdAt" >= :fromDate';
       replacements.fromDate = fromDate.toISOString();
     }
+    let recoveredClientCondition = '';
+    if (recoveredClientParam === 'true') {
+      recoveredClientCondition = ' AND c."isRecoveredClient" = true';
+    } else if (recoveredClientParam === 'false') {
+      recoveredClientCondition = ' AND (c."isRecoveredClient" = false OR c."isRecoveredClient" IS NULL)';
+    }
 
     const results = await Company.sequelize!.query(`
       SELECT c."ownerId" as "userId", c."lifecycleStage" as stage, COUNT(c.id)::integer as count
@@ -59,6 +66,7 @@ router.get('/companies-by-user', async (req: AuthRequest, res) => {
       ${userIdCondition}
       ${leadSourceCondition}
       ${periodCondition}
+      ${recoveredClientCondition}
       GROUP BY c."ownerId", c."lifecycleStage"
       ORDER BY c."ownerId", c."lifecycleStage"
     `, { replacements: Object.keys(replacements).length ? replacements : undefined, type: QueryTypes.SELECT }) as Array<{ userId: number; stage: string; count: number }>;
@@ -87,6 +95,7 @@ router.get('/companies-list', async (req: AuthRequest, res) => {
     const userId = req.query.userId != null ? Number(req.query.userId) : null;
     const leadSourceParam = req.query.leadSource as string | undefined;
     const periodParam = req.query.period as string | undefined;
+    const recoveredClientParam = req.query.recoveredClient as string | undefined;
     const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
     const offset = (page - 1) * limit;
@@ -121,6 +130,12 @@ router.get('/companies-list', async (req: AuthRequest, res) => {
       periodCondition = ' AND c."createdAt" >= :fromDate';
       replacements.fromDate = fromDate.toISOString();
     }
+    let recoveredClientCondition = '';
+    if (recoveredClientParam === 'true') {
+      recoveredClientCondition = ' AND c."isRecoveredClient" = true';
+    } else if (recoveredClientParam === 'false') {
+      recoveredClientCondition = ' AND (c."isRecoveredClient" = false OR c."isRecoveredClient" IS NULL)';
+    }
 
     const countResult = await Company.sequelize!.query(`
       SELECT COUNT(c.id)::integer as total
@@ -131,6 +146,7 @@ router.get('/companies-list', async (req: AuthRequest, res) => {
       ${userIdCondition}
       ${leadSourceCondition}
       ${periodCondition}
+      ${recoveredClientCondition}
     `, { replacements, type: QueryTypes.SELECT }) as Array<{ total: number }>;
     const total = (countResult && countResult[0] && countResult[0].total != null) ? countResult[0].total : 0;
 
@@ -143,6 +159,7 @@ router.get('/companies-list', async (req: AuthRequest, res) => {
       ${userIdCondition}
       ${leadSourceCondition}
       ${periodCondition}
+      ${recoveredClientCondition}
       ORDER BY c.name ASC
       LIMIT :limit OFFSET :offset
     `, { replacements, type: QueryTypes.SELECT }) as Array<{ id: number; name: string; companyname: string | null; lifecycleStage: string; ownerId: number | null; estimatedRevenue: number | null }>;
