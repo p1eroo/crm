@@ -42,6 +42,7 @@ import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import { FormDrawer } from '../components/FormDrawer';
+import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
 import { getAvatarColors } from '../utils/avatarColors';
 
 library.add(far);
@@ -144,6 +145,7 @@ const Tasks: React.FC = () => {
   });
   const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
   const [taskStats, setTaskStats] = useState({ overdue: 0, dueToday: 0, pending: 0, completed: 0 });
+  const [taskDetailDrawerTaskId, setTaskDetailDrawerTaskId] = useState<number | null>(null);
 
   // Estadísticas totales para los cards (no dependen de la página actual)
   const overdueTasks = taskStats.overdue;
@@ -1449,6 +1451,7 @@ const Tasks: React.FC = () => {
                   <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: { xs: 0.5, md: 1 }, minWidth: { xs: 180, md: 200 }, width: { xs: 'auto', md: '22%' } }}>
                     <Typography 
                       variant="body2" 
+                      onClick={() => setTaskDetailDrawerTaskId(task.id)}
                       sx={{ 
                         fontWeight: 500, 
                         color: theme.palette.text.primary,
@@ -1456,6 +1459,11 @@ const Tasks: React.FC = () => {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          color: taxiMonterricoColors.green,
+                          textDecoration: 'underline',
+                        },
                       }}
                     >
                       {task.title || task.subject}
@@ -2395,6 +2403,12 @@ const Tasks: React.FC = () => {
               </Box>
             </Box>
       </FormDrawer>
+      <TaskDetailDrawer
+        open={taskDetailDrawerTaskId != null}
+        onClose={() => setTaskDetailDrawerTaskId(null)}
+        taskId={taskDetailDrawerTaskId}
+        onTaskUpdated={fetchTasks}
+      />
       {/* Modal de Confirmación de Eliminación */}
       <Dialog
         open={deleteDialogOpen}

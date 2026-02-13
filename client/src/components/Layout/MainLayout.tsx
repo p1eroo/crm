@@ -57,6 +57,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       handleCloseWelcomeModal();
       // Marcar como leída
       markAsRead(notification.id);
+    } else if (notification.type === 'task' || notification.type === 'event') {
+      // Por ahora, tareas/reuniones no llevan a ninguna vista: solo marcar como leída
+      markAsRead(notification.id);
+      handleCloseWelcomeModal();
     } else if (notification.actionUrl) {
       // Para otras notificaciones, navegar normalmente
       navigate(notification.actionUrl);

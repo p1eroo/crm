@@ -1,6 +1,7 @@
 import express from 'express';
 import { Op } from 'sequelize';
 import { Task } from '../models/Task';
+import { TaskComment } from '../models/TaskComment';
 import { User } from '../models/User';
 import { Contact } from '../models/Contact';
 import { Company } from '../models/Company';
@@ -238,6 +239,67 @@ router.get('/', async (req: AuthRequest, res) => {
         console.error('❌ Error en fallback:', fallbackError);
       }
     }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Listar comentarios de una tarea (debe ir antes de GET /:id)
+router.get('/:id/comments', async (req: AuthRequest, res) => {
+  try {
+    const taskId = parseInt(req.params.id, 10);
+    if (Number.isNaN(taskId)) {
+      return res.status(400).json({ error: 'ID de tarea inválido' });
+    }
+    const task = await Task.findByPk(taskId);
+    if (!task) {
+      return res.status(404).json({ error: 'Tarea no encontrada' });
+    }
+    const comments = await TaskComment.findAll({
+      where: { taskId },
+      include: [{ model: User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'avatar'] }],
+      order: [['createdAt', 'ASC']],
+    });
+    res.json(comments.map((c) => ({
+      id: c.id,
+      taskId: c.taskId,
+      userId: c.userId,
+      content: c.content,
+      createdAt: c.createdAt,
+      User: c.User,
+    })));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Crear comentario en una tarea
+router.post('/:id/comments', async (req: AuthRequest, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+    const taskId = parseInt(req.params.id, 10);
+    if (Number.isNaN(taskId)) {
+      return res.status(400).json({ error: 'ID de tarea inválido' });
+    }
+    const task = await Task.findByPk(taskId);
+    if (!task) {
+      return res.status(404).json({ error: 'Tarea no encontrada' });
+    }
+    const content = typeof req.body.content === 'string' ? req.body.content.trim() : '';
+    if (!content) {
+      return res.status(400).json({ error: 'El contenido del comentario es requerido' });
+    }
+    const comment = await TaskComment.create({
+      taskId,
+      userId: req.userId,
+      content,
+    });
+    const withUser = await TaskComment.findByPk(comment.id, {
+      include: [{ model: User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'avatar'] }],
+    });
+    res.status(201).json(withUser);
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });

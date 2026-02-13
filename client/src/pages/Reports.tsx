@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -85,6 +86,20 @@ function getStageLabel(stage: string): string {
   return STAGE_LABELS[stage] || stage;
 }
 
+/** Número de semana ISO (1-53) del año: semana 1 = semana que contiene el 4 de enero (lun-dom). */
+function getISOWeekNumber(d: Date): number {
+  const date = new Date(d);
+  date.setHours(0, 0, 0, 0);
+  const day = date.getDay() || 7; // 1 = Lunes, 7 = Domingo
+  const thursday = new Date(date);
+  thursday.setDate(date.getDate() - day + 4);
+  const jan4 = new Date(thursday.getFullYear(), 0, 4);
+  const week1Monday = new Date(jan4);
+  week1Monday.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
+  const diff = date.getTime() - week1Monday.getTime();
+  return 1 + Math.floor(diff / (7 * 24 * 60 * 60 * 1000));
+}
+
 const PIE_STAGE_COLORS = [
   'rgb(255, 99, 132)',
   'rgb(54, 162, 235)',
@@ -129,6 +144,7 @@ const COMPANY_STAGE_ORDER = [
 
 const Reports: React.FC = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
 
   const getStageColor = (stage: string) => getStageColorUtil(theme, stage);
   const [users, setUsers] = useState<User[]>([]);
@@ -158,7 +174,10 @@ const Reports: React.FC = () => {
   const companiesModalLimit = 20;
   const [chartAdvisorFilter, setChartAdvisorFilter] = useState<number | null>(null);
   const [chartOriginFilter, setChartOriginFilter] = useState<string | null>(null);
-  const [chartPeriodFilter, setChartPeriodFilter] = useState<string>('');
+  const currentYear = new Date().getFullYear();
+  const currentWeekNum = getISOWeekNumber(new Date());
+  const [chartYear] = useState<number>(currentYear);
+  const [chartWeekNumber, setChartWeekNumber] = useState<number>(currentWeekNum);
   const [chartRecoveredClientFilter, setChartRecoveredClientFilter] = useState<string>('');
   const [etapaFilterAnchorEl, setEtapaFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [chartCompaniesByUser, setChartCompaniesByUser] = useState<Record<number, Array<{ stage: string; count: number }>>>({});
@@ -215,9 +234,8 @@ const Reports: React.FC = () => {
       if (chartOriginFilter !== null) {
         params.set('leadSource', chartOriginFilter === '' ? '__null__' : chartOriginFilter);
       }
-      if (chartPeriodFilter && ['day', 'week', 'month', 'year'].includes(chartPeriodFilter)) {
-        params.set('period', chartPeriodFilter);
-      }
+      params.set('year', String(chartYear));
+      params.set('weekNumber', String(chartWeekNumber));
       if (chartRecoveredClientFilter === 'true' || chartRecoveredClientFilter === 'false') {
         params.set('recoveredClient', chartRecoveredClientFilter);
       }
@@ -228,7 +246,7 @@ const Reports: React.FC = () => {
       console.error('Error al cargar empresas para gráfico:', err);
       setChartCompaniesByUser({});
     }
-  }, [chartAdvisorFilter, chartOriginFilter, chartPeriodFilter, chartRecoveredClientFilter]);
+  }, [chartAdvisorFilter, chartOriginFilter, chartYear, chartWeekNumber, chartRecoveredClientFilter]);
 
   useEffect(() => {
     fetchChartCompaniesByUser();
@@ -242,7 +260,8 @@ const Reports: React.FC = () => {
       params.set('stage', stage);
       if (chartAdvisorFilter != null) params.set('userId', String(chartAdvisorFilter));
       if (chartOriginFilter !== null) params.set('leadSource', chartOriginFilter === '' ? '__null__' : chartOriginFilter);
-      if (chartPeriodFilter && ['day', 'week', 'month', 'year'].includes(chartPeriodFilter)) params.set('period', chartPeriodFilter);
+      params.set('year', String(chartYear));
+      params.set('weekNumber', String(chartWeekNumber));
       if (chartRecoveredClientFilter === 'true' || chartRecoveredClientFilter === 'false') params.set('recoveredClient', chartRecoveredClientFilter);
       params.set('page', String(page));
       params.set('limit', String(companiesModalLimit));
@@ -753,9 +772,8 @@ const Reports: React.FC = () => {
               </Typography>
               <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 }, maxWidth: { sm: 140 }, width: { md: 140 } }}>
                 <Select
-                  value={chartPeriodFilter}
-                  onChange={(e) => setChartPeriodFilter(e.target.value)}
-                  displayEmpty
+                  value={chartWeekNumber}
+                  onChange={(e) => setChartWeekNumber(Number(e.target.value))}
                   sx={{
                     borderRadius: 1.5,
                     bgcolor: reportsCardBg,
@@ -785,13 +803,9 @@ const Reports: React.FC = () => {
                     },
                   }}
                 >
-                  <MenuItem value="">
-                    <em>Todos</em>
-                  </MenuItem>
-                  <MenuItem value="day">Por día (24h)</MenuItem>
-                  <MenuItem value="week">Por semana (7 días)</MenuItem>
-                  <MenuItem value="month">Por mes (30 días)</MenuItem>
-                  <MenuItem value="year">Por año</MenuItem>
+                  {Array.from({ length: currentWeekNum }, (_, i) => i + 1).map((w) => (
+                    <MenuItem key={w} value={w}>Semana {w}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Box>
@@ -1724,12 +1738,17 @@ const Reports: React.FC = () => {
                   companiesModalCompanies.map((c) => (
                     <Box
                       key={c.id}
+                      onClick={() => {
+                        setCompaniesPopoverAnchor(null);
+                        navigate(`/companies/${c.id}`);
+                      }}
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1,
                         py: 1,
                         px: 1,
+                        cursor: 'pointer',
                         '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
                       }}
                     >

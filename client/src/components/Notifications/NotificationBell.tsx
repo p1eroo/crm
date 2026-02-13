@@ -46,6 +46,17 @@ export const NotificationBell: React.FC = () => {
   };
 
   const handleNotificationClick = (notification: Notification) => {
+    // Por ahora, las tareas no abren ninguna vista: solo marcar como leída y no abrir el drawer
+    const isTask = notification.type === 'task' || notification.type === 'event';
+    if (isTask) {
+      if (notification.archived) {
+        removeNotification(notification.id);
+      } else {
+        markAsRead(notification.id);
+      }
+      return;
+    }
+
     setSelectedNotification(notification);
     setDetailOpen(true);
     // No cerrar el panel principal, mantenerlo abierto

@@ -10,13 +10,42 @@ import { authenticateToken, AuthRequest } from '../middleware/auth';
 const router = express.Router();
 router.use(authenticateToken);
 
+/** Número de semana ISO (1-53) del año: semana 1 = semana que contiene el 4 de enero (lun-dom). */
+function getISOWeekNumber(d: Date): number {
+  const date = new Date(d);
+  date.setHours(0, 0, 0, 0);
+  const day = date.getDay() || 7; // 1 = Lunes, 7 = Domingo
+  const thursday = new Date(date);
+  thursday.setDate(date.getDate() - day + 4);
+  const jan4 = new Date(thursday.getFullYear(), 0, 4);
+  const week1Monday = new Date(jan4);
+  week1Monday.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
+  const diff = date.getTime() - week1Monday.getTime();
+  return 1 + Math.floor(diff / (7 * 24 * 60 * 60 * 1000));
+}
+
+/** Rango lunes–domingo para la semana N del año (semana 1 = primera semana del año, lun-dom). */
+function getWeekRangeByYearAndWeek(year: number, weekNumber: number): { fromDate: Date; toDate: Date } {
+  const jan4 = new Date(year, 0, 4);
+  const dayOfJan4 = jan4.getDay() || 7; // 1 = Lunes, 7 = Domingo
+  const week1Monday = new Date(year, 0, 4 - dayOfJan4 + 1);
+  week1Monday.setHours(0, 0, 0, 0);
+  const targetMonday = new Date(week1Monday);
+  targetMonday.setDate(week1Monday.getDate() + (weekNumber - 1) * 7);
+  const targetSunday = new Date(targetMonday);
+  targetSunday.setDate(targetMonday.getDate() + 6);
+  targetSunday.setHours(23, 59, 59, 999);
+  return { fromDate: targetMonday, toDate: targetSunday };
+}
+
 // Empresas por etapa, agrupadas por asesor (ownerId). Solo usuarios con rol "user".
-// Query params opcionales: userId, leadSource, period (day|week|month|year = últimas 24h, 7d, 30d, 365d).
+// Query params opcionales: userId, leadSource, year, weekNumber (semana 1, 2, 3... del año), recoveredClient.
 router.get('/companies-by-user', async (req: AuthRequest, res) => {
   try {
     const userId = req.query.userId != null ? Number(req.query.userId) : null;
     const leadSourceParam = req.query.leadSource as string | undefined;
-    const periodParam = req.query.period as string | undefined;
+    const yearParam = req.query.year;
+    const weekNumberParam = req.query.weekNumber;
     const recoveredClientParam = req.query.recoveredClient as string | undefined;
 
     let leadSourceCondition = '';
@@ -35,20 +64,13 @@ router.get('/companies-by-user', async (req: AuthRequest, res) => {
       replacements.userId = userId;
     }
     let periodCondition = '';
-    if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
-      const now = new Date();
-      let fromDate: Date;
-      if (periodParam === 'day') {
-        fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      } else if (periodParam === 'week') {
-        fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      } else if (periodParam === 'month') {
-        fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      } else {
-        fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-      }
-      periodCondition = ' AND c."createdAt" >= :fromDate';
+    const year = yearParam != null && yearParam !== '' ? parseInt(String(yearParam), 10) : new Date().getFullYear();
+    const weekNumber = weekNumberParam != null && weekNumberParam !== '' ? Math.max(1, Math.min(53, parseInt(String(weekNumberParam), 10) || 1)) : -1;
+    if (weekNumber >= 1) {
+      const { fromDate, toDate } = getWeekRangeByYearAndWeek(year, weekNumber);
+      periodCondition = ' AND c."createdAt" >= :fromDate AND c."createdAt" <= :toDate';
       replacements.fromDate = fromDate.toISOString();
+      replacements.toDate = toDate.toISOString();
     }
     let recoveredClientCondition = '';
     if (recoveredClientParam === 'true') {
@@ -85,7 +107,7 @@ router.get('/companies-by-user', async (req: AuthRequest, res) => {
   }
 });
 
-// Listar empresas por etapa (mismos filtros que companies-by-user). Query: stage, userId, leadSource, period, page, limit.
+// Listar empresas por etapa (mismos filtros que companies-by-user). Query: stage, userId, leadSource, year, weekNumber, page, limit.
 router.get('/companies-list', async (req: AuthRequest, res) => {
   try {
     const stageParam = req.query.stage as string;
@@ -94,7 +116,8 @@ router.get('/companies-list', async (req: AuthRequest, res) => {
     }
     const userId = req.query.userId != null ? Number(req.query.userId) : null;
     const leadSourceParam = req.query.leadSource as string | undefined;
-    const periodParam = req.query.period as string | undefined;
+    const yearParam = req.query.year;
+    const weekNumberParam = req.query.weekNumber;
     const recoveredClientParam = req.query.recoveredClient as string | undefined;
     const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
@@ -120,15 +143,13 @@ router.get('/companies-list', async (req: AuthRequest, res) => {
       replacements.userId = userId;
     }
     let periodCondition = '';
-    if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
-      const now = new Date();
-      let fromDate: Date;
-      if (periodParam === 'day') fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      else if (periodParam === 'week') fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      else if (periodParam === 'month') fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      else fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-      periodCondition = ' AND c."createdAt" >= :fromDate';
+    const yearList = yearParam != null && yearParam !== '' ? parseInt(String(yearParam), 10) : new Date().getFullYear();
+    const weekNumberList = weekNumberParam != null && weekNumberParam !== '' ? Math.max(1, Math.min(53, parseInt(String(weekNumberParam), 10) || 1)) : -1;
+    if (weekNumberList >= 1) {
+      const { fromDate, toDate } = getWeekRangeByYearAndWeek(yearList, weekNumberList);
+      periodCondition = ' AND c."createdAt" >= :fromDate AND c."createdAt" <= :toDate';
       replacements.fromDate = fromDate.toISOString();
+      replacements.toDate = toDate.toISOString();
     }
     let recoveredClientCondition = '';
     if (recoveredClientParam === 'true') {

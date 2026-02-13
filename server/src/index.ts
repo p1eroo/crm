@@ -556,12 +556,15 @@ sequelize.authenticate()
     // Sincronizar tablas que tienen ENUMs
     // NO usar alter: true porque puede causar conflictos cuando la columna ya existe con un enum diferente
     // Las columnas se crean manualmente en ensureAllEnumsMigration() si no existen
-    const { Company, Contact, Task, Ticket, Campaign, Automation, Activity, Payment, Subscription } = await import('./models');
+    const { Company, Contact, Task, TaskComment, Ticket, Campaign, Automation, Activity, Payment, Subscription } = await import('./models');
     
     // Solo hacer sync sin alter para evitar conflictos de tipos ENUM
     await Company.sync({ alter: false });
     await Contact.sync({ alter: false });
     await Task.sync({ alter: false });
+    if (TaskComment && typeof (TaskComment as any).sync === 'function') {
+      await (TaskComment as any).sync({ alter: true });
+    }
     await Ticket.sync({ alter: false });
     await Campaign.sync({ alter: false });
     await Automation.sync({ alter: false });

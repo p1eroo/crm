@@ -5,6 +5,7 @@ export { Contact } from './Contact';
 export { Company } from './Company';
 export { Deal } from './Deal';
 export { Task } from './Task';
+export { TaskComment } from './TaskComment';
 export { Activity } from './Activity';
 export { Campaign } from './Campaign';
 export { Automation } from './Automation';
@@ -37,6 +38,7 @@ import './ContactContact';
 // Luego los demás modelos
 import './Deal';
 import './Task';
+import './TaskComment';
 import './Activity';
 import './Campaign';
 import './Automation';
