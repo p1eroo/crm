@@ -163,6 +163,8 @@ const Reports: React.FC = () => {
   const [moreAnchor, setMoreAnchor] = useState<{ el: HTMLElement; userId: number } | null>(null);
   const [moreDealsAnchor, setMoreDealsAnchor] = useState<{ el: HTMLElement; userId: number } | null>(null);
   const [hiddenStageIndices, setHiddenStageIndices] = useState<Set<number>>(new Set());
+  const [hiddenDealsStageIndices, setHiddenDealsStageIndices] = useState<Set<number>>(new Set());
+  const [dealsEtapaFilterAnchorEl, setDealsEtapaFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [companiesPopoverAnchor, setCompaniesPopoverAnchor] = useState<HTMLElement | null>(null);
   const [companiesAnchorPosition, setCompaniesAnchorPosition] = useState<{ left: number; top: number } | null>(null);
   const [companiesModalStage, setCompaniesModalStage] = useState<string | null>(null);
@@ -515,19 +517,22 @@ const Reports: React.FC = () => {
     });
     const labels: string[] = [];
     const series: number[] = [];
+    const stageKeys: string[] = [];
     COMPANY_STAGE_ORDER.forEach((stage) => {
       const total = byStage[stage] ?? 0;
       labels.push(getStageLabel(stage));
       series.push(total);
+      stageKeys.push(stage);
     });
     Object.keys(byStage).forEach((stage) => {
       if (!COMPANY_STAGE_ORDER.includes(stage)) {
         labels.push(getStageLabel(stage));
         series.push(byStage[stage] ?? 0);
+        stageKeys.push(stage);
       }
     });
     const total = series.reduce((a, b) => a + b, 0);
-    return { labels, series, total };
+    return { labels, series, total, stageKeys };
   }, [dealsByUser, chartDealsAdvisorFilter]);
 
   const activitiesChartData = useMemo(() => {
@@ -1572,36 +1577,129 @@ const Reports: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
+            <Box>
+              <Button
+                size="small"
+                onClick={(e) => setDealsEtapaFilterAnchorEl(e.currentTarget)}
+                endIcon={<ChevronRight sx={{ transform: 'rotate(90deg)', fontSize: 20 }} />}
+                sx={{
+                  borderRadius: 1.5,
+                  border: `1.5px solid ${theme.palette.divider}`,
+                  color: theme.palette.text.primary,
+                  textTransform: 'none',
+                  fontSize: '0.8125rem',
+                  bgcolor: reportsCardBg,
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
+                    bgcolor: reportsCardBg,
+                  },
+                }}
+              >
+                {hiddenDealsStageIndices.size === 0
+                  ? 'Todas visibles'
+                  : `${hiddenDealsStageIndices.size} oculta${hiddenDealsStageIndices.size === 1 ? '' : 's'}`}
+              </Button>
+              <Popover
+                open={Boolean(dealsEtapaFilterAnchorEl)}
+                anchorEl={dealsEtapaFilterAnchorEl}
+                onClose={() => setDealsEtapaFilterAnchorEl(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                PaperProps={{
+                  sx: {
+                    bgcolor: reportsCardBg,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1.5,
+                    mt: 1,
+                    p: 1.5,
+                    minWidth: 280,
+                    maxWidth: 360,
+                  },
+                }}
+              >
+                <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 1 }}>
+                  Clic en una etapa para ocultarla o mostrarla en el gráfico
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 0.75 }}>
+                  {dealsChartData.labels.map((label, i) => {
+                    const color = PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length];
+                    const isHidden = hiddenDealsStageIndices.has(i);
+                    return (
+                      <Box
+                        key={`deals-etapa-${i}-${label}`}
+                        onClick={() => {
+                          setHiddenDealsStageIndices((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(i)) next.delete(i);
+                            else next.add(i);
+                            return next;
+                          });
+                        }}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          cursor: 'pointer',
+                          borderRadius: 1,
+                          px: 1,
+                          py: 0.75,
+                          opacity: isHidden ? 0.5 : 1,
+                          '&:hover': {
+                            bgcolor: theme.palette.action.hover,
+                            opacity: isHidden ? 0.7 : 1,
+                          },
+                        }}
+                      >
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+                        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, textDecoration: isHidden ? 'line-through' : 'none' }}>
+                          {label}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Popover>
+            </Box>
           </Box>
         </Box>
-        <Box sx={{ px: { xs: 2, md: 3 }, pt: 2, pb: { xs: 1.5, md: 2 }, bgcolor: reportsCardBg }}>
+        <Box sx={{ px: { xs: 2, md: 3 }, pt: 2, pb: { xs: 1.5, md: 3 }, bgcolor: reportsCardBg }}>
           {dealsChartData.series.some((v) => v > 0) ? (
+            (() => {
+              const visibleDealsIndices = dealsChartData.labels
+                .map((_, i) => i)
+                .filter((i) => !hiddenDealsStageIndices.has(i));
+              const chartLabels = visibleDealsIndices.map((i) => dealsChartData.labels[i]);
+              const chartSeries = visibleDealsIndices.map((i) => dealsChartData.series[i]);
+              const visibleTotal = chartSeries.reduce((a, b) => a + b, 0);
+              const chartColors = visibleDealsIndices.map((i) => PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length]);
+              return (
             <Box
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: 2,
-                minHeight: 260,
+                minHeight: 340,
               }}
             >
               <Box
                 sx={{
                   flex: '0 0 auto',
-                  width: { xs: '100%', sm: 260 },
-                  maxWidth: 300,
+                  width: { xs: '100%', sm: 340 },
+                  maxWidth: 380,
                   '& .apexcharts-donut-center-label': {
-                    '& text': { fill: '#ffffff !important' },
+                    '& text': { fill: `${theme.palette.text.primary} !important` },
                   },
                 }}
               >
                 <ReactApexChart
                   options={{
-                    chart: { type: 'donut', width: 260, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
-                    colors: PIE_STAGE_COLORS,
+                    chart: { type: 'donut', width: 340, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
+                    colors: chartColors,
                     stroke: { width: 0 },
                     dataLabels: { enabled: false },
-                    labels: dealsChartData.labels,
+                    labels: chartLabels,
                     theme: { mode: theme.palette.mode as 'light' | 'dark' },
                     plotOptions: {
                       pie: {
@@ -1612,66 +1710,25 @@ const Reports: React.FC = () => {
                               show: true,
                               showAlways: true,
                               label: 'Total',
-                              formatter: () => String(dealsChartData.total),
-                              color: '#ffffff',
+                              formatter: () => String(visibleTotal),
+                              color: theme.palette.text.primary,
                             },
                           },
                         },
                       },
                     },
-                    responsive: [{ breakpoint: 480, options: { chart: { width: 220, background: 'transparent' } } }],
+                    responsive: [{ breakpoint: 480, options: { chart: { width: 300, background: 'transparent' } } }],
                     legend: { show: false },
                     tooltip: { theme: theme.palette.mode },
                   } as ApexOptions}
-                  series={dealsChartData.series}
+                  series={chartSeries}
                   type="donut"
-                  height={260}
+                  height={340}
                 />
               </Box>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                  gap: 1,
-                  justifyContent: 'center',
-                  width: '100%',
-                  maxWidth: 560,
-                }}
-              >
-                {dealsChartData.labels.map((label, i) => {
-                  const color = PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length];
-                  return (
-                    <Box
-                      key={`${label}-${i}`}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1.5,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: '50%',
-                          bgcolor: color,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: theme.palette.text.primary,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {label}
-                      </Typography>
-                    </Box>
-                  );
-                })}
-              </Box>
             </Box>
+              );
+            })()
           ) : (
             <Box sx={{ py: 6, textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">

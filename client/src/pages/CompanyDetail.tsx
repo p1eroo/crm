@@ -1228,7 +1228,7 @@ const detailFields = [
     show: true,
   },
   {
-    label: 'Tipo de empresa',
+    label: 'Tipo',
     value: (company as any)?.companyType ? getCompanyTypeLabel((company as any).companyType) : '--',
     show: true,
   },

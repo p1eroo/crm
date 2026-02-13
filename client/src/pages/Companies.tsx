@@ -159,7 +159,7 @@ const Companies: React.FC = () => {
   // Estados para filtros por columna
   const [columnFilters, setColumnFilters] = useState<{
     nombre: string;
-    rubro: string;
+    tipo: string;
     propietario: string;
     telefono: string;
     correo: string;
@@ -168,7 +168,7 @@ const Companies: React.FC = () => {
     cr: string;
   }>({
     nombre: '',
-    rubro: '',
+    tipo: '',
     propietario: '',
     telefono: '',
     correo: '',
@@ -1705,9 +1705,9 @@ const Companies: React.FC = () => {
     if (columnFilters.correo && (company as any).email) {
       if (!(company as any).email.toLowerCase().includes(columnFilters.correo.toLowerCase())) return false;
     }
-    if (columnFilters.rubro) {
-      const rubro = (company as any).rubro || '';
-      if (!rubro.toLowerCase().includes(columnFilters.rubro.toLowerCase())) return false;
+    if (columnFilters.tipo) {
+      const tipo = ((company as any).companyType || '').toString().toLowerCase();
+      if (!tipo.includes(columnFilters.tipo.toLowerCase())) return false;
     }
     
     return true;
@@ -1759,11 +1759,11 @@ const Companies: React.FC = () => {
               sx={{ height: 24, fontSize: '0.7rem' }}
             />
           )}
-          {columnFilters.rubro && (
+          {columnFilters.tipo && (
             <Chip
               size="small"
-              label={`Rubro: "${columnFilters.rubro}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, rubro: '' }))}
+              label={`Tipo: "${columnFilters.tipo}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, tipo: '' }))}
               sx={{ height: 24, fontSize: '0.7rem' }}
             />
           )}
@@ -1817,7 +1817,7 @@ const Companies: React.FC = () => {
           )}
           <Button
             size="small"
-            onClick={() => setColumnFilters({ nombre: '', rubro: '', propietario: '', telefono: '', correo: '', origenLead: '', etapa: '', cr: '' })}
+            onClick={() => setColumnFilters({ nombre: '', tipo: '', propietario: '', telefono: '', correo: '', origenLead: '', etapa: '', cr: '' })}
             sx={{ 
               fontSize: '0.7rem', 
               textTransform: 'none',
@@ -2092,9 +2092,9 @@ const Companies: React.FC = () => {
             </Box>
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Rubro</Typography>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Tipo</Typography>
                 {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, rubro: '' }))} sx={{ p: 0.25, opacity: columnFilters.rubro ? 1 : 0.3 }}>
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, tipo: '' }))} sx={{ p: 0.25, opacity: columnFilters.tipo ? 1 : 0.3 }}>
                     <FilterList sx={{ fontSize: 14 }} />
                   </IconButton>
                 )}
@@ -2103,8 +2103,8 @@ const Companies: React.FC = () => {
                 <TextField
                   size="small"
                   placeholder="Filtrar..."
-                  value={columnFilters.rubro}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, rubro: e.target.value }))}
+                  value={columnFilters.tipo}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, tipo: e.target.value }))}
                   sx={{
                     width: '100%',
                     '& .MuiOutlinedInput-root': {
@@ -2400,10 +2400,10 @@ const Companies: React.FC = () => {
                       </Box>
                     </Box>
                 </Box>
-                {/* Columna Rubro */}
+                {/* Columna Tipo */}
                 <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
                   <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {(company as any).rubro || '--'}
+                    {((company as any).companyType === 'a' ? 'A' : (company as any).companyType === 'b' ? 'B' : (company as any).companyType === 'c' ? 'C' : (company as any).companyType) || '--'}
                   </Typography>
                 </Box>
                 {/* Nueva columna: Fecha de última actividad */}

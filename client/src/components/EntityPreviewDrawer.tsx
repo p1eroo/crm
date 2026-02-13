@@ -652,11 +652,11 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
               </Typography>
             </Box>
 
-            {/* Tipo de empresa */}
+            {/* Tipo */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
               <Category sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
               <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                Tipo de empresa:
+                Tipo:
               </Typography>
               <Typography
                 variant="body2"
