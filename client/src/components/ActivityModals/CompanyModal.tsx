@@ -98,6 +98,8 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
     state: "",
     country: "",
     ruc: "",
+    rubro: "",
+    companyType: "",
     lifecycleStage: "lead",
     leadSource: "",
     estimatedRevenue: "",
@@ -127,6 +129,8 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
         state: "",
         country: "",
         ruc: "",
+        rubro: "",
+        companyType: "",
         lifecycleStage: "lead",
         leadSource: "",
         estimatedRevenue: "",
@@ -422,6 +426,8 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
       state: "",
       country: "",
       ruc: "",
+      rubro: "",
+      companyType: "",
       lifecycleStage: "lead",
       leadSource: "",
       estimatedRevenue: "",
@@ -763,6 +769,47 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
                 },
               }}
             />
+            {/* Rubro de la empresa */}
+            <TextField
+              label="Rubro de la empresa"
+              value={companyFormData.rubro || ""}
+              onChange={(e) =>
+                setCompanyFormData({
+                  ...companyFormData,
+                  rubro: e.target.value,
+                })
+              }
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
+            {/* Tipo de empresa */}
+            <TextField
+              select
+              label="Tipo de empresa"
+              value={companyFormData.companyType || ""}
+              onChange={(e) =>
+                setCompanyFormData({
+                  ...companyFormData,
+                  companyType: e.target.value,
+                })
+              }
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 1.5,
+                },
+              }}
+              SelectProps={{ displayEmpty: true, MenuProps: { sx: { zIndex: 1700 } } }}
+            >
+              <MenuItem value="">-- Seleccionar --</MenuItem>
+              <MenuItem value="a">A</MenuItem>
+              <MenuItem value="b">B</MenuItem>
+              <MenuItem value="c">C</MenuItem>
+            </TextField>
             {/* Nombre comercial */}
             <TextField
               label={companyLabels.tradeName}

@@ -31,6 +31,8 @@ const cleanCompany = (company: any, includeSensitive: boolean = false): any => {
   if (companyData.phone != null) cleaned.phone = companyData.phone;
   if (companyData.email != null) cleaned.email = companyData.email; // Incluir email siempre
   if (companyData.leadSource != null) cleaned.leadSource = companyData.leadSource;
+  if (companyData.rubro != null) cleaned.rubro = companyData.rubro;
+  if (companyData.companyType != null) cleaned.companyType = companyData.companyType;
   if (companyData.city != null) cleaned.city = companyData.city;
   if (companyData.state != null) cleaned.state = companyData.state;
   if (companyData.country != null) cleaned.country = companyData.country;
@@ -44,8 +46,8 @@ const cleanCompany = (company: any, includeSensitive: boolean = false): any => {
 
   // Solo incluir datos sensibles si se solicita explícitamente (para detalle completo)
   if (includeSensitive) {
-    if (companyData.ruc != null) cleaned.ruc = companyData.ruc;
-    if (companyData.address != null) cleaned.address = companyData.address;
+  if (companyData.ruc != null) cleaned.ruc = companyData.ruc;
+  if (companyData.address != null) cleaned.address = companyData.address;
     if (companyData.idClienteEmpresa != null) cleaned.idClienteEmpresa = companyData.idClienteEmpresa;
   }
 
@@ -959,8 +961,8 @@ router.put('/:id', async (req: AuthRequest, res) => {
         });
         const stage = updatedCompany.lifecycleStage || 'lead';
         const amount = updatedCompany.estimatedRevenue != null ? Number(updatedCompany.estimatedRevenue) : 0;
-        const dealPayload: { name: string; stage: string; amount: number; ownerId: number; closeDate?: Date | null } = { name: dealName, stage, amount, ownerId: dealOwnerId };
-        if (dealCloseDate !== undefined) dealPayload.closeDate = dealCloseDate;
+        const dealPayload: { name: string; stage: string; amount: number; ownerId: number; closeDate?: Date } = { name: dealName, stage, amount, ownerId: dealOwnerId };
+        if (dealCloseDate != null) dealPayload.closeDate = dealCloseDate;
         if (existingDeals.length > 0) {
           await existingDeals[0].update(dealPayload);
         } else {

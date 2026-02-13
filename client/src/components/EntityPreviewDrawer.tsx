@@ -27,6 +27,7 @@ import {
   ChevronLeft,
   ChevronRight,
   AttachMoney,
+  Category,
 } from '@mui/icons-material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserTie, faHandshake, faSackDollar } from '@fortawesome/free-solid-svg-icons';
@@ -631,6 +632,44 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                 </Typography>
               </Box>
             )}
+
+            {/* Rubro */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Assignment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                Rubro:
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '0.875rem',
+                  fontWeight: 400,
+                  color: entity.rubro ? theme.palette.text.primary : theme.palette.text.disabled,
+                  fontStyle: !entity.rubro ? 'italic' : 'normal',
+                }}
+              >
+                {entity.rubro || '--'}
+              </Typography>
+            </Box>
+
+            {/* Tipo de empresa */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Category sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                Tipo de empresa:
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '0.875rem',
+                  fontWeight: 400,
+                  color: entity.companyType ? theme.palette.text.primary : theme.palette.text.disabled,
+                  fontStyle: !entity.companyType ? 'italic' : 'normal',
+                }}
+              >
+                {entity.companyType ? (entity.companyType === 'a' ? 'A' : entity.companyType === 'b' ? 'B' : entity.companyType === 'c' ? 'C' : entity.companyType) : '--'}
+              </Typography>
+            </Box>
 
             {/* Lifecycle Stage */}
             {entity.lifecycleStage && (

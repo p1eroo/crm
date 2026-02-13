@@ -488,6 +488,15 @@ router.put('/:id', async (req, res) => {
             return res.status(403).json({ error: 'No tienes permisos para modificar este deal' });
         }
         await deal.update(req.body);
+        // Si se actualizó la etapa del negocio, sincronizar con la empresa vinculada (el negocio manda)
+        if (deal.companyId != null && req.body.stage != null) {
+            try {
+                await Company_1.Company.update({ lifecycleStage: req.body.stage }, { where: { id: deal.companyId } });
+            }
+            catch (companyErr) {
+                console.error('Error syncing company lifecycleStage from deal:', companyErr);
+            }
+        }
         // Si se están actualizando los contactos relacionados
         if (req.body.contactIds && Array.isArray(req.body.contactIds)) {
             const dealInstance = await Deal_1.Deal.findByPk(deal.id);

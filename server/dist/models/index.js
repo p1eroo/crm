@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SystemLog = exports.UserGoogleToken = exports.MonthlyBudget = exports.ContactContact = exports.CompanyCompany = exports.DealDeal = exports.DealCompany = exports.DealContact = exports.ContactCompany = exports.Payment = exports.Subscription = exports.Ticket = exports.Automation = exports.Campaign = exports.Activity = exports.Task = exports.Deal = exports.Company = exports.Contact = exports.Role = exports.User = void 0;
+exports.SystemLog = exports.UserGoogleToken = exports.MonthlyBudget = exports.ContactContact = exports.CompanyCompany = exports.DealDeal = exports.DealCompany = exports.DealContact = exports.ContactCompany = exports.Payment = exports.Subscription = exports.Ticket = exports.Automation = exports.Campaign = exports.Activity = exports.TaskComment = exports.Task = exports.Deal = exports.Company = exports.Contact = exports.Role = exports.User = void 0;
 // Export all models
 var User_1 = require("./User");
 Object.defineProperty(exports, "User", { enumerable: true, get: function () { return User_1.User; } });
@@ -14,6 +14,8 @@ var Deal_1 = require("./Deal");
 Object.defineProperty(exports, "Deal", { enumerable: true, get: function () { return Deal_1.Deal; } });
 var Task_1 = require("./Task");
 Object.defineProperty(exports, "Task", { enumerable: true, get: function () { return Task_1.Task; } });
+var TaskComment_1 = require("./TaskComment");
+Object.defineProperty(exports, "TaskComment", { enumerable: true, get: function () { return TaskComment_1.TaskComment; } });
 var Activity_1 = require("./Activity");
 Object.defineProperty(exports, "Activity", { enumerable: true, get: function () { return Activity_1.Activity; } });
 var Campaign_1 = require("./Campaign");
@@ -60,6 +62,7 @@ require("./ContactContact");
 // Luego los demás modelos
 require("./Deal");
 require("./Task");
+require("./TaskComment");
 require("./Activity");
 require("./Campaign");
 require("./Automation");

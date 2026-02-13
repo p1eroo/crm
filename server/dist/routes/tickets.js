@@ -37,6 +37,8 @@ const cleanTicket = (ticket) => {
         cleaned.companyId = ticketData.companyId;
     if (ticketData.dealId != null)
         cleaned.dealId = ticketData.dealId;
+    if (ticketData.images != null && Array.isArray(ticketData.images))
+        cleaned.images = ticketData.images;
     // Solo incluir relaciones si existen
     if (ticketData.AssignedTo)
         cleaned.AssignedTo = ticketData.AssignedTo;

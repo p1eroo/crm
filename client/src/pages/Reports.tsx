@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   Box,
   Typography,
@@ -145,6 +146,8 @@ const COMPANY_STAGE_ORDER = [
 const Reports: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const isRoleUser = currentUser?.role === 'user';
 
   const getStageColor = (stage: string) => getStageColorUtil(theme, stage);
   const [users, setUsers] = useState<User[]>([]);
@@ -212,11 +215,27 @@ const Reports: React.FC = () => {
   const [weeklyMovementRangeLoading, setWeeklyMovementRangeLoading] = useState(false);
 
   useEffect(() => {
-    fetchUsers();
     fetchStats();
     fetchCompaniesByUser();
     fetchDealsByUser();
-  }, []);
+    if (currentUser == null) return;
+    if (currentUser.role === 'user') {
+      setUsers([{ id: currentUser.id, usuario: (currentUser as any).usuario ?? '', email: currentUser.email ?? '', firstName: currentUser.firstName ?? '', lastName: currentUser.lastName ?? '', role: 'user' } as User]);
+      setLoading(false);
+    } else {
+      fetchUsers();
+    }
+  }, [currentUser]);
+
+  // Para rol "user", fijar todos los filtros de asesor al usuario actual (solo ven su reporte)
+  useEffect(() => {
+    if (currentUser?.id != null && isRoleUser) {
+      setChartAdvisorFilter(currentUser.id);
+      setChartDealsAdvisorFilter(currentUser.id);
+      setActivitiesAdvisorFilter(currentUser.id);
+      setWeeklyMovementAdvisorFilter(currentUser.id);
+    }
+  }, [currentUser?.id, isRoleUser]);
 
   const fetchCompaniesByUser = async () => {
     try {
@@ -484,8 +503,8 @@ const Reports: React.FC = () => {
 
   // Conteo por etapa de negocios (donut con total en el centro) - card a la derecha de Movimiento por semana
   const dealsChartData = useMemo(() => {
-    const lists = chartDealsAdvisorFilter != null && dealsByUser[chartDealsAdvisorFilter]
-      ? [dealsByUser[chartDealsAdvisorFilter]!]
+    const lists = chartDealsAdvisorFilter != null
+      ? [dealsByUser[chartDealsAdvisorFilter] || []]
       : Object.values(dealsByUser);
     const byStage: Record<string, number> = {};
     lists.forEach((list) => {
@@ -674,8 +693,9 @@ const Reports: React.FC = () => {
               <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 }, maxWidth: { sm: 140 }, width: { md: 140 } }}>
                 <Select
                   value={chartAdvisorFilter === null ? '' : String(chartAdvisorFilter)}
-                  onChange={(e) => setChartAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
+                  onChange={(e) => !isRoleUser && setChartAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
                   displayEmpty
+                  disabled={isRoleUser}
                   sx={{
                     borderRadius: 1.5,
                     bgcolor: reportsCardBg,
@@ -692,8 +712,10 @@ const Reports: React.FC = () => {
                       boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                     },
                     '& .MuiSelect-select': { py: 1 },
+                    ...(isRoleUser && { opacity: 1, '& .MuiSelect-select': { cursor: 'default' } }),
                   }}
                   MenuProps={{
+                    ...(isRoleUser && { open: false }),
                     PaperProps: {
                       sx: {
                         bgcolor: reportsCardBg,
@@ -705,10 +727,8 @@ const Reports: React.FC = () => {
                     },
                   }}
                 >
-                  <MenuItem value="">
-                    <em>Todos</em>
-                  </MenuItem>
-                  {users.map((u) => (
+                  {!isRoleUser && <MenuItem value=""><em>Todos</em></MenuItem>}
+                  {(isRoleUser && currentUser ? [currentUser] : users).map((u) => (
                     <MenuItem key={u.id} value={String(u.id)}>
                       {u.firstName} {u.lastName}
                     </MenuItem>
@@ -1198,8 +1218,9 @@ const Reports: React.FC = () => {
               <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 160 }, maxWidth: { sm: 160 } }}>
                 <Select
                   value={activitiesAdvisorFilter === null ? '' : String(activitiesAdvisorFilter)}
-                  onChange={(e) => setActivitiesAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
+                  onChange={(e) => !isRoleUser && setActivitiesAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
                   displayEmpty
+                  disabled={isRoleUser}
                   sx={{
                     borderRadius: 1.5,
                     bgcolor: reportsCardBg,
@@ -1216,8 +1237,10 @@ const Reports: React.FC = () => {
                       boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                     },
                     '& .MuiSelect-select': { py: 1 },
+                    ...(isRoleUser && { opacity: 1, '& .MuiSelect-select': { cursor: 'default' } }),
                   }}
                   MenuProps={{
+                    ...(isRoleUser && { open: false }),
                     PaperProps: {
                       sx: {
                         bgcolor: reportsCardBg,
@@ -1229,8 +1252,8 @@ const Reports: React.FC = () => {
                     },
                   }}
                 >
-                  <MenuItem value=""><em>Todos</em></MenuItem>
-                  {users.map((u) => (
+                  {!isRoleUser && <MenuItem value=""><em>Todos</em></MenuItem>}
+                  {(isRoleUser && currentUser ? [currentUser] : users).map((u) => (
                     <MenuItem key={u.id} value={String(u.id)}>
                       {u.firstName} {u.lastName}
                     </MenuItem>
@@ -1425,18 +1448,23 @@ const Reports: React.FC = () => {
             <FormControl size="small" sx={{ minWidth: 160 }}>
               <Select
                 value={weeklyMovementAdvisorFilter === null ? '' : String(weeklyMovementAdvisorFilter)}
-                onChange={(e) => setWeeklyMovementAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
+                onChange={(e) => !isRoleUser && setWeeklyMovementAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
                 displayEmpty
+                disabled={isRoleUser}
                 sx={{
                   borderRadius: 1.5,
                   bgcolor: reportsCardBg,
                   fontSize: '0.8125rem',
                   border: `1px solid ${theme.palette.divider}`,
                   '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                  ...(isRoleUser && { opacity: 1, '& .MuiSelect-select': { cursor: 'default' } }),
+                }}
+                MenuProps={{
+                  ...(isRoleUser && { open: false }),
                 }}
               >
-                <MenuItem value="">Todos los asesores</MenuItem>
-                {users.map((u) => (
+                {!isRoleUser && <MenuItem value="">Todos los asesores</MenuItem>}
+                {(isRoleUser && currentUser ? [currentUser] : users).map((u) => (
                   <MenuItem key={u.id} value={String(u.id)}>
                     {u.firstName} {u.lastName}
                   </MenuItem>
@@ -1523,18 +1551,23 @@ const Reports: React.FC = () => {
             <FormControl size="small" sx={{ minWidth: 160 }}>
               <Select
                 value={chartDealsAdvisorFilter === null ? '' : String(chartDealsAdvisorFilter)}
-                onChange={(e) => setChartDealsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
+                onChange={(e) => !isRoleUser && setChartDealsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
                 displayEmpty
+                disabled={isRoleUser}
                 sx={{
                   borderRadius: 1.5,
                   bgcolor: reportsCardBg,
                   fontSize: '0.8125rem',
                   border: `1px solid ${theme.palette.divider}`,
                   '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                  ...(isRoleUser && { opacity: 1, '& .MuiSelect-select': { cursor: 'default' } }),
+                }}
+                MenuProps={{
+                  ...(isRoleUser && { open: false }),
                 }}
               >
-                <MenuItem value="">Todos los asesores</MenuItem>
-                {users.map((u) => (
+                {!isRoleUser && <MenuItem value="">Todos los asesores</MenuItem>}
+                {(isRoleUser && currentUser ? [currentUser] : users).map((u) => (
                   <MenuItem key={u.id} value={String(u.id)}>{u.firstName} {u.lastName}</MenuItem>
                 ))}
               </Select>

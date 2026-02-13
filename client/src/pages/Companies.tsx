@@ -159,6 +159,7 @@ const Companies: React.FC = () => {
   // Estados para filtros por columna
   const [columnFilters, setColumnFilters] = useState<{
     nombre: string;
+    rubro: string;
     propietario: string;
     telefono: string;
     correo: string;
@@ -167,6 +168,7 @@ const Companies: React.FC = () => {
     cr: string;
   }>({
     nombre: '',
+    rubro: '',
     propietario: '',
     telefono: '',
     correo: '',
@@ -843,6 +845,7 @@ const Companies: React.FC = () => {
       'Contacto': company.name || '--',
       'Dominio': company.domain || '--',
       'Razón social': company.companyname || '--',
+      'Rubro': (company as any).rubro || '--',
       'Teléfono empresa': company.phone || '--',
       'Correo': (company as any).email || '--',
       'Origen de lead': getLeadSourceLabel((company as any).leadSource),
@@ -870,6 +873,7 @@ const Companies: React.FC = () => {
       { wch: 30 }, // Nombre
       { wch: 25 }, // Dominio
       { wch: 20 }, // Razón social
+      { wch: 18 }, // Rubro
       { wch: 18 }, // Teléfono empresa
       { wch: 25 }, // Correo
       { wch: 20 }, // Origen de lead
@@ -901,6 +905,8 @@ const Companies: React.FC = () => {
   const handleDownloadTemplate = () => {
     const templateHeaders = {
       'Nombre': '',
+      'Rubro': '',
+      'Tipo de empresa': '',
       'Propietario': '',
       'Contacto': '',
       'Cargo': '',
@@ -923,7 +929,8 @@ const Companies: React.FC = () => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet([templateHeaders]);
     ws['!cols'] = [
-      { wch: 28 }, { wch: 22 }, { wch: 22 }, { wch: 20 }, { wch: 22 },
+      { wch: 28 }, { wch: 18 }, { wch: 14 }, // Nombre, Rubro, Tipo de empresa
+      { wch: 22 }, { wch: 22 }, { wch: 20 }, { wch: 22 },
       { wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 14 },
       { wch: 8 }, { wch: 14 }, { wch: 22 }, { wch: 22 }, { wch: 28 },
       { wch: 14 }, { wch: 18 }, { wch: 14 },
@@ -1032,9 +1039,15 @@ const Companies: React.FC = () => {
         const etapaStr = etapaRaw !== undefined && etapaRaw !== null ? String(etapaRaw).trim() : '';
         const lifecycleStage = normalizeStageFromExcel(etapaStr);
 
+        // Tipo de empresa: aceptar A/B/C (o a/b/c) y guardar como minúscula
+        const tipoRaw = (row['Tipo de empresa'] || row['Tipo'] || '').toString().trim();
+        const companyType = tipoRaw ? (['a', 'b', 'c'].includes(tipoRaw.toLowerCase()) ? tipoRaw.toLowerCase() : tipoRaw) : undefined;
+
         return {
           name: (row['Nombre'] || '').toString().trim() || 'Sin nombre',
           domain,
+          rubro: (row['Rubro'] || '').toString().trim() || undefined,
+          companyType: companyType || undefined,
           companyname: (row['Razón social'] || '').toString().trim() || undefined,
           phone: (row['Teléfono empresa'] || row['Teléfono'] || '').toString().trim() || undefined,
           email: (row['Correo'] || '').toString().trim() || undefined,
@@ -1097,6 +1110,8 @@ const Companies: React.FC = () => {
           name: firstRow.name,
           domain: firstRow.domain,
           companyname: firstRow.companyname,
+          rubro: firstRow.rubro,
+          companyType: firstRow.companyType,
           phone: firstRow.phone,
           email: firstRow.email,
           leadSource: firstRow.leadSource,
@@ -1690,6 +1705,10 @@ const Companies: React.FC = () => {
     if (columnFilters.correo && (company as any).email) {
       if (!(company as any).email.toLowerCase().includes(columnFilters.correo.toLowerCase())) return false;
     }
+    if (columnFilters.rubro) {
+      const rubro = (company as any).rubro || '';
+      if (!rubro.toLowerCase().includes(columnFilters.rubro.toLowerCase())) return false;
+    }
     
     return true;
   });
@@ -1737,6 +1756,14 @@ const Companies: React.FC = () => {
               size="small"
               label={`Nombre: "${columnFilters.nombre}"`}
               onDelete={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.rubro && (
+            <Chip
+              size="small"
+              label={`Rubro: "${columnFilters.rubro}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, rubro: '' }))}
               sx={{ height: 24, fontSize: '0.7rem' }}
             />
           )}
@@ -1790,7 +1817,7 @@ const Companies: React.FC = () => {
           )}
           <Button
             size="small"
-            onClick={() => setColumnFilters({ nombre: '', propietario: '', telefono: '', correo: '', origenLead: '', etapa: '', cr: '' })}
+            onClick={() => setColumnFilters({ nombre: '', rubro: '', propietario: '', telefono: '', correo: '', origenLead: '', etapa: '', cr: '' })}
             sx={{ 
               fontSize: '0.7rem', 
               textTransform: 'none',
@@ -1999,8 +2026,8 @@ const Companies: React.FC = () => {
                 overflow: 'hidden',
                 display: 'grid',
                 gridTemplateColumns: { 
-                  xs: 'repeat(10, minmax(0, 1fr))', 
-                  md: '50px 2fr 1.3fr 1.3fr 1.1fr 1.4fr 1fr 1fr 1.6fr 100px' 
+                  xs: 'repeat(11, minmax(0, 1fr))', 
+                  md: '50px 2fr 1.2fr 1.3fr 1.3fr 1.1fr 1.4fr 1fr 1fr 1.6fr 100px' 
                 },
                 columnGap: { xs: 0.5, md: 1 },
                 minWidth: { xs: 800, md: 'auto' },
@@ -2056,6 +2083,32 @@ const Companies: React.FC = () => {
                     width: '100%',
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
+            </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Rubro</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, rubro: '' }))} sx={{ p: 0.25, opacity: columnFilters.rubro ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.rubro}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, rubro: e.target.value }))}
+                  sx={{
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': {
+                      height: 28,
                       fontSize: '0.75rem',
                       bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
@@ -2232,8 +2285,8 @@ const Companies: React.FC = () => {
                     transition: 'all 0.2s ease',
                     display: 'grid',
                     gridTemplateColumns: { 
-                      xs: 'repeat(10, minmax(0, 1fr))', 
-                      md: '50px 2fr 1.3fr 1.3fr 1.1fr 1.4fr 1fr 1fr 1.6fr 100px' 
+                      xs: 'repeat(11, minmax(0, 1fr))', 
+                      md: '50px 2fr 1.2fr 1.3fr 1.3fr 1.1fr 1.4fr 1fr 1fr 1.6fr 100px' 
                     },
                     columnGap: { xs: 0.5, md: 1 },
                     minWidth: { xs: 800, md: 'auto' },
@@ -2346,6 +2399,12 @@ const Companies: React.FC = () => {
                         )}
                       </Box>
                     </Box>
+                </Box>
+                {/* Columna Rubro */}
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {(company as any).rubro || '--'}
+                  </Typography>
                 </Box>
                 {/* Nueva columna: Fecha de última actividad */}
                 <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>

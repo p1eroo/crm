@@ -11,6 +11,8 @@ interface CompanyAttributes {
   email?: string;
   leadSource?: string;
   ruc?: string;
+  rubro?: string;
+  companyType?: string;
   idClienteEmpresa?: string;
   address?: string;
   city?: string;
@@ -26,7 +28,7 @@ interface CompanyAttributes {
   updatedAt?: Date;
 }
 
-interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'companyname' | 'phone' | 'email' | 'leadSource' | 'ruc' | 'address' | 'city' | 'state' | 'country' | 'linkedin' | 'numberOfEmployees' | 'ownerId' | 'estimatedRevenue' | 'isRecoveredClient' | 'createdAt' | 'updatedAt'> {}
+interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'companyname' | 'phone' | 'email' | 'leadSource' | 'ruc' | 'rubro' | 'companyType' | 'address' | 'city' | 'state' | 'country' | 'linkedin' | 'numberOfEmployees' | 'ownerId' | 'estimatedRevenue' | 'isRecoveredClient' | 'createdAt' | 'updatedAt'> {}
 
 export class Company extends Model<CompanyAttributes, CompanyCreationAttributes> implements CompanyAttributes {
   public id!: number;
@@ -37,6 +39,8 @@ export class Company extends Model<CompanyAttributes, CompanyCreationAttributes>
   public email?: string;
   public leadSource?: string;
   public ruc?: string;
+  public rubro?: string;
+  public companyType?: string;
   public idClienteEmpresa?: string;
   public address?: string;
   public city?: string;
@@ -86,6 +90,14 @@ Company.init(
       allowNull: true,
     },
     ruc: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    rubro: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    companyType: {
       type: DataTypes.STRING,
       allowNull: true,
     },

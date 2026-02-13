@@ -563,6 +563,15 @@ const CompanyDetail: React.FC = () => {
     return labels[stage] || stage;
   };
 
+  const getCompanyTypeLabel = (type: string) => {
+    const labels: { [key: string]: string } = {
+      a: "A",
+      b: "B",
+      c: "C",
+    };
+    return labels[type] || type;
+  };
+
   // Fetch usuarios para el selector de propietario
   useEffect(() => {
     const fetchUsers = async () => {
@@ -1212,6 +1221,16 @@ const detailFields = [
     label: 'RUC',
     value: company?.ruc || '--',
     show: !!company?.ruc,
+  },
+  {
+    label: 'Rubro',
+    value: (company as any)?.rubro || '--',
+    show: true,
+  },
+  {
+    label: 'Tipo de empresa',
+    value: (company as any)?.companyType ? getCompanyTypeLabel((company as any).companyType) : '--',
+    show: true,
   },
   {
     label: 'Email',

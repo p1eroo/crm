@@ -17,6 +17,8 @@ export interface CompanyFormData {
   lifecycleStage: string;
   estimatedRevenue: string | number;
   ruc: string;
+  rubro: string;
+  companyType: string;
   address: string;
   city: string;
   state: string;
@@ -40,6 +42,8 @@ export const getInitialFormData = (editingCompany: any): CompanyFormData => {
       lifecycleStage: editingCompany.lifecycleStage || 'lead',
       estimatedRevenue: editingCompany.estimatedRevenue || '',
       ruc: editingCompany.ruc || '',
+      rubro: editingCompany.rubro || '',
+      companyType: editingCompany.companyType || '',
       address: editingCompany.address || '',
       city: editingCompany.city || '',
       state: editingCompany.state || '',
@@ -51,6 +55,7 @@ export const getInitialFormData = (editingCompany: any): CompanyFormData => {
   return {
     name: '', domain: '', linkedin: '', companyname: '', phone: '', email: '',
     leadSource: '', dealName: '', dealCloseDate: '', lifecycleStage: 'lead', estimatedRevenue: '', ruc: '',
+    rubro: '', companyType: '',
     address: '', city: '', state: '', country: '', isRecoveredClient: false, ownerId: '',
   };
 };
@@ -150,6 +155,32 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
         </Box>
         <Box sx={{ minWidth: 0 }}>
           <TextField size="small" value={formData.companyname} onChange={onCompanyNameChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>
+          Rubro de la empresa
+        </Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>
+          Tipo de empresa
+        </Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField size="small" value={formData.rubro} onChange={(e) => onFormDataChange({ rubro: e.target.value })} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField
+            select
+            size="small"
+            value={formData.companyType || ''}
+            onChange={(e) => onFormDataChange({ companyType: e.target.value })}
+            fullWidth
+            inputProps={{ style: { fontSize: '1rem' } }}
+            InputProps={{ sx: { '& input': { py: 1.05 } } }}
+            SelectProps={{ displayEmpty: true, MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
+          >
+            <MenuItem value="">-- Seleccionar --</MenuItem>
+            <MenuItem value="a">A</MenuItem>
+            <MenuItem value="b">B</MenuItem>
+            <MenuItem value="c">C</MenuItem>
+          </TextField>
         </Box>
         <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>
           Nombre comercial <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>

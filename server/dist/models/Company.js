@@ -41,6 +41,14 @@ Company.init({
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
+    rubro: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
+    companyType: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
     idClienteEmpresa: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,

@@ -72,6 +72,11 @@ Ticket.init({
             key: 'id',
         },
     },
+    images: {
+        type: sequelize_1.DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: null,
+    },
 }, {
     sequelize: database_1.sequelize,
     tableName: 'tickets',

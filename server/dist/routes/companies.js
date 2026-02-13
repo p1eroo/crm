@@ -38,6 +38,10 @@ const cleanCompany = (company, includeSensitive = false) => {
         cleaned.email = companyData.email; // Incluir email siempre
     if (companyData.leadSource != null)
         cleaned.leadSource = companyData.leadSource;
+    if (companyData.rubro != null)
+        cleaned.rubro = companyData.rubro;
+    if (companyData.companyType != null)
+        cleaned.companyType = companyData.companyType;
     if (companyData.city != null)
         cleaned.city = companyData.city;
     if (companyData.state != null)
@@ -54,6 +58,10 @@ const cleanCompany = (company, includeSensitive = false) => {
         cleaned.linkedin = companyData.linkedin;
     if (companyData.numberOfEmployees != null)
         cleaned.numberOfEmployees = companyData.numberOfEmployees;
+    if (companyData.dealName != null)
+        cleaned.dealName = companyData.dealName;
+    if (companyData.dealCloseDate != null)
+        cleaned.dealCloseDate = companyData.dealCloseDate;
     // Solo incluir datos sensibles si se solicita explícitamente (para detalle completo)
     if (includeSensitive) {
         if (companyData.ruc != null)
@@ -708,6 +716,16 @@ router.get('/:id', async (req, res) => {
         });
         // Convertir el Map a array
         companyData.Contacts = Array.from(contactsMap.values());
+        // Nombre y fecha de cierre del primer negocio (Deal) asociado por companyId para el formulario
+        const firstDeal = await Deal_1.Deal.findOne({
+            where: { companyId: req.params.id },
+            order: [['id', 'ASC']],
+            attributes: ['name', 'closeDate'],
+        });
+        companyData.dealName = firstDeal?.name ?? undefined;
+        companyData.dealCloseDate = firstDeal?.closeDate
+            ? new Date(firstDeal.closeDate).toISOString().slice(0, 10)
+            : undefined;
         res.json(cleanCompany(companyData, true));
     }
     catch (error) {
@@ -758,23 +776,6 @@ router.post('/', async (req, res) => {
                 });
             }
         }
-        // Validar que no exista una empresa con el mismo dominio (case-insensitive)
-        if (companyData.domain && companyData.domain.trim() !== '') {
-            const existingCompanyByDomain = await Company_1.Company.findOne({
-                where: {
-                    domain: {
-                        [sequelize_1.Op.iLike]: companyData.domain.trim(), // Case-insensitive
-                    },
-                },
-            });
-            if (existingCompanyByDomain) {
-                return res.status(400).json({
-                    error: 'Ya existe una empresa con este dominio',
-                    duplicateField: 'domain',
-                    existingCompanyId: existingCompanyByDomain.id,
-                });
-            }
-        }
         // Validar que no exista una empresa con el mismo RUC (si se proporciona)
         if (companyData.ruc && companyData.ruc.trim() !== '') {
             const existingCompanyByRuc = await Company_1.Company.findOne({
@@ -796,6 +797,27 @@ router.post('/', async (req, res) => {
                 { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
             ],
         });
+        // Crear negocio (Deal) asociado con la misma etapa, facturación y propietario (empresa y negocio comparten valores)
+        const dealOwnerId = company.ownerId ?? req.userId;
+        const dealName = (req.body.dealName != null && String(req.body.dealName).trim() !== '') ? String(req.body.dealName).trim() : company.name;
+        const dealCloseDate = req.body.dealCloseDate && String(req.body.dealCloseDate).trim() ? new Date(String(req.body.dealCloseDate).trim()) : null;
+        if (dealOwnerId) {
+            try {
+                await Deal_1.Deal.create({
+                    name: dealName,
+                    amount: company.estimatedRevenue != null ? Number(company.estimatedRevenue) : 0,
+                    stage: company.lifecycleStage || 'lead',
+                    ownerId: dealOwnerId,
+                    companyId: company.id,
+                    pipelineId: 1,
+                    ...(dealCloseDate && !isNaN(dealCloseDate.getTime()) && { closeDate: dealCloseDate }),
+                });
+            }
+            catch (dealErr) {
+                console.error('Error creating deal for company:', dealErr);
+                // No fallar la creación de la empresa si falla el negocio
+            }
+        }
         // Registrar log
         if (req.userId) {
             await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.CREATE, systemLogger_1.EntityTypes.COMPANY, company.id, { name: company.name }, req);
@@ -853,6 +875,42 @@ router.put('/:id', async (req, res) => {
         });
         if (!updatedCompany) {
             return res.status(404).json({ error: 'Empresa no encontrada después de la actualización' });
+        }
+        // Sincronizar negocio(s) con la empresa: misma etapa, facturación y propietario (la empresa jala los valores del negocio en la UI; aquí los mantenemos alineados)
+        const dealOwnerId = updatedCompany.ownerId ?? req.userId;
+        const dealName = (req.body.dealName != null && String(req.body.dealName).trim() !== '') ? String(req.body.dealName).trim() : updatedCompany.name;
+        const dealCloseDateRaw = req.body.dealCloseDate && String(req.body.dealCloseDate).trim();
+        const dealCloseDate = dealCloseDateRaw ? (() => { const d = new Date(dealCloseDateRaw); return !isNaN(d.getTime()) ? d : null; })() : null;
+        if (dealOwnerId != null) {
+            try {
+                const existingDeals = await Deal_1.Deal.findAll({
+                    where: { companyId: company.id },
+                    order: [['id', 'ASC']],
+                    limit: 1,
+                });
+                const stage = updatedCompany.lifecycleStage || 'lead';
+                const amount = updatedCompany.estimatedRevenue != null ? Number(updatedCompany.estimatedRevenue) : 0;
+                const dealPayload = { name: dealName, stage, amount, ownerId: dealOwnerId };
+                if (dealCloseDate != null)
+                    dealPayload.closeDate = dealCloseDate;
+                if (existingDeals.length > 0) {
+                    await existingDeals[0].update(dealPayload);
+                }
+                else {
+                    await Deal_1.Deal.create({
+                        name: dealName,
+                        amount,
+                        stage,
+                        ownerId: dealOwnerId,
+                        companyId: company.id,
+                        pipelineId: 1,
+                        ...(dealCloseDate && { closeDate: dealCloseDate }),
+                    });
+                }
+            }
+            catch (dealErr) {
+                console.error('Error syncing deal for company:', dealErr);
+            }
         }
         // Registrar log
         if (req.userId) {

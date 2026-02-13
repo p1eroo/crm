@@ -13,13 +13,41 @@ const Task_1 = require("../models/Task");
 const auth_1 = require("../middleware/auth");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
+/** Número de semana ISO (1-53) del año: semana 1 = semana que contiene el 4 de enero (lun-dom). */
+function getISOWeekNumber(d) {
+    const date = new Date(d);
+    date.setHours(0, 0, 0, 0);
+    const day = date.getDay() || 7; // 1 = Lunes, 7 = Domingo
+    const thursday = new Date(date);
+    thursday.setDate(date.getDate() - day + 4);
+    const jan4 = new Date(thursday.getFullYear(), 0, 4);
+    const week1Monday = new Date(jan4);
+    week1Monday.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
+    const diff = date.getTime() - week1Monday.getTime();
+    return 1 + Math.floor(diff / (7 * 24 * 60 * 60 * 1000));
+}
+/** Rango lunes–domingo para la semana N del año (semana 1 = primera semana del año, lun-dom). */
+function getWeekRangeByYearAndWeek(year, weekNumber) {
+    const jan4 = new Date(year, 0, 4);
+    const dayOfJan4 = jan4.getDay() || 7; // 1 = Lunes, 7 = Domingo
+    const week1Monday = new Date(year, 0, 4 - dayOfJan4 + 1);
+    week1Monday.setHours(0, 0, 0, 0);
+    const targetMonday = new Date(week1Monday);
+    targetMonday.setDate(week1Monday.getDate() + (weekNumber - 1) * 7);
+    const targetSunday = new Date(targetMonday);
+    targetSunday.setDate(targetMonday.getDate() + 6);
+    targetSunday.setHours(23, 59, 59, 999);
+    return { fromDate: targetMonday, toDate: targetSunday };
+}
 // Empresas por etapa, agrupadas por asesor (ownerId). Solo usuarios con rol "user".
-// Query params opcionales: userId, leadSource, period (day|week|month|year = últimas 24h, 7d, 30d, 365d).
+// Query params opcionales: userId, leadSource, year, weekNumber (semana 1, 2, 3... del año), recoveredClient.
 router.get('/companies-by-user', async (req, res) => {
     try {
         const userId = req.query.userId != null ? Number(req.query.userId) : null;
         const leadSourceParam = req.query.leadSource;
-        const periodParam = req.query.period;
+        const yearParam = req.query.year;
+        const weekNumberParam = req.query.weekNumber;
+        const recoveredClientParam = req.query.recoveredClient;
         let leadSourceCondition = '';
         const replacements = {};
         if (leadSourceParam !== undefined && leadSourceParam !== null) {
@@ -37,23 +65,20 @@ router.get('/companies-by-user', async (req, res) => {
             replacements.userId = userId;
         }
         let periodCondition = '';
-        if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
-            const now = new Date();
-            let fromDate;
-            if (periodParam === 'day') {
-                fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-            }
-            else if (periodParam === 'week') {
-                fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            }
-            else if (periodParam === 'month') {
-                fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            }
-            else {
-                fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-            }
-            periodCondition = ' AND c."createdAt" >= :fromDate';
+        const year = yearParam != null && yearParam !== '' ? parseInt(String(yearParam), 10) : new Date().getFullYear();
+        const weekNumber = weekNumberParam != null && weekNumberParam !== '' ? Math.max(1, Math.min(53, parseInt(String(weekNumberParam), 10) || 1)) : -1;
+        if (weekNumber >= 1) {
+            const { fromDate, toDate } = getWeekRangeByYearAndWeek(year, weekNumber);
+            periodCondition = ' AND c."createdAt" >= :fromDate AND c."createdAt" <= :toDate';
             replacements.fromDate = fromDate.toISOString();
+            replacements.toDate = toDate.toISOString();
+        }
+        let recoveredClientCondition = '';
+        if (recoveredClientParam === 'true') {
+            recoveredClientCondition = ' AND c."isRecoveredClient" = true';
+        }
+        else if (recoveredClientParam === 'false') {
+            recoveredClientCondition = ' AND (c."isRecoveredClient" = false OR c."isRecoveredClient" IS NULL)';
         }
         const results = await Company_1.Company.sequelize.query(`
       SELECT c."ownerId" as "userId", c."lifecycleStage" as stage, COUNT(c.id)::integer as count
@@ -64,6 +89,7 @@ router.get('/companies-by-user', async (req, res) => {
       ${userIdCondition}
       ${leadSourceCondition}
       ${periodCondition}
+      ${recoveredClientCondition}
       GROUP BY c."ownerId", c."lifecycleStage"
       ORDER BY c."ownerId", c."lifecycleStage"
     `, { replacements: Object.keys(replacements).length ? replacements : undefined, type: sequelize_1.QueryTypes.SELECT });
@@ -81,7 +107,7 @@ router.get('/companies-by-user', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-// Listar empresas por etapa (mismos filtros que companies-by-user). Query: stage, userId, leadSource, period, page, limit.
+// Listar empresas por etapa (mismos filtros que companies-by-user). Query: stage, userId, leadSource, year, weekNumber, page, limit.
 router.get('/companies-list', async (req, res) => {
     try {
         const stageParam = req.query.stage;
@@ -90,7 +116,9 @@ router.get('/companies-list', async (req, res) => {
         }
         const userId = req.query.userId != null ? Number(req.query.userId) : null;
         const leadSourceParam = req.query.leadSource;
-        const periodParam = req.query.period;
+        const yearParam = req.query.year;
+        const weekNumberParam = req.query.weekNumber;
+        const recoveredClientParam = req.query.recoveredClient;
         const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
         const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
         const offset = (page - 1) * limit;
@@ -115,19 +143,20 @@ router.get('/companies-list', async (req, res) => {
             replacements.userId = userId;
         }
         let periodCondition = '';
-        if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
-            const now = new Date();
-            let fromDate;
-            if (periodParam === 'day')
-                fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-            else if (periodParam === 'week')
-                fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            else if (periodParam === 'month')
-                fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            else
-                fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-            periodCondition = ' AND c."createdAt" >= :fromDate';
+        const yearList = yearParam != null && yearParam !== '' ? parseInt(String(yearParam), 10) : new Date().getFullYear();
+        const weekNumberList = weekNumberParam != null && weekNumberParam !== '' ? Math.max(1, Math.min(53, parseInt(String(weekNumberParam), 10) || 1)) : -1;
+        if (weekNumberList >= 1) {
+            const { fromDate, toDate } = getWeekRangeByYearAndWeek(yearList, weekNumberList);
+            periodCondition = ' AND c."createdAt" >= :fromDate AND c."createdAt" <= :toDate';
             replacements.fromDate = fromDate.toISOString();
+            replacements.toDate = toDate.toISOString();
+        }
+        let recoveredClientCondition = '';
+        if (recoveredClientParam === 'true') {
+            recoveredClientCondition = ' AND c."isRecoveredClient" = true';
+        }
+        else if (recoveredClientParam === 'false') {
+            recoveredClientCondition = ' AND (c."isRecoveredClient" = false OR c."isRecoveredClient" IS NULL)';
         }
         const countResult = await Company_1.Company.sequelize.query(`
       SELECT COUNT(c.id)::integer as total
@@ -138,6 +167,7 @@ router.get('/companies-list', async (req, res) => {
       ${userIdCondition}
       ${leadSourceCondition}
       ${periodCondition}
+      ${recoveredClientCondition}
     `, { replacements, type: sequelize_1.QueryTypes.SELECT });
         const total = (countResult && countResult[0] && countResult[0].total != null) ? countResult[0].total : 0;
         const rows = await Company_1.Company.sequelize.query(`
@@ -149,6 +179,7 @@ router.get('/companies-list', async (req, res) => {
       ${userIdCondition}
       ${leadSourceCondition}
       ${periodCondition}
+      ${recoveredClientCondition}
       ORDER BY c.name ASC
       LIMIT :limit OFFSET :offset
     `, { replacements, type: sequelize_1.QueryTypes.SELECT });
