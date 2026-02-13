@@ -24,11 +24,12 @@ interface CompanyAttributes {
   estimatedRevenue?: number;
   isRecoveredClient?: boolean;
   lifecycleStage: 'lead' | 'contacto' | 'reunion_agendada' | 'reunion_efectiva' | 'propuesta_economica' | 'negociacion' | 'licitacion' | 'licitacion_etapa_final' | 'cierre_ganado' | 'cierre_perdido' | 'firma_contrato' | 'activo' | 'cliente_perdido' | 'lead_inactivo';
+  logo?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'companyname' | 'phone' | 'email' | 'leadSource' | 'ruc' | 'rubro' | 'companyType' | 'address' | 'city' | 'state' | 'country' | 'linkedin' | 'numberOfEmployees' | 'ownerId' | 'estimatedRevenue' | 'isRecoveredClient' | 'createdAt' | 'updatedAt'> {}
+interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'companyname' | 'phone' | 'email' | 'leadSource' | 'ruc' | 'rubro' | 'companyType' | 'address' | 'city' | 'state' | 'country' | 'linkedin' | 'numberOfEmployees' | 'ownerId' | 'estimatedRevenue' | 'isRecoveredClient' | 'logo' | 'createdAt' | 'updatedAt'> {}
 
 export class Company extends Model<CompanyAttributes, CompanyCreationAttributes> implements CompanyAttributes {
   public id!: number;
@@ -52,6 +53,7 @@ export class Company extends Model<CompanyAttributes, CompanyCreationAttributes>
   public estimatedRevenue?: number;
   public isRecoveredClient?: boolean;
   public lifecycleStage!: 'lead' | 'contacto' | 'reunion_agendada' | 'reunion_efectiva' | 'propuesta_economica' | 'negociacion' | 'licitacion' | 'licitacion_etapa_final' | 'cierre_ganado' | 'cierre_perdido' | 'firma_contrato' | 'activo' | 'cliente_perdido' | 'lead_inactivo';
+  public logo?: string | null;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -149,6 +151,10 @@ Company.init(
     lifecycleStage: {
       type: DataTypes.ENUM('lead', 'contacto', 'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion', 'licitacion', 'licitacion_etapa_final', 'cierre_ganado', 'cierre_perdido', 'firma_contrato', 'activo', 'cliente_perdido', 'lead_inactivo'),
       defaultValue: 'lead',
+    },
+    logo: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {

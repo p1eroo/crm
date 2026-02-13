@@ -15,6 +15,7 @@ const auth_1 = require("../middleware/auth");
 const rolePermissions_1 = require("../utils/rolePermissions");
 const systemLogger_1 = require("../utils/systemLogger");
 const database_1 = require("../config/database");
+const minio_1 = require("../config/minio");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 // Función para limpiar empresas eliminando campos null y objetos relacionados null
@@ -62,6 +63,8 @@ const cleanCompany = (company, includeSensitive = false) => {
         cleaned.dealName = companyData.dealName;
     if (companyData.dealCloseDate != null)
         cleaned.dealCloseDate = companyData.dealCloseDate;
+    if (companyData.logo != null)
+        cleaned.logo = companyData.logo; // key en Minio; se reemplaza por URL presigned al responder
     // Solo incluir datos sensibles si se solicita explícitamente (para detalle completo)
     if (includeSensitive) {
         if (companyData.ruc != null)
@@ -96,6 +99,21 @@ const cleanCompany = (company, includeSensitive = false) => {
 const transformCompanyForList = (company) => {
     return cleanCompany(company, false);
 };
+// Si logo es una URL (proxy/media), se deja tal cual. Si es key de MinIO, se reemplaza por URL presigned.
+async function withPresignedLogo(cleaned) {
+    if (!cleaned.logo || typeof cleaned.logo !== 'string')
+        return cleaned;
+    if (cleaned.logo.startsWith('http://') || cleaned.logo.startsWith('https://'))
+        return cleaned;
+    try {
+        const url = await (0, minio_1.getPresignedGetUrl)(cleaned.logo);
+        cleaned.logo = url || null;
+    }
+    catch {
+        cleaned.logo = null;
+    }
+    return cleaned;
+}
 // Función para extraer el dominio del email si no está definido
 const extractDomainFromEmail = (companyData) => {
     // Solo extraer dominio si no está definido y hay un email válido
@@ -488,8 +506,9 @@ router.get('/', async (req, res) => {
                 }
                 return transformCompanyForList(companyData);
             }));
+            const withLogos = await Promise.all(companiesWithOwner.map(withPresignedLogo));
             return res.json({
-                companies: companiesWithOwner,
+                companies: withLogos,
                 total: companies.count,
                 page: pageNum,
                 limit,
@@ -498,8 +517,9 @@ router.get('/', async (req, res) => {
         }
         // Transformar empresas para filtrar datos sensibles
         const transformedCompanies = companies.rows.map(transformCompanyForList);
+        const withLogos = await Promise.all(transformedCompanies.map(withPresignedLogo));
         res.json({
-            companies: transformedCompanies,
+            companies: withLogos,
             total: companies.count,
             page: pageNum,
             limit,
@@ -726,7 +746,9 @@ router.get('/:id', async (req, res) => {
         companyData.dealCloseDate = firstDeal?.closeDate
             ? new Date(firstDeal.closeDate).toISOString().slice(0, 10)
             : undefined;
-        res.json(cleanCompany(companyData, true));
+        const cleaned = cleanCompany(companyData, true);
+        await withPresignedLogo(cleaned);
+        res.json(cleaned);
     }
     catch (error) {
         res.status(500).json({ error: error.message });
@@ -822,7 +844,9 @@ router.post('/', async (req, res) => {
         if (req.userId) {
             await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.CREATE, systemLogger_1.EntityTypes.COMPANY, company.id, { name: company.name }, req);
         }
-        res.status(201).json(cleanCompany(newCompany, true));
+        const cleaned = cleanCompany(newCompany, true);
+        await withPresignedLogo(cleaned);
+        res.status(201).json(cleaned);
     }
     catch (error) {
         console.error('Error creating company:', error);
@@ -916,13 +940,42 @@ router.put('/:id', async (req, res) => {
         if (req.userId) {
             await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.UPDATE, systemLogger_1.EntityTypes.COMPANY, company.id, { name: updatedCompany.name, changes: updateData }, req);
         }
-        res.json(cleanCompany(updatedCompany, true));
+        const cleaned = cleanCompany(updatedCompany, true);
+        await withPresignedLogo(cleaned);
+        res.json(cleaned);
     }
     catch (error) {
         console.error('Error updating company:', error);
         console.error('Error stack:', error.stack);
         console.error('Request body:', req.body);
         res.status(500).json({ error: error.message });
+    }
+});
+// Guardar URL de logo (el frontend sube el archivo al proxy media y envía la URL aquí)
+router.post('/:id/logo', async (req, res) => {
+    try {
+        const url = req.body?.url;
+        if (!url || typeof url !== 'string' || !url.trim()) {
+            return res.status(400).json({ error: 'Se requiere la URL del logo (campo "url")' });
+        }
+        const company = await Company_1.Company.findByPk(req.params.id);
+        if (!company) {
+            return res.status(404).json({ error: 'Empresa no encontrada' });
+        }
+        if (!(0, rolePermissions_1.canModifyResource)(req.userRole, req.userId, company.ownerId)) {
+            return res.status(403).json({ error: 'No tienes permisos para modificar esta empresa' });
+        }
+        await company.update({ logo: url.trim() });
+        const updated = await Company_1.Company.findByPk(company.id, {
+            include: [{ model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] }],
+        });
+        const cleaned = cleanCompany(updated, true);
+        await withPresignedLogo(cleaned);
+        res.json(cleaned);
+    }
+    catch (error) {
+        console.error('Error saving company logo URL:', error);
+        res.status(500).json({ error: error.message || 'Error al guardar el logo' });
     }
 });
 // Eliminar empresa
@@ -985,7 +1038,9 @@ router.post('/:id/contacts', async (req, res) => {
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
             ],
         });
-        res.json(cleanCompany(updatedCompany, true));
+        const cleaned = cleanCompany(updatedCompany, true);
+        await withPresignedLogo(cleaned);
+        res.json(cleaned);
     }
     catch (error) {
         console.error('Error adding contacts to company:', error);
@@ -1010,7 +1065,9 @@ router.delete('/:id/contacts/:contactId', async (req, res) => {
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
             ],
         });
-        res.json(cleanCompany(updatedCompany, true));
+        const cleaned = cleanCompany(updatedCompany, true);
+        await withPresignedLogo(cleaned);
+        res.json(cleaned);
     }
     catch (error) {
         console.error('Error removing contact association:', error);
@@ -1047,7 +1104,9 @@ router.post('/:id/deals', async (req, res) => {
                 { model: Deal_1.Deal, as: 'Deals', attributes: ['id', 'name', 'amount', 'stage', 'closeDate'] },
             ],
         });
-        res.status(200).json(cleanCompany(updatedCompany, true));
+        const cleaned = cleanCompany(updatedCompany, true);
+        await withPresignedLogo(cleaned);
+        res.status(200).json(cleaned);
     }
     catch (error) {
         console.error('Error adding deals to company:', error);
@@ -1092,7 +1151,9 @@ router.post('/:id/companies', async (req, res) => {
                 { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname', 'ruc'] },
             ],
         });
-        res.json(cleanCompany(updatedCompany, true));
+        const cleaned = cleanCompany(updatedCompany, true);
+        await withPresignedLogo(cleaned);
+        res.json(cleaned);
     }
     catch (error) {
         console.error('Error adding companies to company:', error);
@@ -1118,7 +1179,9 @@ router.delete('/:id/companies/:companyId', async (req, res) => {
                 { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname', 'ruc'] },
             ],
         });
-        res.json(cleanCompany(updatedCompany, true));
+        const cleaned = cleanCompany(updatedCompany, true);
+        await withPresignedLogo(cleaned);
+        res.json(cleaned);
     }
     catch (error) {
         console.error('Error removing company association:', error);

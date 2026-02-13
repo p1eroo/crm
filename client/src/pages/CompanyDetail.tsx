@@ -23,6 +23,7 @@ import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { far } from "@fortawesome/free-regular-svg-icons";
 import { fas, faEnvelope } from "@fortawesome/free-solid-svg-icons";
+import axios from "axios";
 import api from "../config/api";
 import EmailComposer from "../components/EmailComposer";
 import { taxiMonterricoColors, hexToRgba } from "../theme/colors";
@@ -75,6 +76,7 @@ interface CompanyDetailData {
   linkedin?: string;
   youtube?: string;
   notes?: string;
+  logo?: string | null;
   createdAt?: string;
   Owner?: {
     id: number;
@@ -107,6 +109,8 @@ const CompanyDetail: React.FC = () => {
   const [completedActivities, setCompletedActivities] = useState<{
     [key: number]: boolean;
   }>({});
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   
   // Estados para los filtros de actividad
   // Nota: communicationFilters y teamActivityFilters están comentados porque no se usan actualmente
@@ -222,6 +226,41 @@ const CompanyDetail: React.FC = () => {
       console.error("Error fetching company:", error);
     } finally {
       setLoading(false);
+    }
+  }, [id]);
+
+  const handleLogoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage("Solo se permiten imágenes");
+      return;
+    }
+    const mediaUrl = process.env.REACT_APP_MEDIA_URL || "https://media.conexs.app/media";
+    const bucket = process.env.REACT_APP_MEDIA_BUCKET || "intranetnegocios";
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("bucket", bucket);
+    setUploadingLogo(true);
+    setErrorMessage("");
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(mediaUrl, formData, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const logoUrl = data?.url || "";
+      if (!logoUrl) {
+        setErrorMessage("No se obtuvo la URL del archivo");
+        return;
+      }
+      const response = await api.post(`/companies/${id}/logo`, { url: logoUrl });
+      setCompany(response.data);
+      setSuccessMessage("Logo actualizado");
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.error || err.message || "Error al subir el logo");
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
     }
   }, [id]);
 
@@ -1564,6 +1603,13 @@ const tab2Content = (
 
   return (  
   <>
+    <input
+      ref={logoInputRef}
+      type="file"
+      accept="image/jpeg,image/png,image/gif,image/webp"
+      hidden
+      onChange={handleLogoUpload}
+    />
     <DetailPageLayout
       pageTitle="Detalles de la empresa"
       breadcrumbItems={[
@@ -1573,6 +1619,8 @@ const tab2Content = (
       onBack={() => navigate('/companies')}
       avatarIcon={<Building2 size={60} color="white" />}
       avatarBgColor="#0d9394"
+      avatarSrc={company?.logo ?? undefined}
+      onAvatarClick={() => !uploadingLogo && logoInputRef.current?.click()}
       entityName={company?.name || ''}
       entitySubtitle={company?.domain || 'Sin información adicional'}
       activityButtons={activityButtons}

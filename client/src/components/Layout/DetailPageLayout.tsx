@@ -70,6 +70,10 @@ interface DetailPageLayoutProps {
   // Sidebar izquierdo
   avatarIcon: ReactNode;
   avatarBgColor?: string;
+  /** Si se proporciona, el avatar muestra esta imagen (ej. logo de empresa) en lugar del icono */
+  avatarSrc?: string | null;
+  /** Si se proporciona, el avatar es clickeable (ej. para cambiar logo) */
+  onAvatarClick?: () => void;
   entityName: string;
   entitySubtitle?: string;
 
@@ -79,6 +83,8 @@ interface DetailPageLayoutProps {
     tooltip: string;
     onClick: () => void;
   }>;
+  /** Contenido extra bajo el subtítulo (ej. botón Subir logo) */
+  headerExtra?: ReactNode;
 
   // Detalles
   detailFields: DetailField[];
@@ -105,9 +111,12 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
   onBack,
   avatarIcon,
   avatarBgColor = "#0d9394",
+  avatarSrc,
+  onAvatarClick,
   entityName,
   entitySubtitle,
   activityButtons = [],
+  headerExtra,
   detailFields,
   onEditDetails,
   editButtonText = "Editar Detalles",
@@ -315,20 +324,54 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
               >
                 <History sx={{ fontSize: 27 }} />
               </IconButton>
-              <Avatar
+              <Box
+                onClick={onAvatarClick}
                 sx={{
-                  width: 120,
-                  height: 120,
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 3,
-                  boxShadow: `0 8px 24px ${taxiMonterricoColors.greenLight}40`,
+                  cursor: onAvatarClick ? "pointer" : "default",
+                  position: "relative",
+                  "&:hover": onAvatarClick
+                    ? { "& .avatar-upload-hint": { opacity: 1 } }
+                    : {},
                 }}
               >
-                {avatarIcon}
-              </Avatar>
+                <Avatar
+                  src={avatarSrc || undefined}
+                  sx={{
+                    width: 120,
+                    height: 120,
+                    background: avatarSrc ? "transparent" : `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 3,
+                    boxShadow: `0 8px 24px ${taxiMonterricoColors.greenLight}40`,
+                    transition: "opacity 0.2s",
+                  }}
+                >
+                  {!avatarSrc && avatarIcon}
+                </Avatar>
+                {onAvatarClick && (
+                  <Box
+                    className="avatar-upload-hint"
+                    sx={{
+                      position: "absolute",
+                      inset: 0,
+                      borderRadius: 3,
+                      bgcolor: "rgba(0,0,0,0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: 0,
+                      transition: "opacity 0.2s",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: "white", fontWeight: 600 }}>
+                      Cambiar
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
 
               <Box
                 sx={{
@@ -358,6 +401,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                     {entitySubtitle}
                   </Typography>
                 )}
+                {headerExtra}
               </Box>
 
               {activityButtons.length > 0 && (

@@ -10,6 +10,7 @@ import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { getRoleBasedDataFilter, canModifyResource, canDeleteResource } from '../utils/rolePermissions';
 import { logSystemAction, SystemActions, EntityTypes } from '../utils/systemLogger';
 import { sequelize } from '../config/database';
+import { getPresignedGetUrl } from '../config/minio';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -43,6 +44,7 @@ const cleanCompany = (company: any, includeSensitive: boolean = false): any => {
   if (companyData.numberOfEmployees != null) cleaned.numberOfEmployees = companyData.numberOfEmployees;
   if (companyData.dealName != null) cleaned.dealName = companyData.dealName;
   if (companyData.dealCloseDate != null) cleaned.dealCloseDate = companyData.dealCloseDate;
+  if (companyData.logo != null) cleaned.logo = companyData.logo; // key en Minio; se reemplaza por URL presigned al responder
 
   // Solo incluir datos sensibles si se solicita explícitamente (para detalle completo)
   if (includeSensitive) {
@@ -79,6 +81,19 @@ const cleanCompany = (company: any, includeSensitive: boolean = false): any => {
 const transformCompanyForList = (company: any): any => {
   return cleanCompany(company, false);
 };
+
+// Si logo es una URL (proxy/media), se deja tal cual. Si es key de MinIO, se reemplaza por URL presigned.
+async function withPresignedLogo(cleaned: any): Promise<any> {
+  if (!cleaned.logo || typeof cleaned.logo !== 'string') return cleaned;
+  if (cleaned.logo.startsWith('http://') || cleaned.logo.startsWith('https://')) return cleaned;
+  try {
+    const url = await getPresignedGetUrl(cleaned.logo);
+    cleaned.logo = url || null;
+  } catch {
+    cleaned.logo = null;
+  }
+  return cleaned;
+}
 
 // Función para extraer el dominio del email si no está definido
 const extractDomainFromEmail = (companyData: any): void => {
@@ -496,9 +511,9 @@ router.get('/', async (req: AuthRequest, res) => {
           return transformCompanyForList(companyData);
         })
       );
-      
+      const withLogos = await Promise.all(companiesWithOwner.map(withPresignedLogo));
       return res.json({
-        companies: companiesWithOwner,
+        companies: withLogos,
         total: companies.count,
         page: pageNum,
         limit,
@@ -508,9 +523,10 @@ router.get('/', async (req: AuthRequest, res) => {
 
     // Transformar empresas para filtrar datos sensibles
     const transformedCompanies = companies.rows.map(transformCompanyForList);
+    const withLogos = await Promise.all(transformedCompanies.map(withPresignedLogo));
 
     res.json({
-      companies: transformedCompanies,
+      companies: withLogos,
       total: companies.count,
       page: pageNum,
       limit,
@@ -773,7 +789,9 @@ router.get('/:id', async (req, res) => {
       ? new Date(firstDeal.closeDate).toISOString().slice(0, 10)
       : undefined;
 
-    res.json(cleanCompany(companyData, true));
+    const cleaned = cleanCompany(companyData, true);
+    await withPresignedLogo(cleaned);
+    res.json(cleaned);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -885,7 +903,9 @@ router.post('/', async (req: AuthRequest, res) => {
       );
     }
 
-    res.status(201).json(cleanCompany(newCompany, true));
+    const cleaned = cleanCompany(newCompany, true);
+    await withPresignedLogo(cleaned);
+    res.status(201).json(cleaned);
   } catch (error: any) {
     console.error('Error creating company:', error);
     res.status(500).json({ error: error.message });
@@ -993,12 +1013,41 @@ router.put('/:id', async (req: AuthRequest, res) => {
       );
     }
 
-    res.json(cleanCompany(updatedCompany, true));
+    const cleaned = cleanCompany(updatedCompany, true);
+    await withPresignedLogo(cleaned);
+    res.json(cleaned);
   } catch (error: any) {
     console.error('Error updating company:', error);
     console.error('Error stack:', error.stack);
     console.error('Request body:', req.body);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Guardar URL de logo (el frontend sube el archivo al proxy media y envía la URL aquí)
+router.post('/:id/logo', async (req: AuthRequest, res) => {
+  try {
+    const url = req.body?.url;
+    if (!url || typeof url !== 'string' || !url.trim()) {
+      return res.status(400).json({ error: 'Se requiere la URL del logo (campo "url")' });
+    }
+    const company = await Company.findByPk(req.params.id);
+    if (!company) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+    if (!canModifyResource(req.userRole, req.userId, company.ownerId)) {
+      return res.status(403).json({ error: 'No tienes permisos para modificar esta empresa' });
+    }
+    await company.update({ logo: url.trim() });
+    const updated = await Company.findByPk(company.id, {
+      include: [{ model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] }],
+    });
+    const cleaned = cleanCompany(updated, true);
+    await withPresignedLogo(cleaned);
+    res.json(cleaned);
+  } catch (error: any) {
+    console.error('Error saving company logo URL:', error);
+    res.status(500).json({ error: error.message || 'Error al guardar el logo' });
   }
 });
 
@@ -1082,7 +1131,9 @@ router.post('/:id/contacts', async (req, res) => {
       ],
     });
 
-    res.json(cleanCompany(updatedCompany, true));
+    const cleaned = cleanCompany(updatedCompany, true);
+    await withPresignedLogo(cleaned);
+    res.json(cleaned);
   } catch (error: any) {
     console.error('Error adding contacts to company:', error);
     console.error('Error stack:', error.stack);
@@ -1111,7 +1162,9 @@ router.delete('/:id/contacts/:contactId', async (req, res) => {
       ],
     });
 
-    res.json(cleanCompany(updatedCompany, true));
+    const cleaned = cleanCompany(updatedCompany, true);
+    await withPresignedLogo(cleaned);
+    res.json(cleaned);
   } catch (error: any) {
     console.error('Error removing contact association:', error);
     console.error('Error stack:', error.stack);
@@ -1155,7 +1208,9 @@ router.post('/:id/deals', async (req: AuthRequest, res) => {
       ],
     });
 
-    res.status(200).json(cleanCompany(updatedCompany, true));
+    const cleaned = cleanCompany(updatedCompany, true);
+    await withPresignedLogo(cleaned);
+    res.status(200).json(cleaned);
   } catch (error: any) {
     console.error('Error adding deals to company:', error);
     res.status(500).json({ error: error.message || 'Error al asociar los negocios' });
@@ -1209,7 +1264,9 @@ router.post('/:id/companies', async (req, res) => {
       ],
     });
 
-    res.json(cleanCompany(updatedCompany, true));
+    const cleaned = cleanCompany(updatedCompany, true);
+    await withPresignedLogo(cleaned);
+    res.json(cleaned);
   } catch (error: any) {
     console.error('Error adding companies to company:', error);
     console.error('Error stack:', error.stack);
@@ -1239,7 +1296,9 @@ router.delete('/:id/companies/:companyId', async (req, res) => {
       ],
     });
 
-    res.json(cleanCompany(updatedCompany, true));
+    const cleaned = cleanCompany(updatedCompany, true);
+    await withPresignedLogo(cleaned);
+    res.json(cleaned);
   } catch (error: any) {
     console.error('Error removing company association:', error);
     console.error('Error stack:', error.stack);
