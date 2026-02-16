@@ -63,16 +63,16 @@ const panelContentSx = (theme: Theme) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: 1,
     '& .MuiOutlinedInput-notchedOutline': {
-      borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : 'rgba(0, 0, 0, 0.23)',
-      borderWidth: '1px',
-      borderRadius: 1,
+      borderColor: theme.palette.divider,
+      borderWidth: '2px',
+      borderRadius: 2,
     },
     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-      borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : 'rgba(0, 0, 0, 0.23)',
-      borderWidth: '1px',
+      borderColor: theme.palette.divider,
+      borderWidth: '2px',
     },
     '&:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : 'rgba(0, 0, 0, 0.23)',
+      borderColor: theme.palette.divider,
     },
   },
 });
@@ -243,11 +243,9 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
               color: `${taxiMonterricoColors.orange} !important`,
               borderRadius: 1.5,
               border: '1.5px solid transparent',
-              transition: 'all 0.2s ease',
               '&:hover': {
                 bgcolor: `${taxiMonterricoColors.orange}1A`,
                 borderColor: taxiMonterricoColors.orange,
-                transform: 'rotate(90deg)',
               },
             }}
           >

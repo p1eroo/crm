@@ -43,19 +43,16 @@ const LinkedContactsCard: React.FC<LinkedContactsCardProps> = ({
       elevation={0}
       sx={{ 
         borderRadius: 2,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3) !important' : '0 2px 8px rgba(0,0,0,0.1) !important',
+        boxShadow: 'none',
+        border: `1px solid ${theme.palette.divider}`,
         bgcolor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
         backgroundColor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
         background: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
-        border: "none !important",
     }}>
       <CardContent sx={{ bgcolor: 'transparent', backgroundColor: 'transparent' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-          <Person sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
-          <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-            Contactos vinculados
-          </Typography>
-        </Box>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+          Contactos vinculados
+        </Typography>
         
         {contacts.length > 0 ? (
           <>
@@ -160,9 +157,12 @@ const LinkedContactsCard: React.FC<LinkedContactsCardProps> = ({
             )}
           </>
         ) : (
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-            No hay contactos vinculados
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, py: 2 }}>
+            <Person sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+              No hay contactos vinculados
+            </Typography>
+          </Box>
         )}
       </CardContent>
     </Card>

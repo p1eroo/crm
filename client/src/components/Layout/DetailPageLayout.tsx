@@ -295,11 +295,8 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                 mb: 2,
                 bgcolor: theme.palette.mode === "dark" ? "#1c252e !important" : theme.palette.background.paper,
                 backgroundColor: theme.palette.mode === "dark" ? "#1c252e !important" : theme.palette.background.paper,
-                border: "none !important",
-                boxShadow:
-                  theme.palette.mode === "dark"
-                    ? "0 2px 8px rgba(0,0,0,0.3) !important"
-                    : "0 2px 8px rgba(0,0,0,0.1) !important",
+                border: `1px solid ${theme.palette.divider}`,
+                boxShadow: "none",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -344,7 +341,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: 3,
-                    boxShadow: `0 8px 24px ${taxiMonterricoColors.greenLight}40`,
+                    boxShadow: "none",
                     transition: "opacity 0.2s",
                   }}
                 >

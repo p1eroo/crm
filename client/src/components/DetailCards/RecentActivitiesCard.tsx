@@ -89,11 +89,11 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
       elevation={0}
       sx={{ 
         borderRadius: 2,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3) !important' : '0 2px 8px rgba(0,0,0,0.1) !important',
+        boxShadow: 'none',
+        border: `1px solid ${theme.palette.divider}`,
         bgcolor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
         backgroundColor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
         background: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
-        border: "none !important",
     }}>
       <CardContent sx={{ bgcolor: 'transparent', backgroundColor: 'transparent' }}>
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
@@ -192,9 +192,12 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
             })}
           </Box>
         ) : (
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-            No hay actividades recientes
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, py: 2 }}>
+            <Assignment sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+              No hay actividades recientes
+            </Typography>
+          </Box>
         )}
       </CardContent>
     </Card>

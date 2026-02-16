@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Drawer,
   Box,
@@ -67,6 +67,10 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
   const [, setTicketsPage] = useState(1);
   const [activitiesPage, setActivitiesPage] = useState(1);
   const itemsPerPage = 5;
+  const entityRef = useRef<any>(null);
+  useEffect(() => {
+    entityRef.current = entity;
+  }, [entity]);
 
   const fetchEntity = useCallback(async () => {
     if (!entityId) return;
@@ -123,8 +127,8 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
     if (!entityId) return;
     setLoadingAssociations(true);
     try {
-      // Para deals, obtener el deal completo con relaciones si es necesario
-      let currentEntity = entity;
+      // Para deals, obtener el deal completo con relaciones si es necesario (usar ref para evitar bucle)
+      let currentEntity = entityRef.current;
       if (entityType === 'deal' && (!currentEntity?.Companies || !Array.isArray(currentEntity.Companies))) {
         try {
           const dealResponse = await api.get(`/deals/${entityId}`);
@@ -197,7 +201,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
         }
       } else if (entityType === 'deal') {
         // Deal - Usar currentEntity que ya tiene las relaciones si fueron obtenidas
-        const dealData = currentEntity || entity;
+        const dealData = currentEntity || entityRef.current;
 
         // Obtener contactos asociados (relación muchos a muchos)
         if (dealData?.Contacts && Array.isArray(dealData.Contacts)) {
@@ -237,10 +241,11 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
         }
       } else if (entityType === 'task') {
         // Task
+        const taskEntity = entityRef.current;
         // Obtener contacto asociado
-        if (entity?.contactId) {
+        if (taskEntity?.contactId) {
           try {
-            const contactResponse = await api.get(`/contacts/${entity.contactId}`);
+            const contactResponse = await api.get(`/contacts/${taskEntity.contactId}`);
             setAssociatedContacts([contactResponse.data]);
           } catch (error) {
             console.error('Error fetching contact:', error);
@@ -248,9 +253,9 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
         }
 
         // Obtener empresa asociada
-        if (entity?.companyId) {
+        if (taskEntity?.companyId) {
           try {
-            const companyResponse = await api.get(`/companies/${entity.companyId}`);
+            const companyResponse = await api.get(`/companies/${taskEntity.companyId}`);
             setAssociatedCompanies([companyResponse.data]);
           } catch (error) {
             console.error('Error fetching company:', error);
@@ -258,9 +263,9 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
         }
 
         // Obtener deal asociado
-        if (entity?.dealId) {
+        if (taskEntity?.dealId) {
           try {
-            const dealResponse = await api.get(`/deals/${entity.dealId}`);
+            const dealResponse = await api.get(`/deals/${taskEntity.dealId}`);
             setAssociatedDeals([dealResponse.data]);
           } catch (error) {
             console.error('Error fetching deal:', error);
@@ -272,11 +277,12 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
     } finally {
       setLoadingAssociations(false);
     }
-  }, [entityId, entityType, entity]);
+  }, [entityId, entityType]);
 
   useEffect(() => {
     if (open && entityId) {
       if (entityData) {
+        entityRef.current = entityData;
         setEntity(entityData);
       } else {
         fetchEntity();
@@ -284,6 +290,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
       fetchActivities();
       fetchAssociations();
     } else if (!open) {
+      entityRef.current = null;
       // Limpiar datos al cerrar
       setEntity(null);
       setActivities([]);

@@ -34,6 +34,7 @@ import {
   FormatAlignJustify,
   ChevronLeft,
   ChevronRight,
+  Schedule,
 } from "@mui/icons-material";
 import { taxiMonterricoColors } from "../../theme/colors";
 import { pageStyles } from "../../theme/styles";
@@ -55,8 +56,10 @@ interface TaskModalProps {
   entityName: string;
   user: User | null;
   onSave: (newTask: any) => void;
-  taskType?: "todo" | "meeting"; // "todo" para tarea, "meeting" para reunión
+  taskType?: "todo" | "meeting"; // valor inicial al abrir
 }
+
+type TaskTypeValue = "call" | "email" | "meeting" | "note" | "todo" | "other";
 
 const TaskModal: React.FC<TaskModalProps> = ({
   open,
@@ -69,12 +72,24 @@ const TaskModal: React.FC<TaskModalProps> = ({
   taskType = "todo",
 }) => {
   const theme = useTheme();
-  const [taskData, setTaskData] = useState({
+  const [taskData, setTaskData] = useState<{
+    title: string;
+    description: string;
+    priority: string;
+    dueDate: string;
+    startDate: string;
+    type: TaskTypeValue;
+    status: string;
+    estimatedTime: string;
+  }>({
     title: "",
     description: "",
     priority: "medium",
     dueDate: "",
-    type: taskType,
+    startDate: "",
+    type: taskType as TaskTypeValue,
+    status: "pending",
+    estimatedTime: "",
   });
   const [saving, setSaving] = useState(false);
   const descriptionEditorRef = useRef<HTMLDivElement>(null);
@@ -99,6 +114,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
     useState<HTMLElement | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const estimatedTimeInputRef = useRef<HTMLInputElement>(null);
+  const startDateInputRef = useRef<HTMLInputElement>(null);
 
   // Resetear estados cuando se abre/cierra el modal
   useEffect(() => {
@@ -108,7 +125,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
         description: "",
         priority: "medium",
         dueDate: "",
+        startDate: "",
         type: taskType,
+        status: "pending",
+        estimatedTime: "",
       });
       setLinkDialogOpen(false);
       setTableDialogOpen(false);
@@ -509,10 +529,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
         const response = await api.post("/tasks", {
           title: taskData.title,
           description: taskData.description,
-          type: 'todo',
-          status: "pending",
+          type: taskData.type || "todo",
+          status: taskData.status || "pending",
           priority: taskData.priority || "medium",
           dueDate: taskData.dueDate || undefined,
+          startDate: taskData.startDate || undefined,
           [`${entityType}Id`]: Number(entityId),
         });
         const newTask = response.data;
@@ -610,10 +631,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: { xs: "50vw", sm: "700px", md: "550px" },
+          width: { xs: "92vw", sm: "760px", md: "620px" },
           maxWidth: { xs: "95vw", sm: "95vw" },
-          height: { xs: "85vh", sm: "90vh" },
-          maxHeight: { xs: "85vh", sm: "680px" },
+          height: { xs: "90vh", sm: "92vh" },
+          maxHeight: { xs: "90vh", sm: "820px" },
           bgcolor: `${theme.palette.background.paper} !important`,
           color: `${theme.palette.text.primary} !important`,
           border: "none",
@@ -658,16 +679,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
               letterSpacing: "-0.02em",
             }}
           >
-            {taskData.type === "meeting" ? "Reunión" : "Tarea"}
+            {({ email: "Correo", meeting: "Reunión", call: "Llamada", note: "Nota", todo: "Tarea", other: "Otro" } as Record<string, string>)[taskData.type] || "Tarea"}
           </Typography>
           <IconButton
             sx={{
               color: theme.palette.text.secondary,
-              transition: "all 0.2s ease",
               "&:hover": {
                 backgroundColor: theme.palette.action.hover,
                 color: theme.palette.text.primary,
-                transform: "rotate(90deg)",
               },
             }}
             size="medium"
@@ -690,7 +709,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             gap: 2,
           }}
         >
-          {/* Título */}
+          {/* Fila 1: Título (solo) */}
           <Box sx={{ mb: 0.5 }}>
             <Typography
               variant="body2"
@@ -703,11 +722,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
               Título
             </Typography>
             <TextField
+              size="small"
               value={taskData.title}
               onChange={(e) =>
                 setTaskData({ ...taskData, title: e.target.value })
               }
               fullWidth
+              placeholder="Título"
               sx={{
                 "& input": {
                   color: `${theme.palette.text.primary} !important`,
@@ -730,22 +751,398 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     borderColor: theme.palette.divider,
                     borderWidth: "2px",
                   },
+                  "& .MuiInputBase-input": {
+                    py: 1,
+                  },
                 },
               }}
               onKeyDown={(e) => {
-                // Enter para guardar (solo en el campo de título)
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   if (!saving && taskData.title.trim()) {
                     handleSaveTask();
                   }
                 }
-                // Esc para cancelar
                 if (e.key === "Escape") {
                   onClose();
                 }
               }}
             />
+          </Box>
+
+          {/* Fila 2: Tipo | Fecha de inicio */}
+          <Box sx={{ display: "flex", gap: 1.5, mb: 0.5 }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  mb: 0.75,
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                }}
+              >
+                Tipo
+              </Typography>
+              <TextField
+                select
+                size="small"
+                value={taskData.type}
+                onChange={(e) =>
+                  setTaskData({ ...taskData, type: e.target.value as TaskTypeValue })
+                }
+                fullWidth
+                SelectProps={{
+                  MenuProps: {
+                    disablePortal: false,
+                    disableScrollLock: true,
+                    style: { zIndex: 1600 },
+                    slotProps: {
+                      root: { style: { zIndex: 1600 } },
+                    },
+                    PaperProps: {
+                      sx: {
+                        borderRadius: 2,
+                        mt: 1,
+                        zIndex: "1600 !important",
+                        backgroundColor: theme.palette.background.paper,
+                        boxShadow: theme.palette.mode === "dark"
+                          ? "0 8px 32px rgba(0, 0, 0, 0.4)"
+                          : "0 8px 32px rgba(0, 0, 0, 0.15)",
+                        maxHeight: 300,
+                        border: `1px solid ${theme.palette.divider}`,
+                        "& .MuiMenuItem-root": {
+                          color: theme.palette.text.primary,
+                          py: 0.75,
+                          "&:hover": { backgroundColor: theme.palette.action.hover },
+                          "&.Mui-selected": {
+                            backgroundColor: `${taxiMonterricoColors.green}20`,
+                            color: taxiMonterricoColors.green,
+                            "&:hover": { backgroundColor: `${taxiMonterricoColors.green}30` },
+                          },
+                        },
+                      },
+                    },
+                    anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                    transformOrigin: { vertical: "top", horizontal: "left" },
+                  },
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
+                      borderColor: theme.palette.divider,
+                    },
+                    "&:hover fieldset": { borderColor: theme.palette.divider },
+                    "&.Mui-focused fieldset": {
+                      borderColor: theme.palette.divider,
+                      borderWidth: "2px",
+                    },
+                  },
+                  "& .MuiInputBase-input": { py: 1 },
+                }}
+              >
+                <MenuItem value="email">Correo</MenuItem>
+                <MenuItem value="meeting">Reunión</MenuItem>
+                <MenuItem value="call">Llamada</MenuItem>
+                <MenuItem value="note">Nota</MenuItem>
+                <MenuItem value="todo">Tarea</MenuItem>
+                <MenuItem value="other">Otro</MenuItem>
+              </TextField>
+            </Box>
+            <Box sx={{ flex: 1, position: "relative" }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  mb: 0.75,
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                }}
+              >
+                Fecha de inicio
+              </Typography>
+              <Box sx={{ position: "relative", width: "100%" }}>
+                <TextField
+                  inputRef={startDateInputRef}
+                  size="small"
+                  type="date"
+                  value={taskData.startDate}
+                  onChange={(e) =>
+                    setTaskData({ ...taskData, startDate: e.target.value })
+                  }
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ title: "" }}
+                  InputProps={{
+                    sx: {
+                      borderRadius: 2,
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      "& fieldset": {
+                        borderWidth: "2px",
+                        borderColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(255, 255, 255, 0.08)"
+                            : "rgba(0, 0, 0, 0.23)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(255, 255, 255, 0.08)"
+                            : "rgba(0, 0, 0, 0.23)",
+                        borderWidth: "2px",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: theme.palette.divider,
+                        borderWidth: "2px",
+                      },
+                      "& .MuiInputBase-input": {
+                        py: 1,
+                        outline: "none",
+                        "&::-webkit-calendar-picker-indicator": {
+                          opacity: 0,
+                          position: "absolute",
+                          right: 0,
+                          width: "100%",
+                          height: "100%",
+                          cursor: "pointer",
+                        },
+                      },
+                    },
+                    endAdornment: (
+                      <IconButton
+                        size="small"
+                        sx={{
+                          color: theme.palette.text.secondary,
+                          mr: 0.5,
+                          pointerEvents: "none",
+                        }}
+                        aria-hidden
+                      >
+                        <CalendarToday sx={{ fontSize: 20 }} />
+                      </IconButton>
+                    ),
+                  }}
+                />
+                <Box
+                  component="span"
+                  role="presentation"
+                  title=""
+                  tabIndex={-1}
+                  onClick={() => {
+                    try {
+                      (startDateInputRef.current as HTMLInputElement & { showPicker?: () => void })?.showPicker?.();
+                    } catch {
+                      startDateInputRef.current?.focus();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      try {
+                        (startDateInputRef.current as HTMLInputElement & { showPicker?: () => void })?.showPicker?.();
+                      } catch {
+                        startDateInputRef.current?.focus();
+                      }
+                    }
+                  }}
+                  sx={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    cursor: "pointer",
+                    zIndex: 1,
+                  }}
+                />
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Estado y Hora estimada */}
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  mb: 0.75,
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                }}
+              >
+                Estado
+              </Typography>
+              <TextField
+                select
+                size="small"
+                value={taskData.status}
+                onChange={(e) =>
+                  setTaskData({ ...taskData, status: e.target.value })
+                }
+                fullWidth
+                SelectProps={{
+                  MenuProps: {
+                    disablePortal: false,
+                    disableScrollLock: true,
+                    style: { zIndex: 1600 },
+                    slotProps: { root: { style: { zIndex: 1600 } } },
+                    PaperProps: {
+                      sx: {
+                        borderRadius: 2,
+                        mt: 1,
+                        zIndex: "1600 !important",
+                        backgroundColor: theme.palette.background.paper,
+                        boxShadow: theme.palette.mode === "dark"
+                          ? "0 8px 32px rgba(0, 0, 0, 0.4)"
+                          : "0 8px 32px rgba(0, 0, 0, 0.15)",
+                        maxHeight: 300,
+                        border: `1px solid ${theme.palette.divider}`,
+                        "& .MuiMenuItem-root": {
+                          color: theme.palette.text.primary,
+                          py: 0.75,
+                          "&:hover": { backgroundColor: theme.palette.action.hover },
+                          "&.Mui-selected": {
+                            backgroundColor: `${taxiMonterricoColors.green}20`,
+                            color: taxiMonterricoColors.green,
+                            "&:hover": { backgroundColor: `${taxiMonterricoColors.green}30` },
+                          },
+                        },
+                      },
+                    },
+                    anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                    transformOrigin: { vertical: "top", horizontal: "left" },
+                  },
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
+                      borderColor: theme.palette.divider,
+                    },
+                    "&:hover fieldset": { borderColor: theme.palette.divider },
+                    "&.Mui-focused fieldset": {
+                      borderColor: theme.palette.divider,
+                      borderWidth: "2px",
+                    },
+                  },
+                  "& .MuiInputBase-input": { py: 1 },
+                }}
+              >
+                <MenuItem value="pending">Pendiente</MenuItem>
+                <MenuItem value="in progress">En Progreso</MenuItem>
+                <MenuItem value="completed">Completada</MenuItem>
+              </TextField>
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  mb: 0.75,
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                }}
+              >
+                Hora estimada
+              </Typography>
+              <Box sx={{ position: "relative", width: "100%" }}>
+                <TextField
+                  inputRef={estimatedTimeInputRef}
+                  size="small"
+                  type="time"
+                  value={taskData.estimatedTime}
+                  onChange={(e) =>
+                    setTaskData({ ...taskData, estimatedTime: e.target.value })
+                  }
+                  fullWidth
+                  inputProps={{ title: "" }}
+                  InputProps={{
+                    sx: {
+                      borderRadius: 2,
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      "& fieldset": {
+                        borderWidth: "2px",
+                        borderColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(255, 255, 255, 0.08)"
+                            : "rgba(0, 0, 0, 0.23)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(255, 255, 255, 0.08)"
+                            : "rgba(0, 0, 0, 0.23)",
+                        borderWidth: "2px",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: theme.palette.divider,
+                        borderWidth: "2px",
+                      },
+                      "& .MuiInputBase-input": {
+                        py: 1,
+                        outline: "none",
+                        "&::-webkit-calendar-picker-indicator": {
+                          opacity: 0,
+                          position: "absolute",
+                          right: 0,
+                          width: "100%",
+                          height: "100%",
+                          cursor: "pointer",
+                        },
+                      },
+                    },
+                    endAdornment: (
+                      <IconButton
+                        size="small"
+                        sx={{
+                          color: theme.palette.text.secondary,
+                          mr: 0.5,
+                          pointerEvents: "none",
+                        }}
+                        aria-hidden
+                      >
+                        <Schedule sx={{ fontSize: 20 }} />
+                      </IconButton>
+                    ),
+                  }}
+                />
+                {/* Overlay para ocultar el tooltip nativo del navegador y evitar borde blanco en hover */}
+                <Box
+                  component="span"
+                  role="presentation"
+                  title=""
+                  tabIndex={-1}
+                  onClick={() => {
+                    try {
+                      (estimatedTimeInputRef.current as HTMLInputElement & { showPicker?: () => void })?.showPicker?.();
+                    } catch {
+                      estimatedTimeInputRef.current?.focus();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      try {
+                        (estimatedTimeInputRef.current as HTMLInputElement & { showPicker?: () => void })?.showPicker?.();
+                      } catch {
+                        estimatedTimeInputRef.current?.focus();
+                      }
+                    }
+                  }}
+                  sx={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    cursor: "pointer",
+                    zIndex: 1,
+                  }}
+                />
+              </Box>
+            </Box>
           </Box>
 
           {/* Prioridad y Fecha límite */}
@@ -914,7 +1311,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
           </Box>
 
           {/* Editor de texto enriquecido */}
-          <Box sx={{ position: "relative", flex: 1, minHeight: 0, maxHeight: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <Box sx={{ position: "relative", flex: 1, minHeight: 0, maxHeight: "100%", display: "flex", flexDirection: "column", overflow: "hidden", pb: 0 }}>
             <Box
               ref={descriptionEditorRef}
               contentEditable

@@ -955,10 +955,8 @@ const DealDetail: React.FC = () => {
           <Card
             sx={{
               borderRadius: 2,
-              boxShadow:
-                theme.palette.mode === 'dark'
-                  ? '0 2px 8px rgba(0,0,0,0.3)'
-                  : '0 2px 8px rgba(0,0,0,0.1)',
+              boxShadow: 'none',
+              border: `1px solid ${theme.palette.divider}`,
               bgcolor: theme.palette.background.paper,
               px: 2,
               py: 2,

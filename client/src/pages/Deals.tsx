@@ -38,6 +38,13 @@ import UserAvatar from '../components/UserAvatar';
 import { FormDrawer } from '../components/FormDrawer';
 import { DealFormContent, getInitialDealFormData, type DealFormData } from '../components/DealFormContent';
 import { formatCurrencyPE, formatCurrencyPECompact } from '../utils/currencyUtils';
+import { getAvatarColors } from '../utils/avatarColors';
+
+const getCompanyInitials = (name: string): string => {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return (name || '').slice(0, 2).toUpperCase() || '—';
+};
 
 interface Deal {
   id: number;
@@ -50,7 +57,7 @@ interface Deal {
   companyId?: number;
   contactId?: number;
   Contact?: { firstName: string; lastName: string };
-  Company?: { name: string };
+  Company?: { name: string; logo?: string | null };
   Owner?: { id: number; firstName: string; lastName: string; email?: string };
 }
 
@@ -662,66 +669,6 @@ const Deals: React.FC = () => {
       }}>
 
       {/* Indicador de filtros por columna activos */}
-      {Object.values(columnFilters).some(v => v) && (
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 1, 
-          flexWrap: 'wrap', 
-          mb: 1.5,
-          alignItems: 'center',
-          px: { xs: 1, sm: 2 },
-        }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
-            Filtros por columna:
-          </Typography>
-          {columnFilters.nombre && (
-            <Chip
-              size="small"
-              label={`Nombre: "${columnFilters.nombre}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.monto && (
-            <Chip
-              size="small"
-              label={`Monto: "${columnFilters.monto}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, monto: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.etapa && (
-            <Chip
-              size="small"
-              label={`Etapa: "${columnFilters.etapa}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.propietario && (
-            <Chip
-              size="small"
-              label={`Propietario: "${columnFilters.propietario}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, propietario: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          <Button
-            size="small"
-            onClick={() => setColumnFilters({ nombre: '', monto: '', etapa: '', propietario: '' })}
-            sx={{ 
-              fontSize: '0.7rem', 
-              textTransform: 'none',
-              color: theme.palette.error.main,
-              minWidth: 'auto',
-              p: 0.5,
-            }}
-          >
-            Limpiar todos
-          </Button>
-        </Box>
-      )}
-
       {/* Barra de herramientas compartida - se muestra siempre */}
       <Box
         sx={{
@@ -923,7 +870,7 @@ const Deals: React.FC = () => {
                   : `${taxiMonterricoColors.green}03`,
                 overflow: 'hidden',
                 display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(5, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 0.7fr' },
+                gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.9fr 0.9fr 0.8fr 0.7fr' },
                 columnGap: { xs: 1, md: 1.5 },
                 minWidth: { xs: 600, md: 'auto' },
                 maxWidth: '100%',
@@ -1011,6 +958,12 @@ const Deals: React.FC = () => {
                 />
               )}
             </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Fecha de Cierre</Typography>
+            </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Empresa</Typography>
+            </Box>
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Propietario</Typography>
@@ -1057,7 +1010,7 @@ const Deals: React.FC = () => {
                   bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                   cursor: 'pointer',
                   display: 'grid',
-                  gridTemplateColumns: { xs: 'repeat(5, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 0.7fr' },
+                  gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.9fr 0.9fr 0.8fr 0.7fr' },
                   columnGap: { xs: 1, md: 1.5 },
                   minWidth: { xs: 600, md: 'auto' },
                   maxWidth: '100%',
@@ -1183,14 +1136,19 @@ const Deals: React.FC = () => {
                       alignItems: 'center',
                       gap: 0.25,
                       cursor: updatingStage[deal.id] ? 'wait' : 'pointer',
-                      '&:hover': { opacity: 0.8 },
+                      '&:hover': { opacity: 0.9 },
+                      bgcolor: getStageColor(deal.stage).bg,
+                      color: getStageColor(deal.stage).color,
+                      borderRadius: 3,
+                      px: 1,
+                      py: 0.375,
                     }}
                   >
                     <Typography
                       sx={{
                         fontWeight: 600,
                         fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                        color: getStageColor(deal.stage).color,
+                        color: 'inherit',
                       }}
                     >
                       {getStageLabel(deal.stage)}
@@ -1198,7 +1156,7 @@ const Deals: React.FC = () => {
                     <ExpandMore
                       sx={{
                         fontSize: { xs: '0.875rem', md: '1rem' },
-                        color: getStageColor(deal.stage).color,
+                        color: 'inherit',
                       }}
                     />
                   </Box>
@@ -1283,7 +1241,33 @@ const Deals: React.FC = () => {
                       ))}
                     </Menu>
                 </Box>
-                {/* Nueva columna: Propietario */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.8125rem' }, color: theme.palette.text.secondary }}>
+                    {deal.closeDate ? new Date(deal.closeDate).toLocaleDateString('es-ES') : '--'}
+                  </Typography>
+                </Box>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                  {deal.Company?.name ? (
+                    <Tooltip title={deal.Company.name} arrow>
+                      <Avatar
+                        src={deal.Company.logo ?? undefined}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          bgcolor: deal.Company.logo ? 'transparent' : getAvatarColors(deal.Company.name).bg,
+                          color: getAvatarColors(deal.Company.name).color,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {!deal.Company.logo && getCompanyInitials(deal.Company.name)}
+                      </Avatar>
+                    </Tooltip>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>—</Typography>
+                  )}
+                </Box>
                 <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   {deal.Owner ? (
                     <Tooltip title={`${deal.Owner.firstName} ${deal.Owner.lastName}`} arrow>
@@ -1427,8 +1411,8 @@ const Deals: React.FC = () => {
           }
           emptyState={
             deals.length === 0 ? (
-              <Box sx={pageStyles.emptyState}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 6 }}>
+              <Box sx={{ ...pageStyles.emptyState, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper, py: 8 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                   <Box
                     sx={{
                       width: 120,
@@ -1440,12 +1424,12 @@ const Deals: React.FC = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      mb: 1,
+                      lineHeight: 1,
                     }}
                   >
                     <AttachMoney
                       sx={{
-                        fontSize: 56,
+                        fontSize: 64,
                         color: theme.palette.text.secondary,
                       }}
                     />
@@ -1454,10 +1438,10 @@ const Deals: React.FC = () => {
                     <Typography
                       variant="h6"
                       sx={{
-                        fontWeight: 600,
+                        fontWeight: 700,
                         mb: 1,
-                        color: theme.palette.text.primary,
-                        fontSize: { xs: '1.1rem', md: '1.25rem' },
+                        color: theme.palette.text.secondary,
+                        fontSize: { xs: '1.25rem', md: '1.5rem' },
                       }}
                     >
                       No hay negocios para mostrar

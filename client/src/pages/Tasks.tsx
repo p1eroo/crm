@@ -47,10 +47,13 @@ import { getAvatarColors } from '../utils/avatarColors';
 
 library.add(far);
 
+type TaskType = 'call' | 'email' | 'meeting' | 'note' | 'todo' | 'other';
+
 interface Task {
   id: number;
   title: string;
   subject?: string; // Para actividades
+  type?: TaskType;
   status: string;
   priority: string;
   startDate?: string;
@@ -78,6 +81,17 @@ const getContactInitials = (firstName: string, lastName: string): string => {
   return `${f}${l}`.toUpperCase() || '—';
 };
 
+const getTypeLabel = (type: string | undefined): string => {
+  const map: Record<string, string> = {
+    email: 'Correo',
+    meeting: 'Reunión',
+    call: 'Llamada',
+    note: 'Nota',
+    todo: 'Tarea',
+    other: 'Otro',
+  };
+  return type ? (map[type] || type) : '—';
+};
 
 const initialsAvatarSx = {
   width: { xs: 28, md: 32 },
@@ -102,6 +116,7 @@ const Tasks: React.FC = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    type: 'todo' as TaskType,
     status: 'pending',
     priority: 'medium',
     startDate: '',
@@ -138,9 +153,25 @@ const Tasks: React.FC = () => {
   const [contactSearchInput, setContactSearchInput] = useState('');
   const [linkedTaskLockCompanyContact, setLinkedTaskLockCompanyContact] = useState(false);
   const [showColumnFilters, setShowColumnFilters] = useState(false);
-  const [columnFilters, setColumnFilters] = useState<{ titulo: string; estado: string; prioridad: string }>({
+  const [columnFilters, setColumnFilters] = useState<{
+    titulo: string;
+    tipo: string;
+    estado: string;
+    fechaInicio: string;
+    fechaVencimiento: string;
+    asignadoA: string;
+    empresa: string;
+    contacto: string;
+    prioridad: string;
+  }>({
     titulo: '',
+    tipo: '',
     estado: '',
+    fechaInicio: '',
+    fechaVencimiento: '',
+    asignadoA: '',
+    empresa: '',
+    contacto: '',
     prioridad: '',
   });
   const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
@@ -288,7 +319,23 @@ const Tasks: React.FC = () => {
         const mappedPriority = mapPriorityToEnglish(debouncedColumnFilters.prioridad);
         params.filterPrioridad = mappedPriority || debouncedColumnFilters.prioridad;
       }
-      
+      if (debouncedColumnFilters.tipo) {
+        const typeMap: Record<string, string> = {
+          Correo: 'email',
+          Reunión: 'meeting',
+          Llamada: 'call',
+          Nota: 'note',
+          Tarea: 'todo',
+          Otro: 'other',
+        };
+        params.filterTipo = typeMap[debouncedColumnFilters.tipo] || debouncedColumnFilters.tipo;
+      }
+      if (debouncedColumnFilters.fechaInicio) params.filterFechaInicio = debouncedColumnFilters.fechaInicio;
+      if (debouncedColumnFilters.fechaVencimiento) params.filterFechaVencimiento = debouncedColumnFilters.fechaVencimiento;
+      if (debouncedColumnFilters.asignadoA) params.filterAsignadoA = debouncedColumnFilters.asignadoA;
+      if (debouncedColumnFilters.empresa) params.filterEmpresa = debouncedColumnFilters.empresa;
+      if (debouncedColumnFilters.contacto) params.filterContacto = debouncedColumnFilters.contacto;
+
       // Filtro por categoría (activeFilter) - solo si no hay filtro de columna para estado
       if (activeFilter && !debouncedColumnFilters.estado) {
         switch (activeFilter) {
@@ -473,6 +520,7 @@ const Tasks: React.FC = () => {
       setFormData({
         title: task.title || task.subject || '',
         description: description,
+        type: ((task as any).type as TaskType) || 'todo',
         status: task.status,
         priority: task.priority,
         startDate: task.startDate ? task.startDate.split('T')[0] : '',
@@ -487,6 +535,7 @@ const Tasks: React.FC = () => {
       setFormData({
         title: '',
         description: '',
+        type: 'todo',
         status: 'pending',
         priority: 'medium',
         startDate: '',
@@ -528,6 +577,7 @@ const Tasks: React.FC = () => {
     setFormData({
       title: '',
       description: '',
+      type: 'todo',
       status: 'pending',
       priority: 'medium',
       startDate: '',
@@ -1184,11 +1234,6 @@ const Tasks: React.FC = () => {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       Nombre
-                      {showColumnFilters && (
-                        <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, titulo: '' }))} sx={{ p: 0.25, opacity: columnFilters.titulo ? 1 : 0.3 }}>
-                          <FilterList sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      )}
                     </Box>
                     {showColumnFilters && (
                       <TextField
@@ -1211,6 +1256,50 @@ const Tasks: React.FC = () => {
                   py: { xs: 1.5, md: 1.25 }, 
                   pl: { xs: 1, md: 1.5 }, 
                   pr: { xs: 1.5, md: 2 }, 
+                  minWidth: { xs: 90, md: 100 }, 
+                  width: { xs: 'auto', md: '12%' },
+                  bgcolor: 'transparent',
+                  verticalAlign: showColumnFilters ? 'top' : 'middle',
+                }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Tipo
+                    </Box>
+                    {showColumnFilters && (
+                      <FormControl size="small" fullWidth>
+                        <Select
+                          value={columnFilters.tipo || 'todos'}
+                          onChange={(e) => {
+                            const value = e.target.value === 'todos' ? '' : e.target.value;
+                            setColumnFilters(prev => ({ ...prev, tipo: value }));
+                          }}
+                          displayEmpty
+                          sx={{
+                            height: 28,
+                            fontSize: '0.75rem',
+                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                            '& .MuiSelect-select': { py: 0.5 },
+                          }}
+                        >
+                          <MenuItem value="todos">Todos</MenuItem>
+                          <MenuItem value="Correo">Correo</MenuItem>
+                          <MenuItem value="Reunión">Reunión</MenuItem>
+                          <MenuItem value="Llamada">Llamada</MenuItem>
+                          <MenuItem value="Nota">Nota</MenuItem>
+                          <MenuItem value="Tarea">Tarea</MenuItem>
+                          <MenuItem value="Otro">Otro</MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
+                  </Box>
+                </TableCell>
+                <TableCell sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  py: { xs: 1.5, md: 1.25 }, 
+                  pl: { xs: 1, md: 1.5 }, 
+                  pr: { xs: 1.5, md: 2 }, 
                   minWidth: { xs: 100, md: 120 }, 
                   width: { xs: 'auto', md: '14%' },
                   bgcolor: 'transparent',
@@ -1219,11 +1308,6 @@ const Tasks: React.FC = () => {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       Estado
-                      {showColumnFilters && (
-                        <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, estado: '' }))} sx={{ p: 0.25, opacity: columnFilters.estado ? 1 : 0.3 }}>
-                          <FilterList sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      )}
                     </Box>
                     {showColumnFilters && (
                       <FormControl size="small" fullWidth>
@@ -1264,9 +1348,34 @@ const Tasks: React.FC = () => {
                   px: { xs: 1.5, md: 2 }, 
                   minWidth: { xs: 120, md: 150 }, 
                   width: { xs: 'auto', md: '14%' },
-                  bgcolor: 'transparent'
+                  bgcolor: 'transparent',
+                  verticalAlign: showColumnFilters ? 'top' : 'middle',
                 }}>
-                  Fecha de inicio
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Fecha de inicio
+                    </Box>
+                    {showColumnFilters && (
+                      <TextField
+                        size="small"
+                        type="date"
+                        value={columnFilters.fechaInicio}
+                        onChange={(e) => setColumnFilters(prev => ({ ...prev, fechaInicio: e.target.value }))}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{
+                          width: '100%',
+                          '& .MuiOutlinedInput-root': {
+                            height: 28,
+                            fontSize: '0.75rem',
+                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                            '& input::-webkit-calendar-picker-indicator': {
+                              filter: theme.palette.mode === 'dark' ? 'invert(1)' : 'none',
+                            },
+                          },
+                        }}
+                      />
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell sx={{ 
                   fontWeight: 600, 
@@ -1277,9 +1386,34 @@ const Tasks: React.FC = () => {
                   pr: { xs: 1.5, md: 2 }, 
                   minWidth: { xs: 140, md: 170 }, 
                   width: { xs: 'auto', md: '15%' },
-                  bgcolor: 'transparent'
+                  bgcolor: 'transparent',
+                  verticalAlign: showColumnFilters ? 'top' : 'middle',
                 }}>
-                  Fecha de Vencimiento
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Fecha de Vencimiento
+                    </Box>
+                    {showColumnFilters && (
+                      <TextField
+                        size="small"
+                        type="date"
+                        value={columnFilters.fechaVencimiento}
+                        onChange={(e) => setColumnFilters(prev => ({ ...prev, fechaVencimiento: e.target.value }))}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{
+                          width: '100%',
+                          '& .MuiOutlinedInput-root': {
+                            height: 28,
+                            fontSize: '0.75rem',
+                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                            '& input::-webkit-calendar-picker-indicator': {
+                              filter: theme.palette.mode === 'dark' ? 'invert(1)' : 'none',
+                            },
+                          },
+                        }}
+                      />
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell sx={{ 
                   fontWeight: 600, 
@@ -1290,9 +1424,26 @@ const Tasks: React.FC = () => {
                   pr: { xs: 3, md: 4 }, 
                   minWidth: { xs: 100, md: 120 }, 
                   width: { xs: 'auto', md: '10%' },
-                  bgcolor: 'transparent'
+                  bgcolor: 'transparent',
+                  verticalAlign: showColumnFilters ? 'top' : 'middle',
                 }}>
-                  Asignado a
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Asignado a
+                    </Box>
+                    {showColumnFilters && (
+                      <TextField
+                        size="small"
+                        placeholder="Filtrar..."
+                        value={columnFilters.asignadoA}
+                        onChange={(e) => setColumnFilters(prev => ({ ...prev, asignadoA: e.target.value }))}
+                        sx={{
+                          width: '100%',
+                          '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.75rem', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper },
+                        }}
+                      />
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell sx={{ 
                   fontWeight: 600, 
@@ -1303,9 +1454,26 @@ const Tasks: React.FC = () => {
                   pr: { xs: 1.5, md: 2 }, 
                   minWidth: { xs: 72, md: 88 }, 
                   width: { xs: 'auto', md: '8%' },
-                  bgcolor: 'transparent'
+                  bgcolor: 'transparent',
+                  verticalAlign: showColumnFilters ? 'top' : 'middle',
                 }}>
-                  Empresa
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Empresa
+                    </Box>
+                    {showColumnFilters && (
+                      <TextField
+                        size="small"
+                        placeholder="Filtrar..."
+                        value={columnFilters.empresa}
+                        onChange={(e) => setColumnFilters(prev => ({ ...prev, empresa: e.target.value }))}
+                        sx={{
+                          width: '100%',
+                          '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.75rem', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper },
+                        }}
+                      />
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell sx={{ 
                   fontWeight: 600, 
@@ -1316,9 +1484,26 @@ const Tasks: React.FC = () => {
                   pr: { xs: 1.5, md: 2 }, 
                   minWidth: { xs: 72, md: 88 }, 
                   width: { xs: 'auto', md: '8%' },
-                  bgcolor: 'transparent'
+                  bgcolor: 'transparent',
+                  verticalAlign: showColumnFilters ? 'top' : 'middle',
                 }}>
-                  Contacto
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Contacto
+                    </Box>
+                    {showColumnFilters && (
+                      <TextField
+                        size="small"
+                        placeholder="Filtrar..."
+                        value={columnFilters.contacto}
+                        onChange={(e) => setColumnFilters(prev => ({ ...prev, contacto: e.target.value }))}
+                        sx={{
+                          width: '100%',
+                          '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.75rem', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper },
+                        }}
+                      />
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell sx={{ 
                   fontWeight: 600, 
@@ -1335,23 +1520,30 @@ const Tasks: React.FC = () => {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       Prioridad
-                      {showColumnFilters && (
-                        <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, prioridad: '' }))} sx={{ p: 0.25, opacity: columnFilters.prioridad ? 1 : 0.3 }}>
-                          <FilterList sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      )}
                     </Box>
                     {showColumnFilters && (
-                      <TextField
-                        size="small"
-                        placeholder="Filtrar..."
-                        value={columnFilters.prioridad}
-                        onChange={(e) => setColumnFilters(prev => ({ ...prev, prioridad: e.target.value }))}
-                        sx={{
-                          width: '100%',
-                          '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.75rem', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper },
-                        }}
-                      />
+                      <FormControl size="small" fullWidth>
+                        <Select
+                          value={columnFilters.prioridad || 'todos'}
+                          onChange={(e) => {
+                            const value = e.target.value === 'todos' ? '' : e.target.value;
+                            setColumnFilters(prev => ({ ...prev, prioridad: value }));
+                          }}
+                          displayEmpty
+                          sx={{
+                            height: 28,
+                            fontSize: '0.75rem',
+                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                            '& .MuiSelect-select': { py: 0.5 },
+                          }}
+                        >
+                          <MenuItem value="todos">Todos</MenuItem>
+                          <MenuItem value="Baja">Baja</MenuItem>
+                          <MenuItem value="Media">Media</MenuItem>
+                          <MenuItem value="Alta">Alta</MenuItem>
+                          <MenuItem value="Urgente">Urgente</MenuItem>
+                        </Select>
+                      </FormControl>
                     )}
                   </Box>
                 </TableCell>
@@ -1372,8 +1564,8 @@ const Tasks: React.FC = () => {
             </TableHead>
             <TableBody>
               {tasks.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
+                <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper }}>
+                  <TableCell colSpan={10} sx={{ py: 8, textAlign: 'center', border: 'none', bgcolor: 'transparent' }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <Box
                         sx={{
@@ -1386,11 +1578,10 @@ const Tasks: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '64px',
                           lineHeight: 1,
                         }}
                       >
-                        📋
+                        <PendingActions sx={{ fontSize: 64, color: theme.palette.text.secondary }} />
                       </Box>
                       <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
                         <Typography
@@ -1398,7 +1589,7 @@ const Tasks: React.FC = () => {
                           sx={{
                             fontWeight: 700,
                             mb: 1,
-                            color: theme.palette.text.primary,
+                            color: theme.palette.text.secondary,
                             fontSize: { xs: '1.25rem', md: '1.5rem' },
                           }}
                         >
@@ -1407,7 +1598,7 @@ const Tasks: React.FC = () => {
                         <Typography 
                           variant="body2" 
                           sx={{ 
-                            color: theme.palette.text.primary,
+                            color: theme.palette.text.secondary,
                             lineHeight: 1.6,
                             fontSize: { xs: '0.875rem', md: '0.9375rem' },
                           }}
@@ -1424,7 +1615,9 @@ const Tasks: React.FC = () => {
                 tasks.map((task, index) => (
                 <TableRow 
                   key={task.id}
+                  onClick={() => setTaskDetailDrawerTaskId(task.id)}
                   sx={{ 
+                    cursor: 'pointer',
                     bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     borderBottom: theme.palette.mode === 'light' 
                       ? '1px solid rgba(0, 0, 0, 0.08)' 
@@ -1451,7 +1644,6 @@ const Tasks: React.FC = () => {
                   <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: { xs: 0.5, md: 1 }, minWidth: { xs: 180, md: 200 }, width: { xs: 'auto', md: '22%' } }}>
                     <Typography 
                       variant="body2" 
-                      onClick={() => setTaskDetailDrawerTaskId(task.id)}
                       sx={{ 
                         fontWeight: 500, 
                         color: theme.palette.text.primary,
@@ -1459,7 +1651,6 @@ const Tasks: React.FC = () => {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        cursor: 'pointer',
                         '&:hover': {
                           color: taxiMonterricoColors.green,
                           textDecoration: 'underline',
@@ -1467,6 +1658,11 @@ const Tasks: React.FC = () => {
                       }}
                     >
                       {task.title || task.subject}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ pl: { xs: 1, md: 1.5 }, pr: { xs: 1.5, md: 2 }, minWidth: { xs: 90, md: 100 }, width: { xs: 'auto', md: '12%' } }}>
+                    <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.84rem' }, fontWeight: 600, color: theme.palette.text.secondary }}>
+                      {getTypeLabel((task as any).type)}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ pl: { xs: 1, md: 1.5 }, pr: { xs: 1.5, md: 2 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '14%' } }}>
@@ -1953,14 +2149,14 @@ const Tasks: React.FC = () => {
                 sx={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr',
-                  gridTemplateRows: 'auto auto',
                   columnGap: 4,
                   rowGap: 1,
                   alignItems: 'start',
                 }}
               >
-                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Título <Typography component="span" sx={{ color: 'error.main' }}>*</Typography></Typography>
-                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Fecha de inicio</Typography>
+                {/* Fila 1: Título | Tipo */}
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500 }}>Título <Typography component="span" sx={{ color: 'error.main' }}>*</Typography></Typography>
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500 }}>Tipo</Typography>
                 <Box sx={{ minWidth: 0 }}>
                   <TextField
                     size="small"
@@ -1969,25 +2165,59 @@ const Tasks: React.FC = () => {
                     required
                     fullWidth
                     placeholder="Título"
-                    inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ 
-                      sx: { 
-                        '& input': { py: 1.05 },
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': {
+                          borderWidth: '2px',
+                          borderColor: theme.palette.divider,
                         },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                        '&:hover fieldset': {
+                          borderColor: theme.palette.divider,
                         },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
+                        '&.Mui-focused fieldset': {
+                          borderWidth: '2px',
+                          borderColor: theme.palette.divider,
                         },
-                      } 
+                      },
                     }}
                   />
                 </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <TextField
+                    select
+                    size="small"
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as TaskType })}
+                    fullWidth
+                    InputProps={{
+                      sx: {
+                        borderRadius: 2,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                        '&:hover fieldset': { borderColor: theme.palette.divider },
+                        '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
+                        '& .MuiInputBase-input': { py: 1 },
+                      },
+                    }}
+                    SelectProps={{
+                      MenuProps: {
+                        sx: { zIndex: 1700 },
+                        slotProps: { root: { sx: { zIndex: 1700 } } },
+                        PaperProps: { sx: { zIndex: 1700 } },
+                      },
+                    }}
+                  >
+                    <MenuItem value="email">Correo</MenuItem>
+                    <MenuItem value="meeting">Reunión</MenuItem>
+                    <MenuItem value="call">Llamada</MenuItem>
+                    <MenuItem value="note">Nota</MenuItem>
+                    <MenuItem value="todo">Tarea</MenuItem>
+                    <MenuItem value="other">Otro</MenuItem>
+                  </TextField>
+                </Box>
+                {/* Fila 2: Fecha de inicio | Fecha Límite */}
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, mt: 2 }}>Fecha de inicio</Typography>
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, mt: 2 }}>Fecha Límite</Typography>
                 <Box sx={{ minWidth: 0 }}>
                   <TextField
                     size="small"
@@ -1996,50 +2226,21 @@ const Tasks: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                     InputLabelProps={{ shrink: true }}
                     fullWidth
-                    inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ 
-                      sx: { 
-                        '& input': { py: 1.05 },
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                      } 
-                    }}
-                  />
-                </Box>
-                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Hora estimada</Typography>
-                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Fecha Límite</Typography>
-                <Box sx={{ minWidth: 0 }}>
-                  <TextField
-                    size="small"
-                    type="time"
-                    value={formData.estimatedTime}
-                    onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
-                    fullWidth
-                    inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ 
-                      sx: { 
-                        '& input': { py: 1.05 },
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                      } 
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end" sx={{ pointerEvents: 'none', mr: 0.5 }}>
+                          <CalendarToday sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                      sx: {
+                        borderRadius: 2,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                        '&:hover fieldset': { borderColor: theme.palette.divider },
+                        '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
+                        '& .MuiInputBase-input': { py: 1 },
+                        '& input::-webkit-calendar-picker-indicator': { opacity: 0, position: 'absolute', right: 0, width: '100%', height: '100%', cursor: 'pointer' },
+                      },
                     }}
                   />
                 </Box>
@@ -2051,27 +2252,52 @@ const Tasks: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                     InputLabelProps={{ shrink: true }}
                     fullWidth
-                    inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ 
-                      sx: { 
-                        '& input': { py: 1.05 },
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                      } 
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end" sx={{ pointerEvents: 'none', mr: 0.5 }}>
+                          <CalendarToday sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                      sx: {
+                        borderRadius: 2,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                        '&:hover fieldset': { borderColor: theme.palette.divider },
+                        '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
+                        '& .MuiInputBase-input': { py: 1 },
+                        '& input::-webkit-calendar-picker-indicator': { opacity: 0, position: 'absolute', right: 0, width: '100%', height: '100%', cursor: 'pointer' },
+                      },
                     }}
                   />
                 </Box>
-                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Estado</Typography>
-                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Prioridad</Typography>
+                {/* Fila 3: Hora estimada | Estado */}
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, mt: 2 }}>Hora estimada</Typography>
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, mt: 2 }}>Estado</Typography>
+                <Box sx={{ minWidth: 0 }}>
+                  <TextField
+                    size="small"
+                    type="time"
+                    value={formData.estimatedTime}
+                    onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
+                    fullWidth
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end" sx={{ pointerEvents: 'none', mr: 0.5 }}>
+                          <Schedule sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                      sx: {
+                        borderRadius: 2,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                        '&:hover fieldset': { borderColor: theme.palette.divider },
+                        '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
+                        '& .MuiInputBase-input': { py: 1 },
+                        '& input::-webkit-calendar-picker-indicator': { opacity: 0, position: 'absolute', right: 0, width: '100%', height: '100%', cursor: 'pointer' },
+                      },
+                    }}
+                  />
+                </Box>
                 <Box sx={{ minWidth: 0 }}>
                   <TextField
                     select
@@ -2079,22 +2305,15 @@ const Tasks: React.FC = () => {
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                     fullWidth
-                    inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ 
-                      sx: { 
-                        '& input': { py: 1.05 },
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                      } 
+                    InputProps={{
+                      sx: {
+                        borderRadius: 2,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                        '&:hover fieldset': { borderColor: theme.palette.divider },
+                        '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
+                        '& .MuiInputBase-input': { py: 1 },
+                      },
                     }}
                     SelectProps={{
                       MenuProps: {
@@ -2109,6 +2328,9 @@ const Tasks: React.FC = () => {
                     <MenuItem value="completed">Completada</MenuItem>
                   </TextField>
                 </Box>
+                {/* Fila 4: Prioridad | Empresa */}
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, mt: 2 }}>Prioridad</Typography>
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, mt: 2 }}>Empresa</Typography>
                 <Box sx={{ minWidth: 0 }}>
                   <TextField
                     select
@@ -2116,22 +2338,15 @@ const Tasks: React.FC = () => {
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                     fullWidth
-                    inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ 
-                      sx: { 
-                        '& input': { py: 1.05 },
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                      } 
+                    InputProps={{
+                      sx: {
+                        borderRadius: 2,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                        '&:hover fieldset': { borderColor: theme.palette.divider },
+                        '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
+                        '& .MuiInputBase-input': { py: 1 },
+                      },
                     }}
                     SelectProps={{
                       MenuProps: {
@@ -2146,8 +2361,6 @@ const Tasks: React.FC = () => {
                     <MenuItem value="high">Alta</MenuItem>
                   </TextField>
                 </Box>
-                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Empresa</Typography>
-                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Contacto</Typography>
                 <Box sx={{ minWidth: 0 }}>
                   {(editingTask || linkedTaskLockCompanyContact) && formData.companyId ? (
                     <TextField
@@ -2155,15 +2368,15 @@ const Tasks: React.FC = () => {
                       value={companies.find((c) => c.id === parseInt(formData.companyId || '0', 10))?.name || ''}
                       fullWidth
                       disabled
-                      inputProps={{ style: { fontSize: '1rem' } }}
-                      InputProps={{ 
-                        sx: { 
-                          '& input': { py: 1.05 },
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                            borderWidth: '1px',
-                          },
-                        }
+                      InputProps={{
+                        sx: {
+                          borderRadius: 2,
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                          '&:hover fieldset': { borderColor: theme.palette.divider },
+                          '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
+                          '& .MuiInputBase-input': { py: 1 },
+                        },
                       }}
                     />
                   ) : (
@@ -2182,10 +2395,8 @@ const Tasks: React.FC = () => {
                       }}
                       onInputChange={(_, newInputValue, reason) => {
                         if (reason === 'reset') {
-                          // Cuando se resetea (selección de opción), limpiar el input
                           setCompanySearchInput('');
                         } else {
-                          // Cuando el usuario escribe, actualizar el input
                           setCompanySearchInput(newInputValue);
                         }
                       }}
@@ -2197,47 +2408,46 @@ const Tasks: React.FC = () => {
                       filterOptions={(options, { inputValue }) => {
                         if (!inputValue || inputValue.trim().length === 0) return [];
                         const searchTerm = inputValue.toLowerCase().trim();
-                        const filtered = options.filter((option) =>
+                        return options.filter((option) =>
                           option.name.toLowerCase().includes(searchTerm)
                         );
-                        return filtered;
                       }}
                       renderInput={(params) => (
                         <TextField
                           {...params}
                           placeholder="Buscar empresa..."
-                          inputProps={{ ...params.inputProps, style: { fontSize: '1rem' } }}
-                          InputProps={{ 
+                          InputProps={{
                             ...params.InputProps,
-                            sx: { 
-                              '& input': { py: 1.05 },
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                                borderWidth: '1px',
-                              },
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                              },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                                borderWidth: '1px',
-                              },
-                            }
+                            sx: {
+                              borderRadius: 2,
+                              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                              '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                              '&:hover fieldset': { borderColor: theme.palette.divider },
+                              '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
+                              '& .MuiInputBase-input': { py: 1 },
+                            },
                           }}
                         />
                       )}
                       ListboxProps={{
-                        sx: { maxHeight: 300 },
-                      }}
-                      slotProps={{
-                        popper: {
-                          sx: { zIndex: 1700 },
-                        },
-                      }}
-                      noOptionsText={companySearchInput.trim().length > 0 ? "No se encontraron empresas" : null}
+                      sx: { maxHeight: 300 },
+                    }}
+                    slotProps={{
+                      popper: {
+                        sx: { zIndex: 1700 },
+                      },
+                    }}
+                    noOptionsText={companySearchInput.trim().length > 0 ? "No se encontraron empresas" : null}
                     />
                   )}
                 </Box>
+                {/* Fila 5: Contacto | Asignado a */}
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, mt: 2 }}>Contacto</Typography>
+                {users.length > 0 ? (
+                  <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, mt: 2 }}>Asignado a</Typography>
+                ) : (
+                  <Box />
+                )}
                 <Box sx={{ minWidth: 0 }}>
                   {(editingTask || linkedTaskLockCompanyContact) && formData.contactId ? (
                     <TextField
@@ -2248,15 +2458,17 @@ const Tasks: React.FC = () => {
                       })()}
                       fullWidth
                       disabled
-                      inputProps={{ style: { fontSize: '1rem' } }}
-                      InputProps={{ 
-                        sx: { 
-                          '& input': { py: 1.05 },
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                            borderWidth: '1px',
+                      InputProps={{
+                        sx: {
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                            '&:hover fieldset': { borderColor: theme.palette.divider },
+                            '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
                           },
-                        }
+                          '& .MuiInputBase-input': { py: 1 },
+                        },
                       }}
                     />
                   ) : (
@@ -2296,23 +2508,16 @@ const Tasks: React.FC = () => {
                       <TextField
                         {...params}
                         placeholder="Buscar contacto..."
-                        inputProps={{ ...params.inputProps, style: { fontSize: '1rem' } }}
-                        InputProps={{ 
+                        InputProps={{
                           ...params.InputProps,
-                          sx: { 
-                            '& input': { py: 1.05 },
-                            '& .MuiOutlinedInput-notchedOutline': {
-                              borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                              borderWidth: '1px',
-                            },
-                            '&:hover .MuiOutlinedInput-notchedOutline': {
-                              borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                            },
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                              borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                              borderWidth: '1px',
-                            },
-                          }
+                          sx: {
+                            borderRadius: 2,
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                            '&:hover fieldset': { borderColor: theme.palette.divider },
+                            '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
+                            '& .MuiInputBase-input': { py: 1 },
+                          },
                         }}
                       />
                     )}
@@ -2328,53 +2533,45 @@ const Tasks: React.FC = () => {
                   />
                   )}
                 </Box>
-                {users.length > 0 && (
-                  <>
-                    <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Asignado a</Typography>
-                    <Box />
-                    <Box sx={{ minWidth: 0 }}>
-                      <TextField
-                        select
-                        size="small"
-                        value={formData.assignedToId}
-                        onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
-                        fullWidth
-                        inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ 
-                      sx: { 
-                        '& input': { py: 1.05 },
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
+                {users.length > 0 ? (
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      select
+                      size="small"
+                      value={formData.assignedToId}
+                      onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
+                      fullWidth
+                      InputProps={{
+                        sx: {
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                            '&:hover fieldset': { borderColor: theme.palette.divider },
+                            '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
+                          },
+                          '& .MuiInputBase-input': { py: 1 },
                         },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                      } 
-                    }}
-                        SelectProps={{
+                      }}
+                      SelectProps={{
                         MenuProps: {
                           sx: { zIndex: 1700 },
                           slotProps: { root: { sx: { zIndex: 1700 } } },
                           PaperProps: { sx: { zIndex: 1700 } },
                         },
                       }}
-                      >
-                        {users.map((userItem) => (
-                          <MenuItem key={userItem.id} value={userItem.id.toString()}>
-                            {userItem.firstName} {userItem.lastName}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </Box>
-                    <Box />
-                  </>
+                    >
+                      {users.map((userItem) => (
+                        <MenuItem key={userItem.id} value={userItem.id.toString()}>
+                          {userItem.firstName} {userItem.lastName}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Box>
+                ) : (
+                  <Box />
                 )}
-                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Descripción</Typography>
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, mt: 2, gridColumn: '1 / -1' }}>Descripción</Typography>
                 <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
                   <TextField
                     multiline
@@ -2383,20 +2580,15 @@ const Tasks: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     fullWidth
                     placeholder="Descripción"
-                    InputProps={{ 
-                      sx: { 
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
-                          borderWidth: '1px',
-                        },
-                      } 
+                    InputProps={{
+                      sx: {
+                        borderRadius: 2,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '& fieldset': { borderWidth: '2px', borderColor: theme.palette.divider },
+                        '&:hover fieldset': { borderColor: theme.palette.divider },
+                        '&.Mui-focused fieldset': { borderColor: theme.palette.divider, borderWidth: '2px' },
+                        '& .MuiInputBase-input': { py: 1 },
+                      },
                     }}
                   />
                 </Box>

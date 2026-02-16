@@ -221,7 +221,9 @@ const Header: React.FC = () => {
         zIndex: { xs: 1400, sm: 1300 },
         marginLeft: 0,
         marginRight: 0,
-        borderBottom: `1px solid ${theme.palette.divider}`,
+        borderBottom: theme.palette.mode === 'light'
+          ? '0.5px solid rgba(0, 0, 0, 0.06)'
+          : '0.5px solid rgba(255, 255, 255, 0.06)',
         transition: 'all 0.3s ease', // Transición suave para todos los cambios
       }}
     >
@@ -274,23 +276,19 @@ const Header: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 transition: 'all 0.2s ease',
-                border: `1px solid ${theme.palette.divider}`,
+                border: theme.palette.mode === 'light'
+                  ? '0.5px solid rgba(0, 0, 0, 0.06)'
+                  : '0.5px solid rgba(255, 255, 255, 0.06)',
                 textTransform: 'none',
                 color: theme.palette.text.secondary,
                 minWidth: 200,
                 justifyContent: 'flex-start',
-                '&:hover': {
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.04)' 
-                    : 'rgba(0, 0, 0, 0.02)',
-                  borderColor: taxiMonterricoColors.green,
-                },
               }}
             >
               <Search 
                 sx={{ 
                   fontSize: 22,
-                  color: '#7081b9',
+                  color: theme.palette.text.secondary,
                   mr: 1,
                 }} 
               />
@@ -308,16 +306,15 @@ const Header: React.FC = () => {
                 label="Ctrl+K"
                 size="small"
                 sx={{
-                  height: 20,
+                  height: 24,
                   fontSize: '0.6875rem',
                   borderRadius: 1,
                   bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.1)' 
-                    : 'rgba(0, 0, 0, 0.05)',
+                    ? 'rgba(255, 255, 255, 0.08)' 
+                    : 'rgba(0, 0, 0, 0.04)',
                   color: theme.palette.text.secondary,
-                  border: 'none',
                   '& .MuiChip-label': {
-                    px: 0.75,
+                    px: 1,
                   },
                 }}
               />
@@ -566,23 +563,19 @@ const Header: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             transition: 'all 0.2s ease',
-            border: `1px solid ${theme.palette.divider}`,
+            border: theme.palette.mode === 'light'
+              ? '0.5px solid rgba(0, 0, 0, 0.06)'
+              : '0.5px solid rgba(255, 255, 255, 0.06)',
             textTransform: 'none',
             color: theme.palette.text.secondary,
             width: '100%',
             justifyContent: 'flex-start',
-            '&:hover': {
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.04)' 
-                : 'rgba(0, 0, 0, 0.02)',
-              borderColor: taxiMonterricoColors.green,
-            },
           }}
         >
           <Search 
             sx={{ 
               fontSize: 22,
-              color: '#7081b9',
+              color: theme.palette.text.secondary,
               mr: 1,
             }} 
           />
@@ -600,16 +593,15 @@ const Header: React.FC = () => {
             label="Ctrl+K"
             size="small"
             sx={{
-              height: 20,
+              height: 24,
               fontSize: '0.6875rem',
               borderRadius: 1,
               bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.1)' 
-                : 'rgba(0, 0, 0, 0.05)',
+                ? 'rgba(255, 255, 255, 0.08)' 
+                : 'rgba(0, 0, 0, 0.04)',
               color: theme.palette.text.secondary,
-              border: 'none',
               '& .MuiChip-label': {
-                px: 0.75,
+                px: 1,
               },
             }}
           />

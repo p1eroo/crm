@@ -346,7 +346,7 @@ router.get('/', async (req: AuthRequest, res) => {
       includes.push({
         model: Company,
         as: 'Company',
-        attributes: ['id', 'name'],
+        attributes: ['id', 'name', 'logo'],
         required: true,
         where: {
           name: { [Op.iLike]: `%${filterEmpresa}%` },
@@ -356,7 +356,7 @@ router.get('/', async (req: AuthRequest, res) => {
       includes.push({
         model: Company,
         as: 'Company',
-        attributes: ['id', 'name'],
+        attributes: ['id', 'name', 'logo'],
         required: false,
       });
     }

@@ -21,6 +21,7 @@ const cleanTask = (task: any): any => {
   const cleaned: any = {
     id: taskData.id,
     title: taskData.title,
+    type: taskData.type != null ? taskData.type : 'todo',
     status: taskData.status,
     priority: taskData.priority,
     assignedToId: taskData.assignedToId,
@@ -65,6 +66,12 @@ router.get('/', async (req: AuthRequest, res) => {
       filterTitulo,
       filterEstado,
       filterPrioridad,
+      filterTipo,
+      filterFechaInicio,
+      filterFechaVencimiento,
+      filterAsignadoA,
+      filterEmpresa,
+      filterContacto,
     } = req.query;
     
     // Limitar el tamaño máximo de página para evitar sobrecarga
@@ -143,6 +150,44 @@ router.get('/', async (req: AuthRequest, res) => {
       // Solo aplicar filtro de priority si no hay filtro de columna para prioridad
       where.priority = priority;
     }
+
+    // Filtro de tipo por columna
+    if (filterTipo) {
+      const filterTipoStr = String(filterTipo).trim().toLowerCase();
+      const typeMap: { [key: string]: string } = {
+        email: 'email',
+        correo: 'email',
+        meeting: 'meeting',
+        reunión: 'meeting',
+        reunion: 'meeting',
+        call: 'call',
+        llamada: 'call',
+        note: 'note',
+        nota: 'note',
+        todo: 'todo',
+        tarea: 'todo',
+        other: 'other',
+        otro: 'other',
+      };
+      const mappedType = typeMap[filterTipoStr] || filterTipoStr;
+      where.type = mappedType;
+    }
+
+    // Filtro fecha de inicio (por createdAt, un solo día)
+    if (filterFechaInicio) {
+      const dateStr = String(filterFechaInicio).trim();
+      const startOfDay = new Date(dateStr + 'T00:00:00.000Z');
+      const endOfDay = new Date(dateStr + 'T23:59:59.999Z');
+      where.createdAt = { [Op.gte]: startOfDay, [Op.lte]: endOfDay };
+    }
+
+    // Filtro fecha de vencimiento (un solo día)
+    if (filterFechaVencimiento) {
+      const dateStr = String(filterFechaVencimiento).trim();
+      const startOfDay = new Date(dateStr + 'T00:00:00.000Z');
+      const endOfDay = new Date(dateStr + 'T23:59:59.999Z');
+      where.dueDate = { [Op.gte]: startOfDay, [Op.lte]: endOfDay };
+    }
     
     // Otros filtros que no tienen conflictos con filtros de columna
     if (assignedToId) {
@@ -178,13 +223,43 @@ router.get('/', async (req: AuthRequest, res) => {
         break;
     }
 
+    const filterAsignadoAStr = filterAsignadoA ? String(filterAsignadoA).trim() : '';
+    const filterEmpresaStr = filterEmpresa ? String(filterEmpresa).trim() : '';
+    const filterContactoStr = filterContacto ? String(filterContacto).trim() : '';
+
+    const includeAssignedTo: any = { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false };
+    if (filterAsignadoAStr) {
+      includeAssignedTo.required = true;
+      includeAssignedTo.where = {
+        [Op.or]: [
+          { firstName: { [Op.iLike]: `%${filterAsignadoAStr}%` } },
+          { lastName: { [Op.iLike]: `%${filterAsignadoAStr}%` } },
+        ],
+      };
+    }
+    const includeContact: any = { model: Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName'], required: false };
+    if (filterContactoStr) {
+      includeContact.required = true;
+      includeContact.where = {
+        [Op.or]: [
+          { firstName: { [Op.iLike]: `%${filterContactoStr}%` } },
+          { lastName: { [Op.iLike]: `%${filterContactoStr}%` } },
+        ],
+      };
+    }
+    const includeCompany: any = { model: Company, as: 'Company', attributes: ['id', 'name'], required: false };
+    if (filterEmpresaStr) {
+      includeCompany.required = true;
+      includeCompany.where = { name: { [Op.iLike]: `%${filterEmpresaStr}%` } };
+    }
+
     const tasks = await Task.findAndCountAll({
       where,
       include: [
-        { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false },
+        includeAssignedTo,
         { model: User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false },
-        { model: Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName'], required: false },
-        { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
+        includeContact,
+        includeCompany,
         { model: Deal, as: 'Deal', attributes: ['id', 'name'], required: false },
       ],
       distinct: true, // Importante para contar correctamente con includes

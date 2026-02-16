@@ -42,11 +42,8 @@ const GeneralInfoCards: React.FC<GeneralInfoCardsProps> = ({ cards }) => {
             bgcolor: theme.palette.mode === "dark" ? "#1c252e !important" : theme.palette.background.paper,
             backgroundColor: theme.palette.mode === "dark" ? "#1c252e !important" : theme.palette.background.paper,
             background: theme.palette.mode === "dark" ? "#1c252e !important" : theme.palette.background.paper,
-            border: "none !important",
-            boxShadow:
-              theme.palette.mode === "dark"
-                ? "0 2px 8px rgba(0,0,0,0.3) !important"
-                : "0 2px 8px rgba(0,0,0,0.1) !important",
+            border: `1px solid ${theme.palette.divider}`,
+            boxShadow: "none",
             borderRadius: 1.5,
             display: "flex",
             flexDirection: "column",
