@@ -1,10 +1,14 @@
 /**
  * API de correo masivo integrada en el CRM.
  * Usa el servicio massEmailService (Nodemailer + SMTP desde .env).
- * No depende de ningún servidor externo.
+ * Crea contacto por destinatario si no existe (email + nombre opcional).
  */
 import express from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { Op } from 'sequelize';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { Activity } from '../models/Activity';
+import { Company } from '../models/Company';
+import { Contact } from '../models/Contact';
 import {
   sendBulkEmails,
   sendBulkEmailsWithCallbacks,
@@ -14,6 +18,100 @@ import {
 
 const router = express.Router();
 router.use(authenticateToken);
+
+/** Parsea nombre opcional en firstName/lastName; si no hay nombre, usa parte del email. */
+function parseRecipientName(email: string, recipientName?: string | null): { firstName: string; lastName: string } {
+  const name = (recipientName || '').trim();
+  if (name) {
+    const spaceIdx = name.indexOf(' ');
+    if (spaceIdx > 0) {
+      return { firstName: name.slice(0, spaceIdx).trim(), lastName: name.slice(spaceIdx + 1).trim() || '-' };
+    }
+    return { firstName: name, lastName: '-' };
+  }
+  const localPart = email.split('@')[0] || email;
+  const fallback = localPart.replace(/[._-]/g, ' ').trim() || 'Sin nombre';
+  return { firstName: fallback, lastName: '-' };
+}
+
+/** Extrae el dominio del email (parte después de @). Devuelve null si no hay @. */
+function getDomainFromEmail(email: string): string | null {
+  const match = email.trim().toLowerCase().match(/@(.+)$/);
+  return match && match[1] ? match[1] : null;
+}
+
+/** Asegura que exista una empresa con ese dominio; si no, la crea. name = domain. Devuelve la empresa o null si no hay dominio. */
+async function ensureCompanyByDomain(
+  domain: string,
+  ownerId?: number | null
+): Promise<Company | null> {
+  const normalized = domain.trim().toLowerCase();
+  if (!normalized) return null;
+  let company = await Company.findOne({
+    where: { domain: { [Op.iLike]: normalized } },
+  });
+  if (company) return company;
+  company = await Company.create({
+    name: normalized,
+    domain: normalized,
+    ownerId: ownerId ?? null,
+    lifecycleStage: 'lead',
+  });
+  return company;
+}
+
+/** Asegura que exista un contacto con ese email; si no, lo crea. Crea empresa por dominio y vincula el contacto. */
+async function ensureContactByEmail(
+  email: string,
+  recipientName?: string | null,
+  ownerId?: number | null
+): Promise<void> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return;
+  const domain = getDomainFromEmail(normalized);
+  const company = domain ? await ensureCompanyByDomain(domain, ownerId) : null;
+  const companyId = company?.id ?? null;
+
+  const existing = await Contact.findOne({
+    where: { email: { [Op.iLike]: normalized } },
+  });
+  if (existing) {
+    if (companyId != null && existing.companyId == null) {
+      await existing.update({ companyId });
+    }
+    return;
+  }
+  const { firstName, lastName } = parseRecipientName(normalized, recipientName);
+  await Contact.create({
+    email: normalized,
+    firstName: firstName || 'Sin nombre',
+    lastName: lastName || '-',
+    ownerId: ownerId ?? null,
+    companyId: companyId ?? undefined,
+    lifecycleStage: 'lead',
+  });
+}
+
+/** Registra una actividad tipo email para el contacto que recibió el correo masivo. Solo si userId está definido. */
+async function registerMassEmailActivity(
+  contactEmail: string,
+  subject: string,
+  userId: number | null
+): Promise<void> {
+  if (userId == null) return;
+  const contact = await Contact.findOne({
+    where: { email: { [Op.iLike]: contactEmail.trim() } },
+    attributes: ['id'],
+  });
+  if (!contact) return;
+  await Activity.create({
+    type: 'email',
+    subject: subject || 'Correo masivo',
+    description: 'Enviado por correo masivo.',
+    userId,
+    contactId: contact.id,
+  });
+}
 
 function writeSSE(res: express.Response, data: object): void {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -92,7 +190,18 @@ router.post('/send-bulk', async (req, res) => {
       });
     }
 
+    const userId = (req as AuthRequest).userId ?? null;
+    for (const e of emails) {
+      await ensureContactByEmail(e.to, e.recipientName, userId);
+    }
+
     const result = await sendBulkEmails(emails);
+    for (const r of result.results) {
+      if (r.success) {
+        const item = emails.find((e: any) => String(e.to).toLowerCase() === r.email.toLowerCase());
+        await registerMassEmailActivity(r.email, item?.subject ?? 'Correo masivo', userId);
+      }
+    }
     res.json(result);
   } catch (err: any) {
     const message = err?.message || 'Error al enviar correos masivos';
@@ -133,6 +242,11 @@ router.post('/send-bulk-stream', async (req, res) => {
       });
     }
 
+    const userId = (req as AuthRequest).userId ?? null;
+    for (const e of emails) {
+      await ensureContactByEmail(e.to, e.recipientName, userId);
+    }
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -149,6 +263,13 @@ router.post('/send-bulk-stream', async (req, res) => {
         if (typeof (res as any).flush === 'function') (res as any).flush();
       },
     });
+
+    for (const r of result.results) {
+      if (r.success) {
+        const item = emails.find((e: any) => String(e.to).toLowerCase() === r.email.toLowerCase());
+        await registerMassEmailActivity(r.email, item?.subject ?? 'Correo masivo', userId);
+      }
+    }
 
     writeSSE(res, { type: 'done', ...result });
     res.end();

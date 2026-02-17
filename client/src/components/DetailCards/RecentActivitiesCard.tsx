@@ -40,6 +40,7 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
     }
   };
 
+  // En lista: nota/llamada/correo por tipo; meeting/task/todo/other como "Tarea"
   const getActivityTypeLabel = (type: string) => {
     switch (type) {
       case 'note':
@@ -50,9 +51,9 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
         return 'Llamada';
       case 'task':
       case 'todo':
-        return 'Tarea';
       case 'meeting':
-        return 'Reunión';
+      case 'other':
+        return 'Tarea';
       default:
         return 'Actividad';
     }

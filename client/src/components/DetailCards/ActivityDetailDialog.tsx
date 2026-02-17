@@ -17,7 +17,8 @@ import { pageStyles } from '../../theme/styles';
 
 interface Activity {
   id: number;
-  type?: 'note' | 'email' | 'call' | 'task' | 'todo' | 'meeting';
+  type?: 'note' | 'email' | 'call' | 'task' | 'todo' | 'meeting' | 'other';
+  taskSubType?: string; // subtipo real cuando type === 'task' (p. ej. email, meeting)
   subject?: string;
   title?: string;
   description?: string;
@@ -50,6 +51,24 @@ const defaultGetActivityTypeLabel = (type: string) => {
     meeting: 'Reunión',
   };
   return typeMap[type?.toLowerCase()] || 'Actividad';
+};
+
+const TASK_LIKE_TYPES = ['meeting', 'task', 'todo', 'other'];
+const isTaskLikeType = (type: string | undefined) =>
+  type && TASK_LIKE_TYPES.includes(type.toLowerCase());
+
+const getTaskSubtypeLabel = (type: string | undefined) => {
+  const t = type?.toLowerCase() || '';
+  const map: { [key: string]: string } = {
+    meeting: 'Reunión',
+    call: 'Llamada',
+    note: 'Nota',
+    email: 'Correo',
+    task: 'Tarea',
+    todo: 'Tarea',
+    other: 'Otro',
+  };
+  return map[t] || 'Tarea';
 };
 
 const ActivityDetailDialog: React.FC<ActivityDetailDialogProps> = ({
@@ -178,7 +197,7 @@ const ActivityDetailDialog: React.FC<ActivityDetailDialogProps> = ({
             letterSpacing: '-0.02em',
           }}
         >
-          {getActivityTypeLabel(activity.type || '')}
+          {isTaskLikeType(activity.type) ? 'Tarea' : getActivityTypeLabel(activity.type || '')}
         </Typography>
         <IconButton
           sx={{
@@ -206,6 +225,42 @@ const ActivityDetailDialog: React.FC<ActivityDetailDialogProps> = ({
           color: `${theme.palette.text.primary} !important`,
         }}
       >
+        {/* Tipo (solo para tareas: reunión, llamada, nota, correo, etc.) */}
+        {isTaskLikeType(activity.type) && (
+          <Box sx={{ mb: 3 }}>
+            <TextField
+              fullWidth
+              label="Tipo"
+              value={getTaskSubtypeLabel(activity.taskSubType || activity.type)}
+              variant="outlined"
+              InputProps={{
+                readOnly: true,
+              }}
+              sx={{
+                '& .MuiInputLabel-root': {
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                  fontSize: '0.875rem',
+                },
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                  bgcolor: 'transparent',
+                  '& fieldset': {
+                    borderColor: theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.1)'
+                      : theme.palette.divider,
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  color: theme.palette.text.primary,
+                  fontSize: '0.875rem',
+                  py: 1.75,
+                },
+              }}
+            />
+          </Box>
+        )}
+
         {/* Título */}
         <Box sx={{ mb: 4 }}>
           <TextField

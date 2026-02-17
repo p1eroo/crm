@@ -348,17 +348,18 @@ const CompanyDetail: React.FC = () => {
       });
       const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
 
-      // Convertir tareas a formato de actividad para mostrarlas en la lista
+      // Convertir tareas a formato de actividad: type "task" para que en lista se muestre "Tarea"; taskSubType para el modal
       const tasksAsActivities = tasksData.map((task: any) => ({
         id: task.id,
-        type: task.type || "task",
+        type: "task",
+        taskSubType: task.type || "todo",
         subject: task.title,
         description: task.description,
         dueDate: task.dueDate,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt,
         User: task.CreatedBy || task.AssignedTo,
-        isTask: true, // Flag para identificar que es una tarea
+        isTask: true,
         status: task.status,
         priority: task.priority,
       }));
@@ -423,16 +424,16 @@ const CompanyDetail: React.FC = () => {
     return type; // Retornar el tipo para renderizar después
   };
 
+  // En lista: nota/llamada/correo por tipo; meeting/task/todo/other como "Tarea"
   const getActivityTypeLabel = (type: string) => {
+    const t = type?.toLowerCase() || "";
+    if (["meeting", "task", "todo", "other"].includes(t)) return "Tarea";
     const typeMap: { [key: string]: string } = {
       note: "Nota",
       email: "Correo",
       call: "Llamada",
-      task: "Tarea",
-      meeting: "Reunión",
-      todo: "Tarea",
     };
-    return typeMap[type?.toLowerCase()] || "Actividad";
+    return typeMap[t] || "Actividad";
   };
 
   const getActivityStatusColor = (activity: any) => {
@@ -1908,10 +1909,10 @@ const tab2Content = (
         entityName={company?.name || "Sin nombre"}
         user={user}
         onSave={(newTask) => {
-          // Convertir la tarea a formato de actividad para agregarla a la lista
           const taskAsActivity = {
             id: newTask.id,
             type: "task",
+            taskSubType: newTask.type || "todo",
             subject: newTask.title,
             description: newTask.description,
             dueDate: newTask.dueDate,

@@ -328,7 +328,7 @@ router.get('/', async (req, res) => {
             includes.push({
                 model: Company_1.Company,
                 as: 'Company',
-                attributes: ['id', 'name'],
+                attributes: ['id', 'name', 'logo'],
                 required: true,
                 where: {
                     name: { [sequelize_1.Op.iLike]: `%${filterEmpresa}%` },
@@ -339,7 +339,7 @@ router.get('/', async (req, res) => {
             includes.push({
                 model: Company_1.Company,
                 as: 'Company',
-                attributes: ['id', 'name'],
+                attributes: ['id', 'name', 'logo'],
                 required: false,
             });
         }

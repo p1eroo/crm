@@ -330,17 +330,18 @@ const ContactDetail: React.FC = () => {
       });
       const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
 
-      // Convertir tareas a formato de actividad para mostrarlas en la lista
+      // Convertir tareas a formato de actividad: type "task" para que en lista se muestre "Tarea"; taskSubType para el modal
       const tasksAsActivities = tasksData.map((task: any) => ({
         id: task.id,
-        type: task.type || "task",
+        type: "task",
+        taskSubType: task.type || "todo",
         subject: task.title,
         description: task.description,
         dueDate: task.dueDate,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt,
         User: task.CreatedBy || task.AssignedTo,
-        isTask: true, // Flag para identificar que es una tarea
+        isTask: true,
         status: task.status,
         priority: task.priority,
       }));
@@ -1015,6 +1016,7 @@ const ContactDetail: React.FC = () => {
     }
   };
 
+  // En lista: nota/llamada/correo por tipo; meeting/task/todo/other como "Tarea"
   const getActivityTypeLabel = (type: string) => {
     switch (type) {
       case "note":
@@ -1025,9 +1027,9 @@ const ContactDetail: React.FC = () => {
         return "Llamada";
       case "task":
       case "todo":
-        return "Tarea";
       case "meeting":
-        return "Reunión";
+      case "other":
+        return "Tarea";
       default:
         return "Actividad";
     }
@@ -2007,6 +2009,7 @@ const ContactDetail: React.FC = () => {
           const taskAsActivity = {
             id: newTask.id,
             type: "task",
+            taskSubType: newTask.type || "todo",
             subject: newTask.title,
             description: newTask.description,
             dueDate: newTask.dueDate,

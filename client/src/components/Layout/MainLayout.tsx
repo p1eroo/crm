@@ -7,7 +7,7 @@ import { useSidebar } from "../../context/SidebarContext";
 import { LoginWelcomeModal } from "../Notifications/LoginWelcomeModal";
 import { NotificationDetail } from "../Notifications/NotificationDetail";
 import { Notification } from "../../types/notification";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useNotificationPanel } from "../../context/NotificationContext";
 
@@ -23,7 +23,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isHorizontal = layoutMode === "horizontal";
   const drawerWidth = collapsed ? (isMobile ? 0 : 90) : 300;
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  const isReportsPage = location.pathname === "/reports";
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
@@ -181,12 +183,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             sx={{
               flex: 1,
               bgcolor: theme.palette.background.default,
-              pl: { xs: 3.5, sm: 5, md: 6, lg: 5, xl: 8 },
-              pr: { xs: 4.5, sm: 6, md: 7, lg: 6, xl: 9 },
+              pl: isReportsPage ? { xs: 2, sm: 2.5, md: 3 } : { xs: 3.5, sm: 5, md: 6, lg: 5, xl: 8 },
+              pr: isReportsPage ? { xs: 2, sm: 2.5, md: 3 } : { xs: 4.5, sm: 6, md: 7, lg: 6, xl: 9 },
               pt: isHorizontal ? { xs: 3, sm: 4 } : { xs: 1.5, sm: 2.5 },
               pb: 0,
               width: "100%",
-              maxWidth: { lg: "1680px", xl: "1680px" },
+              maxWidth: isReportsPage ? "none" : { lg: "1680px", xl: "1680px" },
               marginLeft: "auto",
               marginRight: "auto",
               boxSizing: "border-box",

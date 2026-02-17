@@ -6,13 +6,99 @@ Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * API de correo masivo integrada en el CRM.
  * Usa el servicio massEmailService (Nodemailer + SMTP desde .env).
- * No depende de ningún servidor externo.
+ * Crea contacto por destinatario si no existe (email + nombre opcional).
  */
 const express_1 = __importDefault(require("express"));
+const sequelize_1 = require("sequelize");
 const auth_1 = require("../middleware/auth");
+const Activity_1 = require("../models/Activity");
+const Company_1 = require("../models/Company");
+const Contact_1 = require("../models/Contact");
 const massEmailService_1 = require("../services/massEmailService");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
+/** Parsea nombre opcional en firstName/lastName; si no hay nombre, usa parte del email. */
+function parseRecipientName(email, recipientName) {
+    const name = (recipientName || '').trim();
+    if (name) {
+        const spaceIdx = name.indexOf(' ');
+        if (spaceIdx > 0) {
+            return { firstName: name.slice(0, spaceIdx).trim(), lastName: name.slice(spaceIdx + 1).trim() || '-' };
+        }
+        return { firstName: name, lastName: '-' };
+    }
+    const localPart = email.split('@')[0] || email;
+    const fallback = localPart.replace(/[._-]/g, ' ').trim() || 'Sin nombre';
+    return { firstName: fallback, lastName: '-' };
+}
+/** Extrae el dominio del email (parte después de @). Devuelve null si no hay @. */
+function getDomainFromEmail(email) {
+    const match = email.trim().toLowerCase().match(/@(.+)$/);
+    return match && match[1] ? match[1] : null;
+}
+/** Asegura que exista una empresa con ese dominio; si no, la crea. name = domain. Devuelve la empresa o null si no hay dominio. */
+async function ensureCompanyByDomain(domain, ownerId) {
+    const normalized = domain.trim().toLowerCase();
+    if (!normalized)
+        return null;
+    let company = await Company_1.Company.findOne({
+        where: { domain: { [sequelize_1.Op.iLike]: normalized } },
+    });
+    if (company)
+        return company;
+    company = await Company_1.Company.create({
+        name: normalized,
+        domain: normalized,
+        ownerId: ownerId ?? null,
+        lifecycleStage: 'lead',
+    });
+    return company;
+}
+/** Asegura que exista un contacto con ese email; si no, lo crea. Crea empresa por dominio y vincula el contacto. */
+async function ensureContactByEmail(email, recipientName, ownerId) {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized)
+        return;
+    const domain = getDomainFromEmail(normalized);
+    const company = domain ? await ensureCompanyByDomain(domain, ownerId) : null;
+    const companyId = company?.id ?? null;
+    const existing = await Contact_1.Contact.findOne({
+        where: { email: { [sequelize_1.Op.iLike]: normalized } },
+    });
+    if (existing) {
+        if (companyId != null && existing.companyId == null) {
+            await existing.update({ companyId });
+        }
+        return;
+    }
+    const { firstName, lastName } = parseRecipientName(normalized, recipientName);
+    await Contact_1.Contact.create({
+        email: normalized,
+        firstName: firstName || 'Sin nombre',
+        lastName: lastName || '-',
+        ownerId: ownerId ?? null,
+        companyId: companyId ?? undefined,
+        lifecycleStage: 'lead',
+    });
+}
+/** Registra una actividad tipo email para el contacto que recibió el correo masivo. Solo si userId está definido. */
+async function registerMassEmailActivity(contactEmail, subject, userId) {
+    if (userId == null)
+        return;
+    const contact = await Contact_1.Contact.findOne({
+        where: { email: { [sequelize_1.Op.iLike]: contactEmail.trim() } },
+        attributes: ['id'],
+    });
+    if (!contact)
+        return;
+    await Activity_1.Activity.create({
+        type: 'email',
+        subject: subject || 'Correo masivo',
+        description: 'Enviado por correo masivo.',
+        userId,
+        contactId: contact.id,
+    });
+}
 function writeSSE(res, data) {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
@@ -81,7 +167,17 @@ router.post('/send-bulk', async (req, res) => {
                 error: 'Cada email debe tener to, subject y html.',
             });
         }
+        const userId = req.userId ?? null;
+        for (const e of emails) {
+            await ensureContactByEmail(e.to, e.recipientName, userId);
+        }
         const result = await (0, massEmailService_1.sendBulkEmails)(emails);
+        for (const r of result.results) {
+            if (r.success) {
+                const item = emails.find((e) => String(e.to).toLowerCase() === r.email.toLowerCase());
+                await registerMassEmailActivity(r.email, item?.subject ?? 'Correo masivo', userId);
+            }
+        }
         res.json(result);
     }
     catch (err) {
@@ -116,6 +212,10 @@ router.post('/send-bulk-stream', async (req, res) => {
                 error: 'Cada email debe tener to, subject y html.',
             });
         }
+        const userId = req.userId ?? null;
+        for (const e of emails) {
+            await ensureContactByEmail(e.to, e.recipientName, userId);
+        }
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
@@ -133,6 +233,12 @@ router.post('/send-bulk-stream', async (req, res) => {
                     res.flush();
             },
         });
+        for (const r of result.results) {
+            if (r.success) {
+                const item = emails.find((e) => String(e.to).toLowerCase() === r.email.toLowerCase());
+                await registerMassEmailActivity(r.email, item?.subject ?? 'Correo masivo', userId);
+            }
+        }
         writeSSE(res, { type: 'done', ...result });
         res.end();
     }

@@ -24,6 +24,7 @@ const cleanTask = (task) => {
     const cleaned = {
         id: taskData.id,
         title: taskData.title,
+        type: taskData.type != null ? taskData.type : 'todo',
         status: taskData.status,
         priority: taskData.priority,
         assignedToId: taskData.assignedToId,
@@ -62,7 +63,7 @@ router.get('/', async (req, res) => {
     try {
         const { page = 1, limit: limitParam = 50, status, priority, assignedToId, contactId, companyId, dealId, search, sortBy = 'newest', // newest, oldest, name, nameDesc, dueDate
         // Filtros por columna
-        filterTitulo, filterEstado, filterPrioridad, } = req.query;
+        filterTitulo, filterEstado, filterPrioridad, filterTipo, filterFechaInicio, filterFechaVencimiento, filterAsignadoA, filterEmpresa, filterContacto, } = req.query;
         // Limitar el tamaño máximo de página para evitar sobrecarga
         const maxLimit = 100;
         const requestedLimit = Number(limitParam);
@@ -136,6 +137,41 @@ router.get('/', async (req, res) => {
             // Solo aplicar filtro de priority si no hay filtro de columna para prioridad
             where.priority = priority;
         }
+        // Filtro de tipo por columna
+        if (filterTipo) {
+            const filterTipoStr = String(filterTipo).trim().toLowerCase();
+            const typeMap = {
+                email: 'email',
+                correo: 'email',
+                meeting: 'meeting',
+                reunión: 'meeting',
+                reunion: 'meeting',
+                call: 'call',
+                llamada: 'call',
+                note: 'note',
+                nota: 'note',
+                todo: 'todo',
+                tarea: 'todo',
+                other: 'other',
+                otro: 'other',
+            };
+            const mappedType = typeMap[filterTipoStr] || filterTipoStr;
+            where.type = mappedType;
+        }
+        // Filtro fecha de inicio (por createdAt, un solo día)
+        if (filterFechaInicio) {
+            const dateStr = String(filterFechaInicio).trim();
+            const startOfDay = new Date(dateStr + 'T00:00:00.000Z');
+            const endOfDay = new Date(dateStr + 'T23:59:59.999Z');
+            where.createdAt = { [sequelize_1.Op.gte]: startOfDay, [sequelize_1.Op.lte]: endOfDay };
+        }
+        // Filtro fecha de vencimiento (un solo día)
+        if (filterFechaVencimiento) {
+            const dateStr = String(filterFechaVencimiento).trim();
+            const startOfDay = new Date(dateStr + 'T00:00:00.000Z');
+            const endOfDay = new Date(dateStr + 'T23:59:59.999Z');
+            where.dueDate = { [sequelize_1.Op.gte]: startOfDay, [sequelize_1.Op.lte]: endOfDay };
+        }
         // Otros filtros que no tienen conflictos con filtros de columna
         if (assignedToId) {
             where.assignedToId = assignedToId;
@@ -168,13 +204,41 @@ router.get('/', async (req, res) => {
                 order = [['dueDate', 'ASC'], ['createdAt', 'DESC']];
                 break;
         }
+        const filterAsignadoAStr = filterAsignadoA ? String(filterAsignadoA).trim() : '';
+        const filterEmpresaStr = filterEmpresa ? String(filterEmpresa).trim() : '';
+        const filterContactoStr = filterContacto ? String(filterContacto).trim() : '';
+        const includeAssignedTo = { model: User_1.User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false };
+        if (filterAsignadoAStr) {
+            includeAssignedTo.required = true;
+            includeAssignedTo.where = {
+                [sequelize_1.Op.or]: [
+                    { firstName: { [sequelize_1.Op.iLike]: `%${filterAsignadoAStr}%` } },
+                    { lastName: { [sequelize_1.Op.iLike]: `%${filterAsignadoAStr}%` } },
+                ],
+            };
+        }
+        const includeContact = { model: Contact_1.Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName'], required: false };
+        if (filterContactoStr) {
+            includeContact.required = true;
+            includeContact.where = {
+                [sequelize_1.Op.or]: [
+                    { firstName: { [sequelize_1.Op.iLike]: `%${filterContactoStr}%` } },
+                    { lastName: { [sequelize_1.Op.iLike]: `%${filterContactoStr}%` } },
+                ],
+            };
+        }
+        const includeCompany = { model: Company_1.Company, as: 'Company', attributes: ['id', 'name'], required: false };
+        if (filterEmpresaStr) {
+            includeCompany.required = true;
+            includeCompany.where = { name: { [sequelize_1.Op.iLike]: `%${filterEmpresaStr}%` } };
+        }
         const tasks = await Task_1.Task.findAndCountAll({
             where,
             include: [
-                { model: User_1.User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false },
+                includeAssignedTo,
                 { model: User_1.User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false },
-                { model: Contact_1.Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName'], required: false },
-                { model: Company_1.Company, as: 'Company', attributes: ['id', 'name'], required: false },
+                includeContact,
+                includeCompany,
                 { model: Deal_1.Deal, as: 'Deal', attributes: ['id', 'name'], required: false },
             ],
             distinct: true, // Importante para contar correctamente con includes

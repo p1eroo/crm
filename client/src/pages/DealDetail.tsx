@@ -311,6 +311,7 @@ const DealDetail: React.FC = () => {
       const tasksAsActivities = filteredTasks.map((task: any) => ({
         id: task.id,
         type: "task",
+        taskSubType: task.type || "todo",
         subject: task.title,
         description: task.description,
         dueDate: task.dueDate,
@@ -610,16 +611,16 @@ const DealDetail: React.FC = () => {
     return "--";
   };
 
+  // En lista: nota/llamada/correo por tipo; meeting/task/todo/other como "Tarea"
   const getActivityTypeLabel = (type: string) => {
+    const t = type?.toLowerCase() || "";
+    if (["meeting", "task", "todo", "other"].includes(t)) return "Tarea";
     const typeMap: { [key: string]: string } = {
       note: "Nota",
       email: "Correo",
       call: "Llamada",
-      task: "Tarea",
-      meeting: "Reunión",
-      todo: "Tarea",
     };
-    return typeMap[type?.toLowerCase()] || "Actividad";
+    return typeMap[t] || "Actividad";
   };
 
   const getActivityStatusColor = (activity: any) => {
@@ -1419,10 +1420,10 @@ const DealDetail: React.FC = () => {
         entityName={deal?.name || "Sin nombre"}
         user={user}
         onSave={(newTask) => {
-          // Convertir la tarea a formato de actividad para agregarla a la lista
           const taskAsActivity = {
             id: newTask.id,
             type: "task",
+            taskSubType: newTask.type || "todo",
             subject: newTask.title,
             description: newTask.description,
             dueDate: newTask.dueDate,

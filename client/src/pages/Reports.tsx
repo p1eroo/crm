@@ -8,31 +8,22 @@ import {
   Card,
   CircularProgress,
   Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
   FormControl,
   Select,
   MenuItem,
   IconButton,
-  Paper,
   Popover,
   useTheme,
   Button,
   Avatar,
 } from '@mui/material';
-import { Person, Search, ChevronLeft, ChevronRight, Close, Business } from '@mui/icons-material';
+import { Person, ChevronLeft, ChevronRight, Close, Business } from '@mui/icons-material';
 import { Building2 } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import ReactApexChart from 'react-apexcharts';
 import type { ApexOptions } from 'apexcharts';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
-import { getStageColor as getStageColorUtil } from '../utils/stageColors';
 import { formatCurrencyPE } from '../utils/currencyUtils';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -101,22 +92,23 @@ function getISOWeekNumber(d: Date): number {
   return 1 + Math.floor(diff / (7 * 24 * 60 * 60 * 1000));
 }
 
+// Paleta vinculada al verde (color principal): verdes, teal, esmeralda, azules profesionales
 const PIE_STAGE_COLORS = [
-  'rgb(255, 99, 132)',
-  'rgb(54, 162, 235)',
-  'rgb(255, 206, 86)',
-  'rgb(75, 192, 192)',
-  'rgb(153, 102, 255)',
-  'rgb(255, 159, 64)',
-  'rgb(199, 199, 199)',
-  'rgb(83, 102, 255)',
-  'rgb(255, 99, 255)',
-  'rgb(99, 255, 132)',
-  'rgb(255, 159, 243)',
-  'rgb(159, 255, 64)',
-  'rgb(64, 159, 255)',
-  'rgb(255, 64, 129)',
-  'rgb(192, 192, 75)',
+  'rgb(46, 125, 50)',   // Verde principal (#2E7D32)
+  'rgb(76, 175, 80)',   // Verde claro (#4CAF50)
+  'rgb(27, 94, 32)',    // Verde oscuro (#1B5E20)
+  'rgb(16, 185, 129)',  // Esmeralda (#10B981)
+  'rgb(13, 147, 148)',  // Teal (#0d9394)
+  'rgb(0, 137, 123)',   // Teal oscuro
+  'rgb(38, 166, 154)',  // Teal claro (#26A69A)
+  'rgb(25, 118, 210)',  // Azul profesional (#1976D2)
+  'rgb(2, 136, 209)',   // Azul claro (#0288D1)
+  'rgb(84, 110, 122)',  // Gris azulado (#546E7A)
+  'rgb(96, 125, 139)',  // Gris azulado claro (#607D8B)
+  'rgb(69, 90, 100)',   // Gris azulado oscuro (#455A64)
+  'rgb(255, 167, 38)',  // Ámbar/naranja (acento, #FFA726)
+  'rgb(120, 144, 156)', // Gris neutro (#78909C)
+  'rgb(0, 105, 92)',    // Teal muy oscuro
 ];
 
 const ACTIVITY_TYPE_ORDER: Array<'call' | 'email' | 'meeting' | 'note' | 'task'> = [
@@ -130,11 +122,11 @@ const ACTIVITY_TYPE_LABELS: Record<string, string> = {
   task: 'Tarea',
 };
 const ACTIVITY_BAR_COLORS = [
-  '#36A2EB',
-  '#4BC0C0',
-  '#FFCE56',
-  '#FF6384',
-  '#9966FF',
+  '#2E7D32', // Verde principal
+  '#4CAF50', // Verde claro
+  '#0d9394', // Teal
+  '#FFA726', // Ámbar (acento)
+  '#1976D2', // Azul profesional
 ];
 
 const COMPANY_STAGE_ORDER = [
@@ -149,19 +141,12 @@ const Reports: React.FC = () => {
   const { user: currentUser } = useAuth();
   const isRoleUser = currentUser?.role === 'user';
 
-  const getStageColor = (stage: string) => getStageColorUtil(theme, stage);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [companiesByUser, setCompaniesByUser] = useState<Record<number, Array<{ stage: string; count: number }>>>({});
+  const [, setStats] = useState<DashboardStats | null>(null);
+  const [, setCompaniesByUser] = useState<Record<number, Array<{ stage: string; count: number }>>>({});
   const [dealsByUser, setDealsByUser] = useState<Record<number, Array<{ stage: string; count: number }>>>({});
-  const [searchInput, setSearchInput] = useState('');
-  const [sortBy, setSortBy] = useState('name');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(7);
-  const [moreAnchor, setMoreAnchor] = useState<{ el: HTMLElement; userId: number } | null>(null);
-  const [moreDealsAnchor, setMoreDealsAnchor] = useState<{ el: HTMLElement; userId: number } | null>(null);
   const [hiddenStageIndices, setHiddenStageIndices] = useState<Set<number>>(new Set());
   const [hiddenDealsStageIndices, setHiddenDealsStageIndices] = useState<Set<number>>(new Set());
   const [dealsEtapaFilterAnchorEl, setDealsEtapaFilterAnchorEl] = useState<HTMLElement | null>(null);
@@ -177,7 +162,7 @@ const Reports: React.FC = () => {
   const [companiesModalPage, setCompaniesModalPage] = useState(1);
   const [companiesModalTotalPages, setCompaniesModalTotalPages] = useState(0);
   const companiesModalLimit = 20;
-  const [chartAdvisorFilter, setChartAdvisorFilter] = useState<number | null>(null);
+  const [reportsAdvisorFilter, setReportsAdvisorFilter] = useState<number | null>(null);
   const [chartOriginFilter, setChartOriginFilter] = useState<string | null>(null);
   const currentYear = new Date().getFullYear();
   const currentWeekNum = getISOWeekNumber(new Date());
@@ -186,9 +171,7 @@ const Reports: React.FC = () => {
   const [chartRecoveredClientFilter, setChartRecoveredClientFilter] = useState<string>('');
   const [etapaFilterAnchorEl, setEtapaFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [chartCompaniesByUser, setChartCompaniesByUser] = useState<Record<number, Array<{ stage: string; count: number }>>>({});
-  const [chartDealsAdvisorFilter, setChartDealsAdvisorFilter] = useState<number | null>(null);
   const [activitiesByType, setActivitiesByType] = useState<Record<string, number>>({});
-  const [activitiesAdvisorFilter, setActivitiesAdvisorFilter] = useState<number | null>(null);
   const [activitiesPeriodFilter, setActivitiesPeriodFilter] = useState<string>('');
   const [activitiesPopoverAnchor, setActivitiesPopoverAnchor] = useState<HTMLElement | null>(null);
   const [activitiesAnchorPosition, setActivitiesAnchorPosition] = useState<{ left: number; top: number } | null>(null);
@@ -205,7 +188,6 @@ const Reports: React.FC = () => {
   const activitiesClickPositionRef = React.useRef<{ clientX: number; clientY: number }>({ clientX: 0, clientY: 0 });
 
   // Movimiento semanal de empresas (polar area: avance, nuevo ingreso, retroceso, sin cambios)
-  const [weeklyMovementAdvisorFilter, setWeeklyMovementAdvisorFilter] = useState<number | null>(null);
   const [weeklyMovementRangeData, setWeeklyMovementRangeData] = useState<Array<{
     year: number;
     week: number;
@@ -229,13 +211,10 @@ const Reports: React.FC = () => {
     }
   }, [currentUser]);
 
-  // Para rol "user", fijar todos los filtros de asesor al usuario actual (solo ven su reporte)
+  // Para rol "user", fijar el filtro de asesor al usuario actual (solo ven su reporte)
   useEffect(() => {
     if (currentUser?.id != null && isRoleUser) {
-      setChartAdvisorFilter(currentUser.id);
-      setChartDealsAdvisorFilter(currentUser.id);
-      setActivitiesAdvisorFilter(currentUser.id);
-      setWeeklyMovementAdvisorFilter(currentUser.id);
+      setReportsAdvisorFilter(currentUser.id);
     }
   }, [currentUser?.id, isRoleUser]);
 
@@ -251,7 +230,7 @@ const Reports: React.FC = () => {
   const fetchChartCompaniesByUser = useCallback(async () => {
     try {
       const params = new URLSearchParams();
-      if (chartAdvisorFilter != null) params.set('userId', String(chartAdvisorFilter));
+      if (reportsAdvisorFilter != null) params.set('userId', String(reportsAdvisorFilter));
       if (chartOriginFilter !== null) {
         params.set('leadSource', chartOriginFilter === '' ? '__null__' : chartOriginFilter);
       }
@@ -267,7 +246,7 @@ const Reports: React.FC = () => {
       console.error('Error al cargar empresas para gráfico:', err);
       setChartCompaniesByUser({});
     }
-  }, [chartAdvisorFilter, chartOriginFilter, chartYear, chartWeekNumber, chartRecoveredClientFilter]);
+  }, [reportsAdvisorFilter, chartOriginFilter, chartYear, chartWeekNumber, chartRecoveredClientFilter]);
 
   useEffect(() => {
     fetchChartCompaniesByUser();
@@ -279,7 +258,7 @@ const Reports: React.FC = () => {
     try {
       const params = new URLSearchParams();
       params.set('stage', stage);
-      if (chartAdvisorFilter != null) params.set('userId', String(chartAdvisorFilter));
+      if (reportsAdvisorFilter != null) params.set('userId', String(reportsAdvisorFilter));
       if (chartOriginFilter !== null) params.set('leadSource', chartOriginFilter === '' ? '__null__' : chartOriginFilter);
       params.set('year', String(chartYear));
       params.set('weekNumber', String(chartWeekNumber));
@@ -323,7 +302,7 @@ const Reports: React.FC = () => {
   const fetchActivitiesByType = useCallback(async () => {
     try {
       const params = new URLSearchParams();
-      if (activitiesAdvisorFilter != null) params.set('userId', String(activitiesAdvisorFilter));
+      if (reportsAdvisorFilter != null) params.set('userId', String(reportsAdvisorFilter));
       if (activitiesPeriodFilter && ['day', 'week', 'month', 'year'].includes(activitiesPeriodFilter)) {
         params.set('period', activitiesPeriodFilter);
       }
@@ -334,7 +313,7 @@ const Reports: React.FC = () => {
       console.error('Error al cargar actividades por tipo:', err);
       setActivitiesByType({});
     }
-  }, [activitiesAdvisorFilter, activitiesPeriodFilter]);
+  }, [reportsAdvisorFilter, activitiesPeriodFilter]);
 
   const fetchActivitiesEntitiesList = async (activityType: string, page: number) => {
     if (!activityType) return;
@@ -342,7 +321,7 @@ const Reports: React.FC = () => {
     try {
       const params = new URLSearchParams();
       params.set('activityType', activityType);
-      if (activitiesAdvisorFilter != null) params.set('userId', String(activitiesAdvisorFilter));
+      if (reportsAdvisorFilter != null) params.set('userId', String(reportsAdvisorFilter));
       if (activitiesPeriodFilter && ['day', 'week', 'month', 'year'].includes(activitiesPeriodFilter)) params.set('period', activitiesPeriodFilter);
       params.set('page', String(page));
       params.set('limit', String(activitiesModalLimit));
@@ -365,7 +344,7 @@ const Reports: React.FC = () => {
     try {
       const params = new URLSearchParams();
       params.set('weeks', '5');
-      if (weeklyMovementAdvisorFilter != null) params.set('userId', String(weeklyMovementAdvisorFilter));
+      if (reportsAdvisorFilter != null) params.set('userId', String(reportsAdvisorFilter));
       const response = await api.get<{
         weeks: Array<{
           year: number;
@@ -383,7 +362,7 @@ const Reports: React.FC = () => {
     } finally {
       setWeeklyMovementRangeLoading(false);
     }
-  }, [weeklyMovementAdvisorFilter]);
+  }, [reportsAdvisorFilter]);
 
   useEffect(() => {
     fetchCompaniesWeeklyMovementRange();
@@ -430,7 +409,8 @@ const Reports: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get('/users', { params: { minimal: true } });
-      const userRoleUsers = response.data
+      const userRoleUsers = (response.data || [])
+        .filter((u: any) => u.isActive !== false)
         .map((user: any) => ({
           ...user,
           role: user.role || user.Role?.name || 'user',
@@ -443,36 +423,6 @@ const Reports: React.FC = () => {
       setLoading(false);
     }
   };
-
-  const filteredAndSortedUsers = useMemo(() => {
-    let list = [...users];
-    const q = (searchInput || '').toLowerCase().trim();
-    if (q) {
-      list = list.filter(
-        (u) =>
-          (u.firstName + ' ' + u.lastName).toLowerCase().includes(q) ||
-          (u.email || '').toLowerCase().includes(q)
-      );
-    }
-    const perf = stats?.deals?.userPerformance || [];
-    const getValue = (u: User) => (perf.find((p: any) => p.userId === u.id)?.wonDealsValue ?? 0);
-    if (sortBy === 'name') {
-      list.sort((a, b) => (a.firstName + ' ' + a.lastName).localeCompare(b.firstName + ' ' + b.lastName));
-    } else if (sortBy === 'nameDesc') {
-      list.sort((a, b) => (b.firstName + ' ' + b.lastName).localeCompare(a.firstName + ' ' + a.lastName));
-    } else if (sortBy === 'totalDesc') {
-      list.sort((a, b) => getValue(b) - getValue(a));
-    } else if (sortBy === 'totalAsc') {
-      list.sort((a, b) => getValue(a) - getValue(b));
-    }
-    return list;
-  }, [users, searchInput, sortBy, stats?.deals?.userPerformance]);
-
-  const totalItems = filteredAndSortedUsers.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-  const pageUsers = filteredAndSortedUsers.slice(startIndex, endIndex);
 
   // Conteo por etapa de empresas (agregado de todos los asesores) para el gráfico polar
   const companyStagesChartData = useMemo(() => {
@@ -505,8 +455,8 @@ const Reports: React.FC = () => {
 
   // Conteo por etapa de negocios (donut con total en el centro) - card a la derecha de Movimiento por semana
   const dealsChartData = useMemo(() => {
-    const lists = chartDealsAdvisorFilter != null
-      ? [dealsByUser[chartDealsAdvisorFilter] || []]
+    const lists = reportsAdvisorFilter != null
+      ? [dealsByUser[reportsAdvisorFilter] || []]
       : Object.values(dealsByUser);
     const byStage: Record<string, number> = {};
     lists.forEach((list) => {
@@ -533,7 +483,7 @@ const Reports: React.FC = () => {
     });
     const total = series.reduce((a, b) => a + b, 0);
     return { labels, series, total, stageKeys };
-  }, [dealsByUser, chartDealsAdvisorFilter]);
+  }, [dealsByUser, reportsAdvisorFilter]);
 
   const activitiesChartData = useMemo(() => {
     const categories = ACTIVITY_TYPE_ORDER.map((t) => ACTIVITY_TYPE_LABELS[t] || t);
@@ -571,7 +521,7 @@ const Reports: React.FC = () => {
     return {
       series,
       options: {
-        chart: { type: 'bar' as const, height: 680, stacked: true, background: 'transparent' },
+        chart: { type: 'bar' as const, height: 680, stacked: true, background: 'transparent', toolbar: { show: false } },
         plotOptions: {
           bar: {
             horizontal: true as const,
@@ -613,10 +563,6 @@ const Reports: React.FC = () => {
     };
   }, [weeklyMovementRangeData, movementChartColors, theme.palette.mode, theme.palette.divider, theme.palette.text.secondary, theme.palette.background.paper]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchInput, sortBy, itemsPerPage]);
-
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -637,12 +583,39 @@ const Reports: React.FC = () => {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
+      {/* Título igual que en Negocios (Deals) */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+          p: 0,
+          mt: 0,
+          mb: 4,
+        }}
+      >
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 700,
+            fontSize: { xs: '1.25rem', md: '1.5rem' },
+            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green} 100%)`,
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          Reportes
+        </Typography>
+      </Box>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 2, md: 1.25 }, mb: 2, alignItems: 'flex-start' }}>
       {/* Card: Conteo por etapa de empresas (gráfico Pie Chart.js) - mismo diseño que bloque Asesores */}
       <Card
         sx={{
-          maxWidth: { xs: 660, md: 820 },
-          flex: { md: '1 1 52%' },
+          maxWidth: { xs: 660, md: 980 },
+          flex: { md: '1 1 56%' },
           minWidth: 0,
           borderRadius: 3,
           boxShadow: theme.palette.mode === 'dark'
@@ -697,8 +670,8 @@ const Reports: React.FC = () => {
               </Typography>
               <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 }, maxWidth: { sm: 140 }, width: { md: 140 } }}>
                 <Select
-                  value={chartAdvisorFilter === null ? '' : String(chartAdvisorFilter)}
-                  onChange={(e) => !isRoleUser && setChartAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
+                  value={reportsAdvisorFilter === null ? '' : String(reportsAdvisorFilter)}
+                  onChange={(e) => !isRoleUser && setReportsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
                   displayEmpty
                   disabled={isRoleUser}
                   sx={{
@@ -1166,9 +1139,9 @@ const Reports: React.FC = () => {
       {/* Card: Cantidad por tipo de actividad (gráfico de barras ApexCharts) */}
       <Card
         sx={{
-          flex: { md: 1 },
+          flex: { md: '1 1 44%' },
           minWidth: 0,
-          maxWidth: { xs: 660, md: 'none' },
+          maxWidth: { xs: 660, md: 820 },
           borderRadius: 3,
           boxShadow: theme.palette.mode === 'dark'
             ? '0 4px 16px rgba(0,0,0,0.3)'
@@ -1222,8 +1195,8 @@ const Reports: React.FC = () => {
               </Typography>
               <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 160 }, maxWidth: { sm: 160 } }}>
                 <Select
-                  value={activitiesAdvisorFilter === null ? '' : String(activitiesAdvisorFilter)}
-                  onChange={(e) => !isRoleUser && setActivitiesAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
+                  value={reportsAdvisorFilter === null ? '' : String(reportsAdvisorFilter)}
+                  onChange={(e) => !isRoleUser && setReportsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
                   displayEmpty
                   disabled={isRoleUser}
                   sx={{
@@ -1398,9 +1371,9 @@ const Reports: React.FC = () => {
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mt: 4, mb: 4, alignItems: 'flex-start' }}>
       <Card
         sx={{
-          flex: { md: '1 1 auto' },
+          flex: { md: '1 1 56%' },
           minWidth: 0,
-          maxWidth: 720,
+          maxWidth: { md: 'none' },
           borderRadius: 3,
           boxShadow: theme.palette.mode === 'dark'
             ? '0 4px 16px rgba(0,0,0,0.3)'
@@ -1452,8 +1425,8 @@ const Reports: React.FC = () => {
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
             <FormControl size="small" sx={{ minWidth: 160 }}>
               <Select
-                value={weeklyMovementAdvisorFilter === null ? '' : String(weeklyMovementAdvisorFilter)}
-                onChange={(e) => !isRoleUser && setWeeklyMovementAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
+                value={reportsAdvisorFilter === null ? '' : String(reportsAdvisorFilter)}
+                onChange={(e) => !isRoleUser && setReportsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
                 displayEmpty
                 disabled={isRoleUser}
                 sx={{
@@ -1492,14 +1465,22 @@ const Reports: React.FC = () => {
           ) : (
             <Box
               sx={{
+                width: '100%',
+                minWidth: 0,
+                overflow: 'hidden',
+                '& > div': { width: '100% !important' },
                 '& .apexcharts-legend-text': { marginLeft: '-10px' },
+                '& .apexcharts-canvas': { width: '100% !important' },
+                '& .apexcharts-inner': { width: '100% !important' },
+                '& .apexcharts-svg': { width: '100% !important' },
+                '& .apexcharts-toolbar': { display: 'none !important' },
               }}
             >
               <ReactApexChart
                 options={weeklyMovementRangeChart.options}
                 series={weeklyMovementRangeChart.series}
                 type="bar"
-                height={350}
+                height={420}
               />
             </Box>
           )}
@@ -1509,9 +1490,12 @@ const Reports: React.FC = () => {
       {/* Card: Conteo por etapa (negocios) - donut con total en el centro, a la derecha de Movimiento por semana */}
       <Card
         sx={{
-          flex: { md: '1 1 400px' },
+          flex: { md: '1 1 44%' },
           minWidth: { md: 400 },
+          minHeight: { md: 520 },
           maxWidth: { md: 'none' },
+          display: 'flex',
+          flexDirection: 'column',
           borderRadius: 3,
           boxShadow: theme.palette.mode === 'dark'
             ? '0 4px 16px rgba(0,0,0,0.3)'
@@ -1555,8 +1539,8 @@ const Reports: React.FC = () => {
             <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>Asesor</Typography>
             <FormControl size="small" sx={{ minWidth: 160 }}>
               <Select
-                value={chartDealsAdvisorFilter === null ? '' : String(chartDealsAdvisorFilter)}
-                onChange={(e) => !isRoleUser && setChartDealsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
+                value={reportsAdvisorFilter === null ? '' : String(reportsAdvisorFilter)}
+                onChange={(e) => !isRoleUser && setReportsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
                 displayEmpty
                 disabled={isRoleUser}
                 sx={{
@@ -1663,7 +1647,20 @@ const Reports: React.FC = () => {
             </Box>
           </Box>
         </Box>
-        <Box sx={{ px: { xs: 2, md: 3 }, pt: 2, pb: { xs: 1.5, md: 3 }, bgcolor: reportsCardBg }}>
+        <Box
+          sx={{
+            px: { xs: 2, md: 3 },
+            pt: 2,
+            pb: { xs: 1.5, md: 3 },
+            bgcolor: reportsCardBg,
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: 0,
+          }}
+        >
           {dealsChartData.series.some((v) => v > 0) ? (
             (() => {
               const visibleDealsIndices = dealsChartData.labels
@@ -1679,23 +1676,25 @@ const Reports: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: 2,
-                minHeight: 340,
+                justifyContent: 'center',
               }}
             >
               <Box
                 sx={{
                   flex: '0 0 auto',
-                  width: { xs: '100%', sm: 340 },
-                  maxWidth: 380,
-                  '& .apexcharts-donut-center-label': {
-                    '& text': { fill: `${theme.palette.text.primary} !important` },
+                  width: { xs: '100%', sm: 300 },
+                  maxWidth: 320,
+                  '& .apexcharts-datalabels-group': {
+                    '& .apexcharts-datalabel-label, & .apexcharts-datalabel-value': {
+                      fill: `${theme.palette.text.secondary} !important`,
+                      fontSize: '30px !important',
+                    },
                   },
                 }}
               >
                 <ReactApexChart
                   options={{
-                    chart: { type: 'donut', width: 340, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
+                    chart: { type: 'donut', width: 300, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
                     colors: chartColors,
                     stroke: { width: 0 },
                     dataLabels: { enabled: false },
@@ -1704,26 +1703,36 @@ const Reports: React.FC = () => {
                     plotOptions: {
                       pie: {
                         donut: {
+                          size: '65%',
                           labels: {
                             show: true,
+                            name: { show: true, color: theme.palette.text.secondary },
+                            value: {
+                              show: true,
+                              fontSize: '30px',
+                              fontWeight: 400,
+                              color: theme.palette.text.secondary,
+                            },
                             total: {
                               show: true,
                               showAlways: true,
                               label: 'Total',
                               formatter: () => String(visibleTotal),
-                              color: theme.palette.text.primary,
+                              color: theme.palette.text.secondary,
+                              fontSize: '30px',
+                              fontWeight: 700,
                             },
                           },
                         },
                       },
                     },
-                    responsive: [{ breakpoint: 480, options: { chart: { width: 300, background: 'transparent' } } }],
+                    responsive: [{ breakpoint: 480, options: { chart: { width: 260, background: 'transparent' } } }],
                     legend: { show: false },
                     tooltip: { theme: theme.palette.mode },
                   } as ApexOptions}
                   series={chartSeries}
                   type="donut"
-                  height={340}
+                  height={300}
                 />
               </Box>
             </Box>
@@ -2055,527 +2064,6 @@ const Reports: React.FC = () => {
         </Box>
       </Popover>
 
-      <Card
-        sx={{
-          borderRadius: 3,
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 4px 16px rgba(0,0,0,0.3)'
-            : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
-          overflow: 'hidden',
-          bgcolor: reportsCardBg,
-          border: '1px solid',
-          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 8px 24px rgba(0,0,0,0.4)'
-              : `0 8px 24px ${taxiMonterricoColors.greenLight}25`,
-          },
-        }}
-      >
-        <Box
-          sx={{
-            px: { xs: 2, md: 3 },
-            pt: { xs: 2, md: 1.5 },
-            pb: { xs: 1.5, md: 2 },
-            bgcolor: reportsCardBg,
-            borderBottom: `2px solid ${theme.palette.divider}`,
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 2, sm: 0 } }}>
-            <Box>
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 700,
-                  fontSize: { xs: '1.25rem', md: '1.5rem' },
-                  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Asesores
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, alignItems: 'center', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-              <TextField
-                size="small"
-                placeholder="Buscar"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <Search sx={{ mr: 1, color: theme.palette.text.secondary, fontSize: { xs: 18, sm: 20 } }} />
-                  ),
-                }}
-                sx={{
-                  minWidth: { xs: '100%', sm: 150 },
-                  maxWidth: { xs: '100%', sm: 180 },
-                  bgcolor: reportsCardBg,
-                  borderRadius: 1.5,
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                    border: `1.5px solid ${theme.palette.divider}`,
-                    '& fieldset': { border: 'none' },
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    },
-                    '&.Mui-focused': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                    },
-                  },
-                }}
-              />
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 200 } }}>
-                <Select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  displayEmpty
-                  sx={{
-                    borderRadius: 1.5,
-                    bgcolor: reportsCardBg,
-                    fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                    border: `1.5px solid ${theme.palette.divider}`,
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    },
-                    '&.Mui-focused': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                    },
-                  }}
-                >
-                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
-                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
-                  <MenuItem value="totalDesc">Ordenar por: Total vendido (mayor)</MenuItem>
-                  <MenuItem value="totalAsc">Ordenar por: Total vendido (menor)</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </Box>
-        </Box>
-
-        {users.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 6, px: 2 }}>
-            <Person sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="body1" color="text.secondary">
-              No hay usuarios con rol de usuario para mostrar
-            </Typography>
-          </Box>
-        ) : (
-          <>
-            <TableContainer
-              component={Paper}
-              sx={{
-                overflowX: 'auto',
-                overflowY: 'hidden',
-                borderRadius: 1.5,
-                overflow: 'hidden',
-                border: 'none',
-                boxShadow: 'none',
-                bgcolor: reportsCardBg,
-                '& .MuiPaper-root': { borderRadius: 0, border: 'none', boxShadow: 'none', bgcolor: reportsCardBg },
-              }}
-            >
-              <Table sx={{ minWidth: { xs: 700, md: 'auto' } }}>
-                <TableHead>
-                  <TableRow
-                    sx={{
-                      bgcolor: reportsCardBg,
-                      borderBottom: `2px solid ${theme.palette.divider}`,
-                      '& .MuiTableCell-head': { borderBottom: 'none', fontWeight: 600, bgcolor: 'transparent' },
-                    }}
-                  >
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 1.25 }, pl: { xs: 2, md: 3 }, pr: { xs: 0.5, md: 1 }, minWidth: 180, bgcolor: 'transparent' }}>
-                      Nombre
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 1.25 }, px: { xs: 1.5, md: 2 }, minWidth: 160, bgcolor: 'transparent' }}>
-                      Email
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 1.25 }, px: { xs: 1.5, md: 2 }, minWidth: 100, bgcolor: 'transparent' }}>
-                      Teléfono
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 1.25 }, px: { xs: 1.5, md: 2 }, minWidth: 200, bgcolor: 'transparent' }}>
-                      Empresas
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 1.25 }, px: { xs: 1.5, md: 2 }, minWidth: 200, bgcolor: 'transparent' }}>
-                      Negocios
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 1.25 }, px: { xs: 1.5, md: 2 }, minWidth: 100, bgcolor: 'transparent' }}>
-                      Ventas
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 1.25 }, pl: { xs: 1.5, md: 2 }, pr: { xs: 2, md: 3 }, minWidth: 120, bgcolor: 'transparent' }}>
-                      Total Vendido
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {pageUsers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} sx={{ py: 4, textAlign: 'center', color: theme.palette.text.secondary }}>
-                        No se encontraron asesores que coincidan con la búsqueda.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    pageUsers.map((user) => {
-                      const userStats = stats?.deals?.userPerformance?.find((u: any) => u.userId === user.id);
-                      return (
-                        <TableRow
-                          key={user.id}
-                          sx={{
-                            bgcolor: reportsCardBg,
-                            borderBottom: theme.palette.mode === 'light' ? '1px solid rgba(0, 0, 0, 0.08)' : '1px solid rgba(255, 255, 255, 0.1)',
-                            '& .MuiTableCell-root': { borderBottom: 'none' },
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              boxShadow: theme.palette.mode === 'dark'
-                                ? 'inset 0 0 0 9999px rgba(255, 255, 255, 0.015)'
-                                : 'inset 0 0 0 9999px rgba(0, 0, 0, 0.012)',
-                            },
-                          }}
-                        >
-                          <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: { xs: 0.5, md: 1 } }}>
-                            <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                              {user.firstName} {user.lastName}
-                            </Typography>
-                          </TableCell>
-                          <TableCell sx={{ py: { xs: 1.5, md: 2 }, px: { xs: 1.5, md: 2 }, fontSize: { xs: '0.75rem', md: '0.875rem' }, color: theme.palette.text.primary }}>
-                            {user.email}
-                          </TableCell>
-                          <TableCell sx={{ py: { xs: 1.5, md: 2 }, px: { xs: 1.5, md: 2 }, fontSize: { xs: '0.75rem', md: '0.875rem' }, color: theme.palette.text.secondary }}>
-                            {user.phone || '--'}
-                          </TableCell>
-                          <TableCell sx={{ py: { xs: 1.5, md: 2 }, px: { xs: 1.5, md: 2 }, verticalAlign: 'top' }} onClick={(e) => e.stopPropagation()}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                              {(() => {
-                                const list = companiesByUser[user.id] || [];
-                                if (list.length === 0) {
-                                  return (
-                                    <Typography variant="body2" sx={{ fontSize: '0.75rem', color: theme.palette.text.disabled }}>
-                                      --
-                                    </Typography>
-                                  );
-                                }
-                                const maxVisible = 4;
-                                const visible = list.slice(0, maxVisible);
-                                const restCount = list.length - maxVisible;
-                                const row1 = visible.slice(0, 2);
-                                const row2 = visible.slice(2, 4);
-                                const tagBaseSx = {
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 0.5,
-                                  px: 1,
-                                  py: 0.5,
-                                  borderRadius: 2,
-                                  fontSize: '0.75rem',
-                                };
-                                const Tag = ({ stage, count }: { stage: string; count: number }) => {
-                                  const { color } = getStageColor(stage);
-                                  return (
-                                    <Box
-                                      sx={{
-                                        ...tagBaseSx,
-                                        color,
-                                        border: `1px solid ${theme.palette.divider}`,
-                                      }}
-                                    >
-                                      <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
-                                        {getStageLabel(stage)}:
-                                      </Typography>
-                                      <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
-                                        {count}
-                                      </Typography>
-                                    </Box>
-                                  );
-                                };
-                                return (
-                                  <>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                                      {row1.map(({ stage, count }) => <Tag key={stage} stage={stage} count={count} />)}
-                                    </Box>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                                      {row2.map(({ stage, count }) => <Tag key={stage} stage={stage} count={count} />)}
-                                      {restCount > 0 && (
-                                        <Box
-                                          component="span"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setMoreAnchor({ el: e.currentTarget as HTMLElement, userId: user.id });
-                                          }}
-                                          sx={{
-                                            ...tagBaseSx,
-                                            cursor: 'pointer',
-                                            color: theme.palette.text.secondary,
-                                            border: `1px solid ${theme.palette.divider}`,
-                                            '&:hover': {
-                                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-                                            },
-                                          }}
-                                        >
-                                          +{restCount} más
-                                        </Box>
-                                      )}
-                                    </Box>
-                                  </>
-                                );
-                              })()}
-                            </Box>
-                          </TableCell>
-                          <TableCell sx={{ py: { xs: 1.5, md: 2 }, px: { xs: 1.5, md: 2 }, verticalAlign: 'top' }} onClick={(e) => e.stopPropagation()}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                              {(() => {
-                                const list = dealsByUser[user.id] || [];
-                                if (list.length === 0) {
-                                  return (
-                                    <Typography variant="body2" sx={{ fontSize: '0.75rem', color: theme.palette.text.disabled }}>
-                                      --
-                                    </Typography>
-                                  );
-                                }
-                                const maxVisible = 4;
-                                const visible = list.slice(0, maxVisible);
-                                const restCount = list.length - maxVisible;
-                                const row1 = visible.slice(0, 2);
-                                const row2 = visible.slice(2, 4);
-                                const tagBaseSx = {
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 0.5,
-                                  px: 1,
-                                  py: 0.5,
-                                  borderRadius: 2,
-                                  fontSize: '0.75rem',
-                                };
-                                const DealTag = ({ stage, count }: { stage: string; count: number }) => {
-                                  const { color } = getStageColor(stage);
-                                  return (
-                                    <Box sx={{ ...tagBaseSx, color, border: `1px solid ${theme.palette.divider}` }}>
-                                      <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
-                                        {getStageLabel(stage)}:
-                                      </Typography>
-                                      <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
-                                        {count}
-                                      </Typography>
-                                    </Box>
-                                  );
-                                };
-                                return (
-                                  <>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                                      {row1.map(({ stage, count }) => <DealTag key={stage} stage={stage} count={count} />)}
-                                    </Box>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                                      {row2.map(({ stage, count }) => <DealTag key={stage} stage={stage} count={count} />)}
-                                      {restCount > 0 && (
-                                        <Box
-                                          component="span"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setMoreDealsAnchor({ el: e.currentTarget as HTMLElement, userId: user.id });
-                                          }}
-                                          sx={{
-                                            ...tagBaseSx,
-                                            cursor: 'pointer',
-                                            color: theme.palette.text.secondary,
-                                            border: `1px solid ${theme.palette.divider}`,
-                                            '&:hover': {
-                                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-                                            },
-                                          }}
-                                        >
-                                          +{restCount} más
-                                        </Box>
-                                      )}
-                                    </Box>
-                                  </>
-                                );
-                              })()}
-                            </Box>
-                          </TableCell>
-                          <TableCell sx={{ py: { xs: 1.5, md: 2 }, px: { xs: 1.5, md: 2 }, fontWeight: 500, fontSize: { xs: '0.75rem', md: '0.875rem' }, color: theme.palette.text.primary }}>
-                            {userStats ? `${userStats.wonDeals || 0} ${userStats.wonDeals === 1 ? 'venta' : 'ventas'}` : '0 ventas'}
-                          </TableCell>
-                          <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 1.5, md: 2 }, pr: { xs: 2, md: 3 }, fontWeight: 500, fontSize: { xs: '0.75rem', md: '0.875rem' }, color: theme.palette.text.primary }}>
-                            {userStats ? formatCurrencyPE(userStats.wonDealsValue || 0) : formatCurrencyPE(0)}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {totalItems > 0 && (
-              <Box
-                sx={{
-                  bgcolor: reportsCardBg,
-                  borderTop: `1px solid ${theme.palette.divider}`,
-                  px: { xs: 2, md: 3 },
-                  py: { xs: 1, md: 1.5 },
-                  display: 'flex',
-                  flexDirection: { xs: 'column', md: 'row' },
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: { xs: 1.5, md: 2 },
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-                    Filas por página:
-                  </Typography>
-                  <Select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    size="small"
-                    sx={{
-                      fontSize: '0.8125rem',
-                      height: '32px',
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.divider },
-                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.text.secondary },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: taxiMonterricoColors.green },
-                    }}
-                  >
-                    <MenuItem value={5}>5</MenuItem>
-                    <MenuItem value={7}>7</MenuItem>
-                    <MenuItem value={10}>10</MenuItem>
-                    <MenuItem value={20}>20</MenuItem>
-                    <MenuItem value={50}>50</MenuItem>
-                  </Select>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-                    {startIndex + 1}-{endIndex} de {totalItems}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <IconButton
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      size="small"
-                      sx={{
-                        color: currentPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
-                        '&:hover': { bgcolor: currentPage === 1 ? 'transparent' : theme.palette.action.hover },
-                      }}
-                    >
-                      <ChevronLeft />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                      size="small"
-                      sx={{
-                        color: currentPage === totalPages ? theme.palette.action.disabled : theme.palette.text.secondary,
-                        '&:hover': { bgcolor: currentPage === totalPages ? 'transparent' : theme.palette.action.hover },
-                      }}
-                    >
-                      <ChevronRight />
-                    </IconButton>
-                  </Box>
-                </Box>
-              </Box>
-            )}
-          </>
-        )}
-      </Card>
-
-      <Popover
-        open={Boolean(moreAnchor)}
-        anchorEl={moreAnchor?.el}
-        onClose={() => setMoreAnchor(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        slotProps={{ paper: { sx: { borderRadius: 2, p: 1.5, maxWidth: 320 } } }}
-      >
-        {moreAnchor && (() => {
-          const fullList = companiesByUser[moreAnchor.userId] || [];
-          const restOnly = fullList.slice(4);
-          if (restOnly.length === 0) return null;
-          return (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-            {restOnly.map(({ stage, count }) => {
-              const { color } = getStageColor(stage);
-              return (
-                <Box
-                  key={stage}
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    px: 1,
-                    py: 0.5,
-                    borderRadius: 2,
-                    color,
-                    border: `1px solid ${theme.palette.divider}`,
-                    fontSize: '0.75rem',
-                  }}
-                >
-                  <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
-                    {getStageLabel(stage)}:
-                  </Typography>
-                  <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
-                    {count}
-                  </Typography>
-                </Box>
-              );
-            })}
-          </Box>
-          );
-        })()}
-      </Popover>
-
-      <Popover
-        open={Boolean(moreDealsAnchor)}
-        anchorEl={moreDealsAnchor?.el}
-        onClose={() => setMoreDealsAnchor(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        slotProps={{ paper: { sx: { borderRadius: 2, p: 1.5, maxWidth: 320 } } }}
-      >
-        {moreDealsAnchor && (() => {
-          const fullList = dealsByUser[moreDealsAnchor.userId] || [];
-          const restOnly = fullList.slice(4);
-          if (restOnly.length === 0) return null;
-          return (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-              {restOnly.map(({ stage, count }) => {
-                const { color } = getStageColor(stage);
-                return (
-                  <Box
-                    key={stage}
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      px: 1,
-                      py: 0.5,
-                      borderRadius: 2,
-                      color,
-                      border: `1px solid ${theme.palette.divider}`,
-                      fontSize: '0.75rem',
-                    }}
-                  >
-                    <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
-                      {getStageLabel(stage)}:
-                    </Typography>
-                    <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
-                      {count}
-                    </Typography>
-                  </Box>
-                );
-              })}
-            </Box>
-          );
-        })()}
-      </Popover>
     </Box>
   );
 };

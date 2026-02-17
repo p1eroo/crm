@@ -82,16 +82,16 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  // En lista: nota/llamada/correo se muestran por tipo; meeting/task/todo/other como "Tarea"
   const defaultGetActivityTypeLabel = (type: string) => {
+    const t = type?.toLowerCase() || '';
+    if (['meeting', 'task', 'todo', 'other'].includes(t)) return 'Tarea';
     const typeMap: { [key: string]: string } = {
       note: 'Nota',
       email: 'Correo',
       call: 'Llamada',
-      task: 'Tarea',
-      meeting: 'Reunión',
-      todo: 'Tarea',
     };
-    return typeMap[type?.toLowerCase()] || 'Actividad';
+    return typeMap[t] || 'Actividad';
   };
 
   const getActivityTypeLabelFn = getActivityTypeLabel || defaultGetActivityTypeLabel;

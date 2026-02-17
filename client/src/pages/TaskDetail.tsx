@@ -1238,16 +1238,16 @@ const TaskDetail: React.FC = () => {
     }
   };
 
+  // En lista: nota/llamada/correo por tipo; meeting/task/todo/other como "Tarea"
   const getActivityTypeLabel = (type: string) => {
+    const t = type?.toLowerCase() || "";
+    if (["meeting", "task", "todo", "other"].includes(t)) return "Tarea";
     const typeMap: { [key: string]: string } = {
       note: "Nota",
       email: "Correo",
       call: "Llamada",
-      task: "Tarea",
-      meeting: "Reunión",
-      todo: "Tarea",
     };
-    return typeMap[type?.toLowerCase()] || "Actividad";
+    return typeMap[t] || "Actividad";
   };
 
   const getActivityStatusColor = (activity: any) => {

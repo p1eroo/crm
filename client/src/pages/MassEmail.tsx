@@ -74,19 +74,18 @@ const processFile = (file: File): Promise<ContactRow[]> => {
         const emailIdx = headers.findIndex((h) => /^(email|correo|e-mail|mail)$/.test(h));
         const nombreIdx = headers.findIndex((h) => /^(nombre|name|cliente|client)$/.test(h));
         if (emailIdx === -1) reject(new Error('Falta columna email/correo'));
-        if (nombreIdx === -1) reject(new Error('Falta columna nombre/name'));
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const rows = json.slice(1) as (string | number)[][];
         const contacts: ContactRow[] = [];
         rows.forEach((row, i) => {
           const email = String(row[emailIdx] ?? '').trim().toLowerCase();
-          const nombre = String(row[nombreIdx] ?? '').trim();
+          const nombre = nombreIdx >= 0 ? String(row[nombreIdx] ?? '').trim() : '';
           if (!email) return;
           if (!emailRegex.test(email)) return;
           contacts.push({
             id: `c_${Date.now()}_${i}`,
             email,
-            nombre: nombre || email,
+            nombre: nombre || '',
           });
         });
         const uniq = contacts.filter((c, i, a) => a.findIndex((x) => x.email === c.email) === i);
@@ -174,6 +173,7 @@ const MassEmail: React.FC = () => {
       subject: subject.trim(),
       html: processContent(body, c),
       attachments: baseAttachments,
+      recipientName: c.nombre || '',
     }));
   };
 
@@ -334,7 +334,7 @@ const MassEmail: React.FC = () => {
         {activeStep === 0 && (
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Sube un Excel o CSV con columnas <strong>email</strong> y <strong>nombre</strong>.
+              Sube un Excel o CSV con columna <strong>email</strong> (obligatoria). Opcional: <strong>nombre</strong>.
             </Typography>
             <Button variant="outlined" component="label" startIcon={<Upload />} sx={{ mb: 2 }}>
               Seleccionar archivo

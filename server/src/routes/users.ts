@@ -58,6 +58,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       const users = await User.findAll({
         attributes: ['id', 'firstName', 'lastName', 'roleId', 'isActive'],
         include: [{ model: Role, as: 'Role', attributes: ['id', 'name'] }],
+        where: { isActive: true },
         order: [['firstName', 'ASC'], ['lastName', 'ASC']],
       });
       const list = users.map((u: any) => {
