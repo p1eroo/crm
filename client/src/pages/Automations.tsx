@@ -21,7 +21,9 @@ import {
   CircularProgress,
   useTheme,
 } from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
+import { Add } from '@mui/icons-material';
+import { Trash } from 'lucide-react';
+import { PencilLine } from 'lucide-react';
 import api from '../config/api';
 import { pageStyles } from '../theme/styles';
 
@@ -161,10 +163,10 @@ const Automations: React.FC = () => {
                 </TableCell>
                 <TableCell>
                   <IconButton size="small" onClick={() => handleOpen(automation)}>
-                    <Edit />
+                    <PencilLine size={18} />
                   </IconButton>
                   <IconButton size="small" onClick={() => handleDelete(automation.id)}>
-                    <Delete />
+                    <Trash size={18} />
                   </IconButton>
                 </TableCell>
               </TableRow>

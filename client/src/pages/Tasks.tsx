@@ -26,12 +26,12 @@ import {
   Tooltip,
   Paper,
   useTheme,
-  Avatar,
   InputAdornment,
   LinearProgress,
   Autocomplete,
 } from '@mui/material';
-import { Add, Delete, Search, Schedule, PendingActions, Edit, Visibility, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday, FilterList } from '@mui/icons-material';
+import { Add, Search, Schedule, PendingActions, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday, FilterList } from '@mui/icons-material';
+import { PencilLine, Eye, Trash } from 'lucide-react';
 import { RiFileWarningLine } from 'react-icons/ri';
 import { IoMdCheckboxOutline } from 'react-icons/io';
 import { library } from '@fortawesome/fontawesome-svg-core';
@@ -43,7 +43,6 @@ import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import { FormDrawer } from '../components/FormDrawer';
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
-import { getAvatarColors } from '../utils/avatarColors';
 
 library.add(far);
 
@@ -69,18 +68,6 @@ interface Task {
   isActivity?: boolean;
 }
 
-const getCompanyInitials = (name: string): string => {
-  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return (name || '').slice(0, 2).toUpperCase() || '—';
-};
-
-const getContactInitials = (firstName: string, lastName: string): string => {
-  const f = (firstName || '').trim()[0] || '';
-  const l = (lastName || '').trim()[0] || '';
-  return `${f}${l}`.toUpperCase() || '—';
-};
-
 const getTypeLabel = (type: string | undefined): string => {
   const map: Record<string, string> = {
     email: 'Correo',
@@ -91,16 +78,6 @@ const getTypeLabel = (type: string | undefined): string => {
     other: 'Otro',
   };
   return type ? (map[type] || type) : '—';
-};
-
-const initialsAvatarSx = {
-  width: { xs: 28, md: 32 },
-  height: { xs: 28, md: 32 },
-  fontSize: { xs: '0.7rem', md: '0.75rem' },
-  fontWeight: 600,
-  textShadow: '0 1px 2px rgba(0,0,0,0.06)',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-  flexShrink: 0,
 };
 
 const Tasks: React.FC = () => {
@@ -141,6 +118,7 @@ const Tasks: React.FC = () => {
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [completeModalTask, setCompleteModalTask] = useState<Task | null>(null);
   const [completeModalViewOnly, setCompleteModalViewOnly] = useState(false);
+  const [completeModalLoading, setCompleteModalLoading] = useState(false);
   const [completeObservations, setCompleteObservations] = useState('');
   const [completeDate, setCompleteDate] = useState('');
   const [completeTime, setCompleteTime] = useState('');
@@ -472,21 +450,29 @@ const Tasks: React.FC = () => {
   }, [linkPromptOpen, taskJustCompletedForLink]);
 
   const getDescriptionWithoutCompletada = (desc: string) => {
-    const idx = (desc || '').indexOf('\n\n--- Completada ---');
-    return idx >= 0 ? (desc || '').slice(0, idx).trim() : (desc || '');
+    const s = (desc || '').replace(/\r\n/g, '\n');
+    let idx = s.indexOf('\n\n--- Completada ---');
+    if (idx >= 0) return s.slice(0, idx).trim();
+    idx = s.indexOf('--- Completada ---');
+    if (idx >= 0) return s.slice(0, idx).trim();
+    return desc || '';
   };
 
   const getCompletadaSection = (desc: string) => {
-    const idx = (desc || '').indexOf('\n\n--- Completada ---');
-    return idx >= 0 ? (desc || '').slice(idx) : '';
+    const s = (desc || '').replace(/\r\n/g, '\n');
+    let idx = s.indexOf('\n\n--- Completada ---');
+    if (idx >= 0) return s.slice(idx);
+    idx = s.indexOf('--- Completada ---');
+    if (idx >= 0) return s.slice(idx);
+    return '';
   };
 
   const getCompletedDateAndTime = (desc: string) => {
     const completadaSection = getCompletadaSection(desc);
     if (!completadaSection) return { date: null, time: null, observations: '' };
     
-    // Buscar el patrón "Completada el DD/MM/YYYY a las HH:MM"
-    const dateMatch = completadaSection.match(/Completada el (\d{2}\/\d{2}\/\d{4}) a las (\d{2}:\d{2})/);
+    // Buscar el patrón "Completada el DD/MM/YYYY a las HH:MM" (permite espacios/saltos extra)
+    const dateMatch = completadaSection.match(/Completada el (\d{1,2}\/\d{1,2}\/\d{4}) a las (\d{1,2}:\d{2})/);
     if (dateMatch) {
       const [, dateStr, timeStr] = dateMatch;
       // Convertir DD/MM/YYYY a Date object
@@ -495,14 +481,14 @@ const Tasks: React.FC = () => {
       
       // Extraer observaciones (todo después de la línea de fecha/hora)
       const observationsStart = completadaSection.indexOf(dateMatch[0]) + dateMatch[0].length;
-      const observations = completadaSection.slice(observationsStart).trim().replace(/^\n+/, '');
+      const observations = completadaSection.slice(observationsStart).replace(/^[\r\n]+/, '').trim();
       
       return { date, time: timeStr, observations };
     }
     
     // Si no hay fecha/hora específica, extraer solo observaciones
     const observationsStart = completadaSection.indexOf('--- Completada ---') + '--- Completada ---'.length;
-    const observations = completadaSection.slice(observationsStart).trim().replace(/^\n+/, '');
+    const observations = completadaSection.slice(observationsStart).replace(/^[\r\n]+/, '').trim();
     
     return { date: null, time: null, observations };
   };
@@ -517,6 +503,12 @@ const Tasks: React.FC = () => {
       const assignedToId = (task as any).assignedToId || '';
       const companyId = (task as any).companyId;
       const contactId = (task as any).contactId;
+      const dueDateStr = task.dueDate ? task.dueDate.split('T')[0] : '';
+      const hasDueTime = task.dueDate && typeof task.dueDate === 'string' && task.dueDate.includes('T');
+      const dueTimeForForm = hasDueTime ? (() => {
+        const d = new Date(task.dueDate!);
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      })() : '';
       setFormData({
         title: task.title || task.subject || '',
         description: description,
@@ -524,8 +516,8 @@ const Tasks: React.FC = () => {
         status: task.status,
         priority: task.priority,
         startDate: task.startDate ? task.startDate.split('T')[0] : '',
-        dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
-        estimatedTime: '',
+        dueDate: dueDateStr,
+        estimatedTime: dueTimeForForm,
         assignedToId: assignedToId ? assignedToId.toString() : (user?.id ? user.id.toString() : ''),
         companyId: companyId != null ? companyId.toString() : '',
         contactId: contactId != null ? contactId.toString() : '',
@@ -609,6 +601,11 @@ const Tasks: React.FC = () => {
       else submitData.companyId = null;
       if (formData.contactId) submitData.contactId = parseInt(formData.contactId);
       else submitData.contactId = null;
+      if (formData.dueDate && formData.estimatedTime) {
+        submitData.dueDate = `${formData.dueDate}T${formData.estimatedTime}:00`;
+      } else if (formData.dueDate) {
+        submitData.dueDate = formData.dueDate;
+      }
 
       if (editingTask) {
         const completadaSection = getCompletadaSection((editingTask as any).description || '');
@@ -713,34 +710,43 @@ const Tasks: React.FC = () => {
     setCompleteModalOpen(false);
     setCompleteModalTask(null);
     setCompleteModalViewOnly(false);
+    setCompleteModalLoading(false);
     setCompleteObservations('');
     setCompleteDate('');
     setCompleteTime('');
   };
 
-  const handleOpenCompleteModalView = (task: Task) => {
+  const handleOpenCompleteModalView = async (task: Task) => {
     setCompleteModalTask(task);
-    const taskDescription = (task as any).description || '';
-    const { date, time, observations } = getCompletedDateAndTime(taskDescription);
-    
-    // Establecer fecha y hora si existen
-    if (date) {
-      const dateStr = date.toISOString().slice(0, 10);
-      setCompleteDate(dateStr);
-    } else {
-      setCompleteDate('');
-    }
-    
-    if (time) {
-      // Convertir HH:MM a formato de input time (HH:MM)
-      setCompleteTime(time);
-    } else {
-      setCompleteTime('');
-    }
-    
-    setCompleteObservations(observations);
     setCompleteModalViewOnly(true);
     setCompleteModalOpen(true);
+    setCompleteDate('');
+    setCompleteTime('');
+    setCompleteObservations('');
+    setCompleteModalLoading(true);
+    try {
+      const endpoint = (task as any).isActivity ? `/activities/${task.id}` : `/tasks/${task.id}`;
+      const res = await api.get(`${endpoint}?_=${Date.now()}`);
+      const fullTask = res.data;
+      const taskDescription = (fullTask?.description ?? (task as any).description ?? '').replace(/\r\n/g, '\n');
+      const { date, time, observations } = getCompletedDateAndTime(taskDescription);
+      if (date) {
+        setCompleteDate(date.toISOString().slice(0, 10));
+      }
+      if (time) {
+        setCompleteTime(time);
+      }
+      setCompleteObservations(observations || '');
+    } catch (e) {
+      console.error('Error al cargar datos de tarea completada:', e);
+      const taskDescription = (task as any).description || '';
+      const { date, time, observations } = getCompletedDateAndTime(taskDescription);
+      if (date) setCompleteDate(date.toISOString().slice(0, 10));
+      if (time) setCompleteTime(time);
+      setCompleteObservations(observations || '');
+    } finally {
+      setCompleteModalLoading(false);
+    }
   };
 
   const handleCompleteWithObservations = async () => {
@@ -1556,7 +1562,8 @@ const Tasks: React.FC = () => {
                   pr: { xs: 0.5, md: 1 },
                   width: { xs: 100, md: 120 }, 
                   minWidth: { xs: 100, md: 120 },
-                  bgcolor: 'transparent'
+                  bgcolor: 'transparent',
+                  textAlign: 'center',
                 }}>
                   Acciones
                 </TableCell>
@@ -1835,6 +1842,19 @@ const Tasks: React.FC = () => {
                             year: 'numeric'
                           })}
                         </Typography>
+                        {task.dueDate && typeof task.dueDate === 'string' && task.dueDate.includes('T') && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: 'block',
+                              color: theme.palette.text.secondary,
+                              fontSize: '0.7rem',
+                              mt: 0.25,
+                            }}
+                          >
+                            {new Date(task.dueDate).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          </Typography>
+                        )}
                         {new Date(task.dueDate) < new Date() && task.status !== 'completed' && (
                           <Typography 
                             variant="caption" 
@@ -1910,42 +1930,14 @@ const Tasks: React.FC = () => {
                     </Box>
                   </TableCell>
                   <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, minWidth: { xs: 72, md: 88 }, width: { xs: 'auto', md: '8%' } }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
-                      {task.Company?.name ? (
-                        <Tooltip title={task.Company.name} arrow>
-                          <Avatar
-                            sx={{
-                              ...initialsAvatarSx,
-                              bgcolor: getAvatarColors(task.Company.name).bg,
-                              color: getAvatarColors(task.Company.name).color,
-                            }}
-                          >
-                            {getCompanyInitials(task.Company.name)}
-                          </Avatar>
-                        </Tooltip>
-                      ) : (
-                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>—</Typography>
-                      )}
-                    </Box>
+                    <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' }, color: task.Company?.name ? theme.palette.text.primary : theme.palette.text.disabled }} noWrap title={task.Company?.name || ''}>
+                      {task.Company?.name || '—'}
+                    </Typography>
                   </TableCell>
                   <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, minWidth: { xs: 72, md: 88 }, width: { xs: 'auto', md: '8%' } }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
-                      {task.Contact ? (
-                        <Tooltip title={`${task.Contact.firstName} ${task.Contact.lastName}`.trim()} arrow>
-                          <Avatar
-                            sx={{
-                              ...initialsAvatarSx,
-                              bgcolor: getAvatarColors(`${task.Contact.firstName} ${task.Contact.lastName}`).bg,
-                              color: getAvatarColors(`${task.Contact.firstName} ${task.Contact.lastName}`).color,
-                            }}
-                          >
-                            {getContactInitials(task.Contact.firstName, task.Contact.lastName)}
-                          </Avatar>
-                        </Tooltip>
-                      ) : (
-                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>—</Typography>
-                      )}
-                    </Box>
+                    <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' }, color: task.Contact ? theme.palette.text.primary : theme.palette.text.disabled }} noWrap title={task.Contact ? `${task.Contact.firstName} ${task.Contact.lastName}`.trim() : ''}>
+                      {task.Contact ? `${task.Contact.firstName} ${task.Contact.lastName}`.trim() || '—' : '—'}
+                    </Typography>
                   </TableCell>
                   <TableCell sx={{ pl: { xs: 4, md: 5 }, pr: { xs: 0.5, md: 1 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '13%' } }}>
                     <Box
@@ -1989,8 +1981,20 @@ const Tasks: React.FC = () => {
                       />
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ pl: { xs: 5, md: 6 }, pr: { xs: 0.5, md: 1 }, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
-                    <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', justifyContent: 'flex-start' }}>
+                  <TableCell sx={{ pl: { xs: 5, md: 6 }, pr: { xs: 0.5, md: 1 }, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 }, textAlign: 'center' }}>
+                    <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', justifyContent: 'center' }}>
+                      <Tooltip title="Editar">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpen(task);
+                          }}
+                          sx={pageStyles.actionButtonEdit(theme)}
+                        >
+                          <PencilLine size={18} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title={task.status === 'completed' ? 'Ver información de completada' : 'Disponible cuando la tarea esté completada'}>
                         <span>
                           <IconButton
@@ -2009,21 +2013,9 @@ const Tasks: React.FC = () => {
                               },
                             }}
                           >
-                            <Visibility sx={{ fontSize: '1.1rem' }} />
+                            <Eye size={18} />
                           </IconButton>
                         </span>
-                      </Tooltip>
-                      <Tooltip title="Editar">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpen(task);
-                          }}
-                          sx={pageStyles.actionButtonEdit(theme)}
-                        >
-                          <Edit sx={{ fontSize: '1.1rem' }} />
-                        </IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar">
                         <IconButton
@@ -2034,7 +2026,7 @@ const Tasks: React.FC = () => {
                           }}
                           sx={pageStyles.actionButtonDelete(theme)}
                         >
-                          <Delete sx={{ fontSize: '1.1rem' }} />
+                          <Trash size={18} />
                         </IconButton>
                       </Tooltip>
                     </Box>
@@ -2632,7 +2624,7 @@ const Tasks: React.FC = () => {
             disabled={deleting}
             variant="contained"
             sx={pageStyles.deleteButton}
-            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Delete />}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Trash size={18} />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
           </Button>
@@ -2662,6 +2654,13 @@ const Tasks: React.FC = () => {
           {completeModalTask?.title ?? 'Completar tarea'}
         </DialogTitle>
         <DialogContent sx={{ ...pageStyles.dialogContent, pt: 5, pb: 3, overflow: 'visible' }}>
+          {completeModalViewOnly && completeModalLoading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 6, gap: 2 }}>
+              <CircularProgress size={32} />
+              <Typography variant="body2" color="text.secondary">Cargando información de completada...</Typography>
+            </Box>
+          ) : (
+          <>
           <Box sx={{ mb: 2, mt: 1 }}>
             <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1, fontWeight: 500 }}>
               Fecha completa
@@ -2784,6 +2783,8 @@ const Tasks: React.FC = () => {
               },
             }}
           />
+          </>
+          )}
         </DialogContent>
         <DialogActions sx={pageStyles.dialogActions}>
           {completeModalViewOnly ? (

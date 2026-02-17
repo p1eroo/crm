@@ -6,9 +6,9 @@ import { taxiMonterricoColors } from './colors';
 const actionButtonBase = {
   padding: 0.5,
   borderRadius: 1,
-  border: '1px solid',
+  border: 'none',
   '&:hover': {
-    border: '1px solid',
+    border: 'none',
   },
 } as const;
 
@@ -169,42 +169,36 @@ export const pageStyles = {
     },
   } as SxProps<Theme>,
 
-  /** Botón Ver: borde e icono azul, fondo azul suave */
+  /** Botón Ver: solo icono blanco/gris claro, sin borde */
   actionButtonView: (theme: Theme): SxProps<Theme> => ({
     ...actionButtonBase,
-    color: theme.palette.info.main,
-    borderColor: theme.palette.info.main,
-    bgcolor: alpha(theme.palette.info.main, theme.palette.mode === 'dark' ? 0.18 : 0.12),
+    color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.85)' : theme.palette.text.secondary,
+    bgcolor: 'transparent',
     '&:hover': {
-      borderColor: theme.palette.info.main,
-      color: theme.palette.info.main,
-      bgcolor: alpha(theme.palette.info.main, theme.palette.mode === 'dark' ? 0.25 : 0.18),
+      color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 1)' : theme.palette.text.primary,
+      bgcolor: alpha(theme.palette.common.white, theme.palette.mode === 'dark' ? 0.06 : 0.04),
     },
   }),
 
-  /** Botón Editar: borde e icono verde, fondo verde suave */
+  /** Botón Editar: solo icono azul, sin borde */
   actionButtonEdit: (theme: Theme): SxProps<Theme> => ({
     ...actionButtonBase,
-    color: taxiMonterricoColors.green,
-    borderColor: taxiMonterricoColors.green,
-    bgcolor: alpha(taxiMonterricoColors.green, theme.palette.mode === 'dark' ? 0.18 : 0.12),
+    color: theme.palette.info.main,
+    bgcolor: 'transparent',
     '&:hover': {
-      borderColor: taxiMonterricoColors.green,
-      color: taxiMonterricoColors.green,
-      bgcolor: alpha(taxiMonterricoColors.green, theme.palette.mode === 'dark' ? 0.25 : 0.18),
+      color: theme.palette.info.main,
+      bgcolor: alpha(theme.palette.info.main, 0.08),
     },
   }),
 
-  /** Botón Eliminar: borde e icono rojo, fondo rojo suave */
+  /** Botón Eliminar: solo icono rojo, sin borde */
   actionButtonDelete: (theme: Theme): SxProps<Theme> => ({
     ...actionButtonBase,
     color: theme.palette.error.main,
-    borderColor: theme.palette.error.main,
-    bgcolor: alpha(theme.palette.error.main, theme.palette.mode === 'dark' ? 0.18 : 0.12),
+    bgcolor: 'transparent',
     '&:hover': {
-      borderColor: theme.palette.error.main,
       color: theme.palette.error.main,
-      bgcolor: alpha(theme.palette.error.main, theme.palette.mode === 'dark' ? 0.25 : 0.18),
+      bgcolor: alpha(theme.palette.error.main, 0.08),
     },
   }),
 

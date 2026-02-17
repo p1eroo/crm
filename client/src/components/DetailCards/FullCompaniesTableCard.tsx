@@ -23,7 +23,6 @@ import {
 import {
   Search,
   ExpandMore,
-  Delete,
   Business,
   Add,
   OpenInNew,
@@ -31,6 +30,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from '@mui/icons-material';
+import { Trash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { companyLabels } from '../../constants/companyLabels';
@@ -602,7 +602,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                         }}
                         title="Eliminar empresa"
                       >
-                        <Delete fontSize="small" />
+                        <Trash size={16} />
                       </IconButton>
                     </TableCell>
                   )}

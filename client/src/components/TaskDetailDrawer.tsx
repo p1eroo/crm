@@ -40,6 +40,16 @@ const getPriorityLabel = (priority: string) => {
   return map[priority] || priority;
 };
 
+/** Descripción sin el bloque "--- Completada ---" (fecha, hora, observaciones). Esa info solo se muestra en el modal "Ver tarea completada". */
+const getDescriptionWithoutCompletada = (desc: string) => {
+  const s = (desc || '').replace(/\r\n/g, '\n');
+  const idx = s.indexOf('\n\n--- Completada ---');
+  if (idx >= 0) return s.slice(0, idx).trim();
+  const idx2 = s.indexOf('--- Completada ---');
+  if (idx2 >= 0) return s.slice(0, idx2).trim();
+  return desc || '';
+};
+
 export interface TaskDetailDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -313,22 +323,25 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     </Typography>
                   </Box>
                 )}
-                {task.description && (
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                      Descripción
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {task.description}
-                    </Typography>
-                  </Box>
-                )}
+                {(() => {
+                  const descriptionForPreview = getDescriptionWithoutCompletada(task.description || '');
+                  return descriptionForPreview ? (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                        Descripción
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {descriptionForPreview}
+                      </Typography>
+                    </Box>
+                  ) : null;
+                })()}
               </Box>
 
               <Divider sx={{ my: 2 }} />

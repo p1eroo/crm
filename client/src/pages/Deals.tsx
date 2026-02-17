@@ -22,7 +22,8 @@ import {
   Collapse,
   LinearProgress,
 } from '@mui/material';
-import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, FilterList, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Add, AttachMoney, ViewList, AccountTree, CalendarToday, Close, FileDownload, FilterList, ExpandMore, Remove, Bolt, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { PencilLine, Eye, Trash } from 'lucide-react';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { getStageColor as getStageColorUtil, getStageProgress } from '../utils/stageColors';
@@ -1302,7 +1303,7 @@ const Deals: React.FC = () => {
                           }}
                           sx={pageStyles.actionButtonEdit(theme)}
                         >
-                          <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          <PencilLine size={20} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Vista previa">
@@ -1314,7 +1315,7 @@ const Deals: React.FC = () => {
                           }}
                           sx={pageStyles.actionButtonView(theme)}
                         >
-                          <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          <Eye size={20} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar">
@@ -1326,7 +1327,7 @@ const Deals: React.FC = () => {
                           }}
                           sx={pageStyles.actionButtonDelete(theme)}
                         >
-                          <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          <Trash size={20} />
                         </IconButton>
                       </Tooltip>
                     </Box>
@@ -2205,7 +2206,7 @@ const Deals: React.FC = () => {
             disabled={deleting}
             variant="contained"
             sx={pageStyles.deleteButton}
-            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Delete />}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Trash size={18} />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
           </Button>

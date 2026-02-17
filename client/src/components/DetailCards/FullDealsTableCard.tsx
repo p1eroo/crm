@@ -24,10 +24,10 @@ import {
   ExpandMore,
   AttachMoney,
   Add,
-  Delete,
   ChevronLeft,
   ChevronRight,
 } from "@mui/icons-material";
+import { Trash } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { taxiMonterricoColors } from "../../theme/colors";
 import { formatCurrencyPE } from "../../utils/currencyUtils";
@@ -566,7 +566,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                         }}
                         title="Eliminar negocio"
                       >
-                        <Delete fontSize="small" />
+                        <Trash size={16} />
                       </IconButton>
                     </TableCell>
                   )}

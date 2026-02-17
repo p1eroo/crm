@@ -35,14 +35,12 @@ import {
   CheckCircle,
   TrendingUp,
   Computer,
-  Visibility,
-  Delete,
-  Edit,
   ChevronLeft,
   ChevronRight,
   AddPhotoAlternate,
   Close as CloseIcon,
 } from '@mui/icons-material';
+import { PencilLine, Eye, Trash } from 'lucide-react';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -847,7 +845,7 @@ const Tickets: React.FC = () => {
                             }}
                             sx={pageStyles.actionButtonEdit(theme)}
                           >
-                            <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                            <PencilLine size={20} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Vista previa">
@@ -859,7 +857,7 @@ const Tickets: React.FC = () => {
                             }}
                             sx={pageStyles.actionButtonView(theme)}
                           >
-                            <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                            <Eye size={20} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Eliminar">
@@ -871,7 +869,7 @@ const Tickets: React.FC = () => {
                             }}
                             sx={pageStyles.actionButtonDelete(theme)}
                           >
-                            <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                            <Trash size={20} />
                           </IconButton>
                         </Tooltip>
                       </Box>
@@ -1113,7 +1111,7 @@ const Tickets: React.FC = () => {
             disabled={deleting}
             variant="contained"
             sx={pageStyles.deleteButton}
-            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Delete />}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Trash size={18} />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
           </Button>

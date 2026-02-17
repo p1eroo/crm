@@ -28,7 +28,7 @@ import {
   Checkbox,
   Popover,
 } from '@mui/material';
-import { Add, Delete, Visibility, FilterList, Close, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight, MoreVert, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered, Description } from '@mui/icons-material';
+import { Add, FilterList, Close, ExpandMore, Remove, Bolt, ChevronLeft, ChevronRight, MoreVert, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered, Description } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { getStageColor as getStageColorUtil, normalizeStageFromExcel } from '../utils/stageColors';
@@ -41,7 +41,7 @@ import { FormDrawer } from '../components/FormDrawer';
 import RichTextEditor from '../components/RichTextEditor';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileImport, faFileExport, faFilter } from '@fortawesome/free-solid-svg-icons';
-import { Building2 } from "lucide-react";
+import { Building2, PencilLine, Eye, Trash } from "lucide-react";
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 import { useAuth } from '../context/AuthContext';
@@ -2588,7 +2588,7 @@ const Companies: React.FC = () => {
                           }}
                           sx={pageStyles.actionButtonEdit(theme)}
                         >
-                          <Edit sx={{ fontSize: '1.125rem' }} />
+                          <PencilLine size={18} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Ver">
@@ -2600,7 +2600,7 @@ const Companies: React.FC = () => {
                           }}
                           sx={pageStyles.actionButtonView(theme)}
                         >
-                          <Visibility sx={{ fontSize: '1.125rem' }} />
+                          <Eye size={18} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar">
@@ -2612,7 +2612,7 @@ const Companies: React.FC = () => {
                           }}
                           sx={pageStyles.actionButtonDelete(theme)}
                         >
-                          <Delete sx={{ fontSize: '1.125rem' }} />
+                          <Trash size={18} />
                         </IconButton>
                       </Tooltip>
                     </>
@@ -2661,7 +2661,7 @@ const Companies: React.FC = () => {
                             py: 1.5,
                           }}
                         >
-                          <Edit sx={{ fontSize: '1.125rem', color: theme.palette.text.secondary }} />
+                          <PencilLine size={18} color={theme.palette.text.secondary} />
                           <Typography variant="body2">Editar</Typography>
                         </MenuItem>
                         <MenuItem
@@ -2677,7 +2677,7 @@ const Companies: React.FC = () => {
                             py: 1.5,
                           }}
                         >
-                          <Visibility sx={{ fontSize: '1.125rem', color: theme.palette.text.secondary }} />
+                          <Eye size={18} color={theme.palette.text.secondary} />
                           <Typography variant="body2">Ver</Typography>
                         </MenuItem>
                         <Divider />
@@ -2700,7 +2700,7 @@ const Companies: React.FC = () => {
                             },
                           }}
                         >
-                          <Delete sx={{ fontSize: '1.125rem' }} />
+                          <Trash size={18} />
                           <Typography variant="body2">Eliminar</Typography>
                         </MenuItem>
                       </Menu>
@@ -3347,7 +3347,7 @@ const Companies: React.FC = () => {
             disabled={deleting}
             variant="contained"
             sx={pageStyles.deleteButton}
-            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Delete />}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Trash size={18} />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
           </Button>

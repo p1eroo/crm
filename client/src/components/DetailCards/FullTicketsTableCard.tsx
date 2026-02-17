@@ -16,7 +16,8 @@ import {
   useTheme,
   IconButton,
 } from '@mui/material';
-import { Search, Support, Delete, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Search, Support, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Trash } from 'lucide-react';
 import { taxiMonterricoColors } from '../../theme/colors';
 
 interface Ticket {
@@ -276,7 +277,7 @@ const FullTicketsTableCard: React.FC<FullTicketsTableCardProps> = ({
                         },
                       }}
                     >
-                      <Delete fontSize="small" />
+                      <Trash size={16} />
                     </IconButton>
                   </TableCell>
                 )}

@@ -22,7 +22,6 @@ import {
 import {
   Search,
   ExpandMore,
-  Delete,
   Person,
   Add,
   OpenInNew,
@@ -30,6 +29,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from '@mui/icons-material';
+import { Trash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { taxiMonterricoColors } from '../../theme/colors';
 
@@ -529,7 +529,7 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                         }}
                         title="Eliminar contacto"
                       >
-                        <Delete fontSize="small" />
+                        <Trash size={16} />
                       </IconButton>
                     </TableCell>
                   )}

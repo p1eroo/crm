@@ -35,11 +35,11 @@ import {
   Refresh, 
   ExpandMore, 
   ExpandLess,
-  Visibility,
   Launch,
   Person,
   Info,
 } from '@mui/icons-material';
+import { Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
@@ -615,7 +615,7 @@ const SystemLogs: React.FC = () => {
                                     },
                                   }}
                                 >
-                                  <Visibility sx={{ fontSize: 16 }} />
+                                  <Eye size={16} />
                                 </IconButton>
                               </Tooltip>
                               <Typography 

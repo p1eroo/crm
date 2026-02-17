@@ -27,18 +27,16 @@ import {
 } from "@mui/material";
 import {
   Add,
-  Delete,
   Search,
   Business,
   Phone,
   LocationOn,
   FilterList,
-  Visibility,
-  Edit,
   ChevronLeft,
   ChevronRight,
   Description,
 } from "@mui/icons-material";
+import { PencilLine, Eye, Trash } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../config/api";
 import { taxiMonterricoColors } from "../theme/colors";
@@ -1860,7 +1858,7 @@ const Contacts: React.FC = () => {
                         }}
                         sx={{ p: 0.75 }}
                       >
-                        <Edit sx={{ fontSize: 18 }} />
+                        <PencilLine size={18} />
                       </IconButton>
                       <IconButton
                         size="small"
@@ -1870,7 +1868,7 @@ const Contacts: React.FC = () => {
                         }}
                         sx={{ p: 0.75 }}
                       >
-                        <Visibility sx={{ fontSize: 18 }} />
+                        <Eye size={18} />
                       </IconButton>
                     </Box>
                   </Box>
@@ -2291,9 +2289,7 @@ const Contacts: React.FC = () => {
                         }}
                         sx={pageStyles.actionButtonEdit(theme)}
                       >
-                        <Edit
-                          sx={{ fontSize: { sm: "1rem", md: "1.25rem" } }}
-                        />
+                        <PencilLine size={20} />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Vista previa">
@@ -2305,9 +2301,7 @@ const Contacts: React.FC = () => {
                         }}
                         sx={pageStyles.actionButtonView(theme)}
                       >
-                        <Visibility
-                          sx={{ fontSize: { sm: "1rem", md: "1.25rem" } }}
-                        />
+                        <Eye size={20} />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Eliminar">
@@ -2319,9 +2313,7 @@ const Contacts: React.FC = () => {
                         }}
                         sx={pageStyles.actionButtonDelete(theme)}
                       >
-                        <Delete
-                          sx={{ fontSize: { sm: "1rem", md: "1.25rem" } }}
-                        />
+                        <Trash size={20} />
                       </IconButton>
                     </Tooltip>
                   </Box>
@@ -2974,7 +2966,7 @@ const Contacts: React.FC = () => {
               deleting ? (
                 <CircularProgress size={16} sx={{ color: theme.palette.common.white }} />
               ) : (
-                <Delete />
+                <Trash size={18} />
               )
             }
           >

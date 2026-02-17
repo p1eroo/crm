@@ -31,11 +31,11 @@ import {
 import {
   CheckCircle,
   Cancel,
-  Delete,
   Add,
   Search,
   Sync,
 } from '@mui/icons-material';
+import { Trash } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
@@ -903,7 +903,7 @@ const Users: React.FC = () => {
                               },
                             }}
                           >
-                            <Delete sx={{ fontSize: { xs: 18, md: 20 } }} />
+                            <Trash size={20} />
                           </IconButton>
                         </span>
                       </Tooltip>

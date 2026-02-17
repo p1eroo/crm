@@ -36,6 +36,16 @@ import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { formatCurrencyPE } from '../utils/currencyUtils';
 
+/** Para tareas: descripción sin el bloque "--- Completada ---" (solo se muestra en el modal Ver tarea completada). */
+const getTaskDescriptionWithoutCompletada = (desc: string) => {
+  const s = (desc || '').replace(/\r\n/g, '\n');
+  const idx = s.indexOf('\n\n--- Completada ---');
+  if (idx >= 0) return s.slice(0, idx).trim();
+  const idx2 = s.indexOf('--- Completada ---');
+  if (idx2 >= 0) return s.slice(0, idx2).trim();
+  return desc || '';
+};
+
 interface EntityPreviewDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -939,23 +949,26 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
               border: `1px solid ${theme.palette.divider}`,
             }}
           >
-            {/* Descripción */}
-            {entity.description && (
-              <Box sx={{ mb: 1.5 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary, mb: 0.5 }}>
-                  Descripción
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: 400,
-                    color: theme.palette.text.primary,
-                  }}
-                  dangerouslySetInnerHTML={{ __html: entity.description }}
-                />
-              </Box>
-            )}
+            {/* Descripción (sin bloque de completada; eso se ve en el modal "Ver tarea completada") */}
+            {(() => {
+              const desc = getTaskDescriptionWithoutCompletada(entity.description || '');
+              return desc ? (
+                <Box sx={{ mb: 1.5 }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary, mb: 0.5 }}>
+                    Descripción
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontSize: '0.875rem',
+                      fontWeight: 400,
+                      color: theme.palette.text.primary,
+                    }}
+                    dangerouslySetInnerHTML={{ __html: desc }}
+                  />
+                </Box>
+              ) : null;
+            })()}
 
             {/* Estado */}
             {entity.status && (

@@ -27,12 +27,12 @@ import {
   Upload,
   ArrowBack,
   ArrowForward,
-  Delete,
   CheckCircle,
   Error as ErrorIcon,
   AttachFile,
   FileDownload,
 } from '@mui/icons-material';
+import { Trash } from 'lucide-react';
 import { taxiMonterricoColors } from '../theme/colors';
 import api from '../config/api';
 
@@ -362,7 +362,7 @@ const MassEmail: React.FC = () => {
                         <TableCell>{c.email}</TableCell>
                         <TableCell align="right">
                           <IconButton size="small" onClick={() => removeContact(c.id)}>
-                            <Delete fontSize="small" />
+                            <Trash size={18} />
                           </IconButton>
                         </TableCell>
                       </TableRow>

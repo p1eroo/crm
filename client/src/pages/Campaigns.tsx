@@ -28,7 +28,8 @@ import {
   Paper,
   useTheme,
 } from '@mui/material';
-import { Add, Delete, Search, Campaign as CampaignIcon, TrendingUp, Computer, Visibility, CheckCircle } from '@mui/icons-material';
+import { Add, Search, Campaign as CampaignIcon, TrendingUp, Computer, CheckCircle } from '@mui/icons-material';
+import { Eye, Trash } from 'lucide-react';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { formatCurrencyPE } from '../utils/currencyUtils';
@@ -643,7 +644,7 @@ const Campaigns: React.FC = () => {
                             },
                           }}
                         >
-                          <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          <Eye size={20} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar">
@@ -662,7 +663,7 @@ const Campaigns: React.FC = () => {
                             },
                           }}
                         >
-                          <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          <Trash size={20} />
                         </IconButton>
                       </Tooltip>
                     </Box>
@@ -798,7 +799,7 @@ const Campaigns: React.FC = () => {
             disabled={deleting}
             variant="contained"
             sx={pageStyles.deleteButton}
-            startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Trash size={18} />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
           </Button>
