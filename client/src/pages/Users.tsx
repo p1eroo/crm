@@ -937,7 +937,7 @@ const Users: React.FC = () => {
         }}
       >
         <DialogTitle sx={{ 
-          color: theme.palette.text.primary, 
+          color: '#4BB280', 
           fontWeight: 700,
           fontSize: { xs: '1.25rem', md: '1.5rem' },
           pb: 2,

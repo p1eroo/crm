@@ -1132,7 +1132,7 @@ const Tickets: React.FC = () => {
           },
         }}
       >
-        <DialogTitle sx={{ borderBottom: `1px solid ${theme.palette.divider}`, pb: 2 }}>
+        <DialogTitle sx={{ borderBottom: `1px solid ${theme.palette.divider}`, pb: 2, color: '#4BB280', fontWeight: 600 }}>
           Nuevo ticket
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>

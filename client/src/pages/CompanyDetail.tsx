@@ -2041,7 +2041,7 @@ const tab2Content = (
           },
         }}
       >
-        <DialogTitle>Crear Ticket</DialogTitle>
+        <DialogTitle sx={{ color: '#4BB280', fontWeight: 600 }}>Crear Ticket</DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
             <TextField

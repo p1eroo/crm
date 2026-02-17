@@ -2027,7 +2027,7 @@ const Companies: React.FC = () => {
                 display: 'grid',
                 gridTemplateColumns: { 
                   xs: 'repeat(11, minmax(0, 1fr))', 
-                  md: '50px 2fr 1.2fr 1.3fr 1.3fr 1.1fr 1.4fr 1fr 1fr 1.6fr 100px' 
+                  md: '50px 2fr 0.5fr 1.4fr 1.4fr 1.2fr 1.5fr 1.25fr 1.5fr 1.55fr 100px' 
                 },
                 columnGap: { xs: 0.5, md: 1 },
                 minWidth: { xs: 800, md: 'auto' },
@@ -2286,7 +2286,7 @@ const Companies: React.FC = () => {
                     display: 'grid',
                     gridTemplateColumns: { 
                       xs: 'repeat(11, minmax(0, 1fr))', 
-                      md: '50px 2fr 1.2fr 1.3fr 1.3fr 1.1fr 1.4fr 1fr 1fr 1.6fr 100px' 
+                      md: '50px 2fr 0.5fr 1.4fr 1.4fr 1.2fr 1.5fr 1.25fr 1.5fr 1.55fr 100px' 
                     },
                     columnGap: { xs: 0.5, md: 1 },
                     minWidth: { xs: 800, md: 'auto' },
@@ -2368,7 +2368,7 @@ const Companies: React.FC = () => {
                               }
                             }}
                             sx={{ 
-                              color: theme.palette.primary.main,
+                              color: theme.palette.text.secondary,
                             fontSize: { xs: '0.6875rem', md: '0.75rem' },
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
@@ -2508,7 +2508,7 @@ const Companies: React.FC = () => {
                         handleStatusMenuOpen(e, company.id);
                       }}
                       disabled={updatingStatus[company.id]}
-                      barWidth={90}
+                      barWidth={120}
                     />
                     <Menu
                       anchorEl={statusMenuAnchor[company.id]}

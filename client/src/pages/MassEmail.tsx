@@ -21,21 +21,26 @@ import {
   Alert,
   IconButton,
   Chip,
+  Divider,
 } from '@mui/material';
 import {
   Send,
-  Upload,
   ArrowBack,
   ArrowForward,
   CheckCircle,
   Error as ErrorIcon,
   AttachFile,
   FileDownload,
+  Description,
 } from '@mui/icons-material';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFileImport, faFileExport } from '@fortawesome/free-solid-svg-icons';
 import { Trash } from 'lucide-react';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 import api from '../config/api';
 
+// Mismo color que el fondo de la página del Masivo (unificado, sin card más claro)
 const getApiBaseUrl = () => {
   const url = (api.defaults.baseURL || '').replace(/\/api\/?$/, '');
   return url || (window.location.port === '3000' ? 'http://localhost:5000' : '');
@@ -47,7 +52,7 @@ interface ContactRow {
   nombre: string;
 }
 
-const STEPS = ['Cargar contactos', 'Crear email', 'Revisar y enviar', 'Resultados'];
+const STEPS = ['Cargar contactos', 'Crear email', 'Resultados'];
 
 const processFile = (file: File): Promise<ContactRow[]> => {
   return new Promise((resolve, reject) => {
@@ -118,6 +123,7 @@ interface AttachmentRow {
 
 const MassEmail: React.FC = () => {
   const theme = useTheme();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [activeStep, setActiveStep] = useState(0);
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [subject, setSubject] = useState('');
@@ -135,6 +141,21 @@ const MassEmail: React.FC = () => {
     results?: Array<{ email: string; success: boolean; error?: string }>;
   } | null>(null);
   const [apiError, setApiError] = useState('');
+
+  const handleDownloadTemplate = () => {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([['email', 'nombre']]);
+    XLSX.utils.book_append_sheet(wb, ws, 'Contactos');
+    XLSX.writeFile(wb, 'Plantilla_masivo_contactos.xlsx');
+  };
+
+  const handleExportContacts = () => {
+    if (contacts.length === 0) return;
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(contacts.map((c) => ({ email: c.email, nombre: c.nombre })));
+    XLSX.utils.book_append_sheet(wb, ws, 'Contactos');
+    XLSX.writeFile(wb, `contactos_masivo_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -308,21 +329,24 @@ const MassEmail: React.FC = () => {
       </Box>
 
       <Card
+        elevation={0}
         sx={{
-          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
           borderRadius: 2,
+          boxShadow: 'none',
+          border: `1px solid ${theme.palette.divider}`,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+          backgroundColor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
           p: 3,
-          boxShadow: theme.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)' : '0 8px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06)',
-          border: 'none',
         }}
       >
-        <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
+        <Stepper activeStep={activeStep} sx={{ mb: 0 }}>
           {STEPS.map((label) => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
             </Step>
           ))}
         </Stepper>
+        <Divider sx={{ my: 3, mx: -3 }} />
 
         {apiError && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setApiError('')}>
@@ -333,72 +357,191 @@ const MassEmail: React.FC = () => {
         {/* Paso 1: Cargar contactos */}
         {activeStep === 0 && (
           <Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Sube un Excel o CSV con columna <strong>email</strong> (obligatoria). Opcional: <strong>nombre</strong>.
-            </Typography>
-            <Button variant="outlined" component="label" startIcon={<Upload />} sx={{ mb: 2 }}>
-              Seleccionar archivo
-              <input type="file" hidden accept=".xlsx,.xls,.csv" onChange={handleFile} />
-            </Button>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+              <Button
+                size="small"
+                startIcon={<Description sx={{ fontSize: 16, color: theme.palette.mode === 'dark' ? '#fff' : '#6A1B9A' }} />}
+                onClick={handleDownloadTemplate}
+                sx={{
+                  border: theme.palette.mode === 'light' ? '1px solid #7B1FA2' : 'none',
+                  borderRadius: 1.5,
+                  bgcolor: theme.palette.mode === 'dark' ? '#7B1FA2' : '#F3E5F5',
+                  color: theme.palette.mode === 'dark' ? '#fff' : '#6A1B9A',
+                  px: 1.5,
+                  py: 0.875,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? '#9C27B0' : '#E1BEE7',
+                    color: theme.palette.mode === 'dark' ? '#fff' : '#4A148C',
+                    borderColor: theme.palette.mode === 'light' ? '#4A148C' : undefined,
+                    boxShadow: '0 4px 12px rgba(123, 31, 162, 0.25)',
+                  },
+                }}
+              >
+                Plantilla
+              </Button>
+              <Button
+                size="small"
+                startIcon={<FontAwesomeIcon icon={faFileImport} style={{ fontSize: 16, color: theme.palette.mode === 'dark' ? '#fff' : taxiMonterricoColors.greenDark }} />}
+                onClick={() => fileInputRef.current?.click()}
+                sx={{
+                  border: theme.palette.mode === 'light' ? `1px solid ${taxiMonterricoColors.green}` : 'none',
+                  borderRadius: 1.5,
+                  bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : '#E8F5E9',
+                  color: theme.palette.mode === 'dark' ? '#fff' : taxiMonterricoColors.greenDark,
+                  px: 1.5,
+                  py: 0.875,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : '#C8E6C9',
+                    color: theme.palette.mode === 'dark' ? '#fff' : taxiMonterricoColors.greenDark,
+                    borderColor: theme.palette.mode === 'light' ? taxiMonterricoColors.greenDark : undefined,
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                  },
+                }}
+              >
+                Importar
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFile}
+                style={{ display: 'none' }}
+              />
+              <Button
+                size="small"
+                startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16, color: theme.palette.mode === 'dark' ? '#fff' : '#455A64' }} />}
+                onClick={handleExportContacts}
+                disabled={contacts.length === 0}
+                sx={{
+                  border: theme.palette.mode === 'light' ? '1px solid #546E7A' : 'none',
+                  borderRadius: 1.5,
+                  bgcolor: theme.palette.mode === 'dark' ? '#546E7A' : '#ECEFF1',
+                  color: theme.palette.mode === 'dark' ? '#fff' : '#37474F',
+                  px: 1.5,
+                  py: 0.875,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? '#607D8B' : '#CFD8DC',
+                    color: theme.palette.mode === 'dark' ? '#fff' : '#263238',
+                    borderColor: theme.palette.mode === 'light' ? '#37474F' : undefined,
+                    boxShadow: '0 4px 12px rgba(84, 110, 122, 0.25)',
+                  },
+                  '&:disabled': {
+                    bgcolor: theme.palette.mode === 'dark' ? '#455A64' : '#ECEFF1',
+                    color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : theme.palette.text.disabled,
+                    borderColor: theme.palette.mode === 'light' ? 'rgba(84, 110, 122, 0.4)' : undefined,
+                    opacity: 1,
+                  },
+                }}
+              >
+                Exportar
+              </Button>
+            </Box>
             {fileError && (
               <Alert severity="error" sx={{ mb: 2 }} onClose={() => setFileError('')}>
                 {fileError}
               </Alert>
             )}
-            {contacts.length > 0 && (
-              <TableContainer component={Paper} sx={{ maxHeight: 320, borderRadius: 1.5, overflow: 'hidden', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined }}>
-                <Table size="small" stickyHeader>
-                  <TableHead>
+            <TableContainer
+              component={Paper}
+              elevation={0}
+              sx={{
+                maxHeight: 320,
+                overflow: 'auto',
+                bgcolor: 'transparent',
+                border: 'none',
+                boxShadow: 'none',
+                '& .MuiTableCell-root': {
+                  borderLeft: 'none',
+                  borderRight: 'none',
+                  borderTop: 'none',
+                  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : theme.palette.divider}`,
+                },
+                '& .MuiTableRow-root:last-child .MuiTableCell-root': { borderBottom: 'none' },
+              }}
+            >
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ color: theme.palette.mode === 'dark' ? '#A0AEC0' : theme.palette.text.secondary, fontWeight: 500, fontSize: '15px', py: 1.5 }}>Nombre</TableCell>
+                    <TableCell sx={{ color: theme.palette.mode === 'dark' ? '#A0AEC0' : theme.palette.text.secondary, fontWeight: 500, fontSize: '15px', py: 1.5 }}>Email</TableCell>
+                    <TableCell align="right" sx={{ color: theme.palette.mode === 'dark' ? '#A0AEC0' : theme.palette.text.secondary, fontWeight: 500, fontSize: '15px', py: 1.5 }}>Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {contacts.length === 0 ? (
                     <TableRow>
-                      <TableCell>Nombre</TableCell>
-                      <TableCell>Email</TableCell>
-                      <TableCell align="right" width={60} />
+                      <TableCell
+                        colSpan={3}
+                        align="center"
+                        sx={{
+                          py: 6,
+                          color: theme.palette.mode === 'dark' ? '#A0AEC0' : theme.palette.text.secondary,
+                          fontSize: '15px',
+                          borderBottom: 'none',
+                        }}
+                      >
+                        No hay contactos agregados. Importa un archivo XLSX o agrega contactos manualmente.
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {contacts.map((c) => (
+                  ) : (
+                    contacts.map((c) => (
                       <TableRow key={c.id}>
-                        <TableCell>{c.nombre}</TableCell>
-                        <TableCell>{c.email}</TableCell>
+                        <TableCell sx={{ color: theme.palette.text.primary, fontSize: '15px' }}>{c.nombre}</TableCell>
+                        <TableCell sx={{ color: theme.palette.text.primary, fontSize: '15px' }}>{c.email}</TableCell>
                         <TableCell align="right">
-                          <IconButton size="small" onClick={() => removeContact(c.id)}>
+                          <IconButton size="small" onClick={() => removeContact(c.id)} sx={pageStyles.actionButtonDelete(theme)}>
                             <Trash size={18} />
                           </IconButton>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              {contacts.length} contacto(s)
-            </Typography>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Box>
         )}
 
         {/* Paso 2: Crear email */}
         {activeStep === 1 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Asunto"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              fullWidth
-              size="small"
-              sx={{ '& .MuiOutlinedInput-root': { bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined } }}
-            />
-            <TextField
-              label="Cuerpo (HTML)"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              fullWidth
-              multiline
-              rows={10}
-              size="small"
-              placeholder="Puedes usar {{nombre}}, {{email}}, {{fecha}}, {{empresa}} para personalizar."
-              sx={{ '& .MuiOutlinedInput-root': { bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined } }}
-            />
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                Asunto
+              </Typography>
+              <TextField
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                fullWidth
+                size="small"
+                placeholder="Escribe el asunto del correo"
+                sx={{ '& .MuiOutlinedInput-root': { bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined } }}
+              />
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                Contenido
+              </Typography>
+              <TextField
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                fullWidth
+                multiline
+                rows={10}
+                size="small"
+                placeholder="Puedes usar {{nombre}}, {{email}}, {{fecha}}, {{empresa}} para personalizar."
+                sx={{ '& .MuiOutlinedInput-root': { bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined } }}
+              />
+            </Box>
             <Box>
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
                 Adjuntos (opcional)
@@ -415,20 +558,8 @@ const MassEmail: React.FC = () => {
                 </Box>
               )}
             </Box>
-          </Box>
-        )}
-
-        {/* Paso 3: Revisar y enviar */}
-        {activeStep === 2 && (
-          <Box>
-            <Typography variant="body1" sx={{ mb: 1 }}>
-              <strong>Destinatarios:</strong> {contacts.length}
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              <strong>Asunto:</strong> {subject || '—'}
-            </Typography>
             {sending && (
-              <Box sx={{ mb: 2 }}>
+              <Box sx={{ mt: 2 }}>
                 <LinearProgress
                   variant="determinate"
                   value={progressTotal > 0 ? Math.round((progressSent / progressTotal) * 100) : 0}
@@ -442,8 +573,8 @@ const MassEmail: React.FC = () => {
           </Box>
         )}
 
-        {/* Paso 4: Resultados */}
-        {activeStep === 3 && result && (
+        {/* Paso 3: Resultados */}
+        {activeStep === 2 && result && (
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
               <CheckCircle sx={{ color: taxiMonterricoColors.green, fontSize: 32 }} />
@@ -493,12 +624,12 @@ const MassEmail: React.FC = () => {
           <Button disabled={activeStep === 0} onClick={handleBack} startIcon={<ArrowBack />}>
             Atrás
           </Button>
-          {activeStep === 2 ? (
+          {activeStep === 1 ? (
             <Button
               variant="contained"
               startIcon={<Send />}
               onClick={handleSend}
-              disabled={sending}
+              disabled={sending || !subject.trim() || !body.trim()}
               sx={{
                 background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
                 color: 'white',

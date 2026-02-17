@@ -39,17 +39,22 @@ export const AppearanceProvider: React.FC<{ children: ReactNode }> = ({ children
   });
   
   const [fontSize, setFontSizeState] = useState<number>(() => {
-    // Cargar fontSize desde localStorage al iniciar
-    const savedFontSize = localStorage.getItem('userFontSize');
-    if (savedFontSize) {
-      const parsedSize = parseInt(savedFontSize, 10);
-      // Validar que esté en el rango válido (12-20)
-      if (!isNaN(parsedSize) && parsedSize >= 12 && parsedSize <= 20) {
-        return parsedSize;
+    const DEFAULT_FONT_SIZE = 16;
+    try {
+      // Migración única: que todos pasen a 16px una vez; luego se respeta lo que guarden
+      const migrated = localStorage.getItem('userFontSizeMigratedTo16');
+      if (!migrated) {
+        localStorage.setItem('userFontSize', String(DEFAULT_FONT_SIZE));
+        localStorage.setItem('userFontSizeMigratedTo16', '1');
+        return DEFAULT_FONT_SIZE;
       }
-    }
-    // Valor por defecto si no hay guardado o es inválido
-    return 14;
+      const saved = localStorage.getItem('userFontSize');
+      if (saved) {
+        const n = parseInt(saved, 10);
+        if (!isNaN(n) && n >= 12 && n <= 20) return n;
+      }
+    } catch (_) {}
+    return DEFAULT_FONT_SIZE;
   });
 
   // Aplicar fuente al documento cuando cambie o al iniciar

@@ -119,7 +119,7 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 4, pt: 3, pb: 1.5, flexShrink: 0 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: taxiMonterricoColors.greenLight }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: '#4BB280' }}>
               {title}
             </Typography>
             <IconButton onClick={onClose} size="small" aria-label="Cerrar">
@@ -227,13 +227,7 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
             : `linear-gradient(135deg, ${taxiMonterricoColors.green}0D 0%, ${taxiMonterricoColors.orange}0D 100%)`,
           bgcolor: theme.palette.mode === 'dark' ? DARK_PAPER : theme.palette.background.paper,
         }}>
-          <Typography variant="h6" sx={{
-            fontWeight: 700,
-            background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#4BB280' }}>
             {title}
           </Typography>
           <IconButton

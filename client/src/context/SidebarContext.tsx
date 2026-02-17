@@ -8,6 +8,7 @@ interface SidebarContextType {
   layoutMode: LayoutMode;
   toggleSidebar: () => void;
   toggleCollapsed: () => void;
+  setCollapsed: (collapsed: boolean) => void;
   setOpen: (open: boolean) => void;
   setLayoutMode: (mode: LayoutMode) => void;
 }
@@ -41,6 +42,7 @@ export const SidebarProvider: React.FC<{ children: ReactNode }> = ({ children })
       layoutMode,
       toggleSidebar, 
       toggleCollapsed, 
+      setCollapsed,
       setOpen,
       setLayoutMode 
     }}>

@@ -30,12 +30,14 @@ import {
   LinearProgress,
   Autocomplete,
 } from '@mui/material';
-import { Add, Search, Schedule, PendingActions, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday, FilterList } from '@mui/icons-material';
+import { Add, Search, Schedule, PendingActions, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday } from '@mui/icons-material';
 import { PencilLine, Eye, Trash } from 'lucide-react';
 import { RiFileWarningLine } from 'react-icons/ri';
 import { IoMdCheckboxOutline } from 'react-icons/io';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { far } from '@fortawesome/free-regular-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFilter } from '@fortawesome/free-solid-svg-icons';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -1131,22 +1133,27 @@ const Tasks: React.FC = () => {
               <Button
                 size="small"
                 onClick={() => setShowColumnFilters(!showColumnFilters)}
-                startIcon={<FilterList sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+                startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
                 sx={{
                   border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
                   borderRadius: 1.5,
                   bgcolor: showColumnFilters
-                    ? (theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.12)' : 'rgba(76, 175, 80, 0.08)')
-                    : (theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper),
-                  color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.primary,
+                    ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
+                    : (theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.grey[100]),
+                  color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
                   px: { xs: 1.25, sm: 1.5 },
                   py: { xs: 0.75, sm: 0.875 },
                   order: { xs: 2, sm: 0 },
                   textTransform: 'none',
-                  fontWeight: 500,
+                  fontWeight: 600,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    borderColor: theme.palette.divider,
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark'
+                      ? `${taxiMonterricoColors.green}33`
+                      : `${taxiMonterricoColors.green}1A`,
+                    color: taxiMonterricoColors.green,
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
                   },
                 }}
               >

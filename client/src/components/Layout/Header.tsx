@@ -12,7 +12,6 @@ import {
   Tooltip,
   Divider,
   Button,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -37,6 +36,7 @@ import {
   Security as SecurityIcon,
   Support as SupportIcon,
 } from '@mui/icons-material';
+import { Logs } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
@@ -53,7 +53,7 @@ const Header: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
   const { mode, toggleTheme } = useThemeContext();
-  const { open: sidebarOpen, toggleSidebar, toggleCollapsed, layoutMode } = useSidebar();
+  const { open: sidebarOpen, collapsed: sidebarCollapsed, toggleSidebar, toggleCollapsed, layoutMode } = useSidebar();
   
   const isHorizontal = layoutMode === 'horizontal';
   
@@ -65,7 +65,7 @@ const Header: React.FC = () => {
     { text: 'Negocios', icon: AttachMoneyIcon, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
     { text: 'Tareas', icon: TaskIcon, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
     { text: 'Calendario', icon: CalendarTodayIcon, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Correos', icon: EmailIcon, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Buzón', icon: EmailIcon, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
     { text: 'Masivo', icon: EmailIcon, path: '/emails/masivo', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
     { text: 'Reportes', icon: AssessmentIcon, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   ];
@@ -127,7 +127,7 @@ const Header: React.FC = () => {
       icon: CalendarTodayIcon,
     },
     { 
-      title: 'Correos', 
+      title: 'Buzón', 
       path: '/emails', 
       icon: EmailIcon,
     },
@@ -262,80 +262,25 @@ const Header: React.FC = () => {
             />
           </Box>
 
-          {/* Elementos de la derecha: búsqueda, tema, notificaciones, configuración, perfil */}
+          {/* Elementos de la derecha: tema, notificaciones, configuración, perfil */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {/* Búsqueda */}
-            <Button
-              onClick={() => setSearchModalOpen(true)}
-              sx={{
-                bgcolor: 'transparent',
-                borderRadius: 2.5,
-                px: 1.5,
-                py: 0.875,
-                minHeight: 44,
-                display: 'flex',
-                alignItems: 'center',
-                transition: 'all 0.2s ease',
-                border: theme.palette.mode === 'light'
-                  ? '0.5px solid rgba(0, 0, 0, 0.06)'
-                  : '0.5px solid rgba(255, 255, 255, 0.06)',
-                textTransform: 'none',
-                color: theme.palette.text.secondary,
-                minWidth: 200,
-                justifyContent: 'flex-start',
-              }}
-            >
-              <Search 
-                sx={{ 
-                  fontSize: 22,
-                  color: theme.palette.text.secondary,
-                  mr: 1,
-                }} 
-              />
-              <Typography
-                sx={{
-                  fontSize: '0.875rem',
-                  color: theme.palette.text.secondary,
-                  flex: 1,
-                  textAlign: 'left',
-                }}
-              >
-                Buscar...
-              </Typography>
-              <Chip
-                label="Ctrl+K"
-                size="small"
-                sx={{
-                  height: 24,
-                  fontSize: '0.6875rem',
-                  borderRadius: 1,
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.08)' 
-                    : 'rgba(0, 0, 0, 0.04)',
-                  color: theme.palette.text.secondary,
-                  '& .MuiChip-label': {
-                    px: 1,
-                  },
-                }}
-              />
-            </Button>
-
             {/* Tickets - reportar fallos / soporte */}
             <Tooltip title="Tickets (reportar fallos o solicitudes)">
               <IconButton
                 size="small"
                 onClick={() => navigate('/tickets')}
                 sx={{
-                  bgcolor: theme.palette.mode === 'dark'
-                    ? 'rgba(255, 255, 255, 0.08)'
-                    : 'rgba(0, 0, 0, 0.05)',
+                  bgcolor: 'transparent',
+                  border: theme.palette.mode === 'dark'
+                    ? '1px solid rgba(255, 255, 255, 0.12)'
+                    : '1px solid rgba(0, 0, 0, 0.12)',
                   borderRadius: 2.5,
                   width: 40,
                   height: 40,
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark'
-                      ? 'rgba(255, 255, 255, 0.12)'
-                      : 'rgba(0, 0, 0, 0.08)',
+                    borderColor: theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.2)'
+                      : 'rgba(0, 0, 0, 0.2)',
                   },
                 }}
               >
@@ -349,16 +294,17 @@ const Header: React.FC = () => {
                 size="small"
                 onClick={toggleTheme}
                 sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.08)' 
-                    : 'rgba(0, 0, 0, 0.05)',
+                  bgcolor: 'transparent',
+                  border: theme.palette.mode === 'dark' 
+                    ? '1px solid rgba(255, 255, 255, 0.12)' 
+                    : '1px solid rgba(0, 0, 0, 0.12)',
                   borderRadius: 2.5,
                   width: 40,
                   height: 40,
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.12)' 
-                      : 'rgba(0, 0, 0, 0.08)',
+                    borderColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.2)' 
+                      : 'rgba(0, 0, 0, 0.2)',
                   },
                 }}
               >
@@ -379,16 +325,17 @@ const Header: React.FC = () => {
                 size="small"
                 onClick={() => setSettingsDrawerOpen(true)}
                 sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.08)' 
-                    : 'rgba(0, 0, 0, 0.05)',
+                  bgcolor: 'transparent',
+                  border: theme.palette.mode === 'dark' 
+                    ? '1px solid rgba(255, 255, 255, 0.12)' 
+                    : '1px solid rgba(0, 0, 0, 0.12)',
                   borderRadius: 2.5,
                   width: 40,
                   height: 40,
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.12)' 
-                      : 'rgba(0, 0, 0, 0.08)',
+                    borderColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.2)' 
+                      : 'rgba(0, 0, 0, 0.2)',
                   },
                 }}
               >
@@ -541,92 +488,51 @@ const Header: React.FC = () => {
         </Box>
       )}
       
-      {/* Botón de búsqueda - Desktop (solo cuando no es horizontal) */}
+      {/* Botón expandir/contraer sidebar + Búsqueda - Desktop (solo cuando no es horizontal) */}
       {!isHorizontal && (
         <Box
           sx={{
             flex: 1,
             position: 'relative',
-            maxWidth: sidebarOpen ? '350px' : '350px',
-            marginLeft: 4,
-            display: { xs: 'none', sm: 'block' },
-          }}
-        >
-        <Button
-          onClick={() => setSearchModalOpen(true)}
-          sx={{
-            bgcolor: 'transparent',
-            borderRadius: 2.5,
-            px: 1.5,
-            py: 0.875,
-            minHeight: 44,
-            display: 'flex',
+            maxWidth: sidebarOpen ? '400px' : '400px',
+            marginLeft: { xs: 0, sm: 2 },
+            display: { xs: 'none', sm: 'flex' },
             alignItems: 'center',
-            transition: 'all 0.2s ease',
-            border: theme.palette.mode === 'light'
-              ? '0.5px solid rgba(0, 0, 0, 0.06)'
-              : '0.5px solid rgba(255, 255, 255, 0.06)',
-            textTransform: 'none',
-            color: theme.palette.text.secondary,
-            width: '100%',
-            justifyContent: 'flex-start',
+            gap: 1,
           }}
         >
-          <Search 
-            sx={{ 
-              fontSize: 22,
-              color: theme.palette.text.secondary,
-              mr: 1,
-            }} 
-          />
-          <Typography
-            sx={{
-              fontSize: '0.875rem',
-              color: theme.palette.text.secondary,
-              flex: 1,
-              textAlign: 'left',
-            }}
-          >
-            Buscar...
-          </Typography>
-          <Chip
-            label="Ctrl+K"
-            size="small"
-            sx={{
-              height: 24,
-              fontSize: '0.6875rem',
-              borderRadius: 1,
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.08)' 
-                : 'rgba(0, 0, 0, 0.04)',
-              color: theme.palette.text.secondary,
-              '& .MuiChip-label': {
-                px: 1,
-              },
-            }}
-          />
-        </Button>
-        </Box>
-      )}
-
-      {/* Icono de búsqueda - Solo móviles (solo cuando no es horizontal) */}
-      {!isHorizontal && (
-        <Box sx={{ display: { xs: 'block', sm: 'none' }, marginLeft: 1 }}>
-        <IconButton
-          size="small"
-          onClick={() => setSearchModalOpen(true)}
-          sx={{
-            bgcolor: 'transparent',
-            borderRadius: 1,
-            width: 36,
-            height: 36,
-            '&:hover': {
-              bgcolor: theme.palette.action.hover,
-            },
-          }}
-        >
-          <Search sx={{ fontSize: 24, color: '#637381' }} />
-        </IconButton>
+          <Tooltip title={sidebarOpen && !sidebarCollapsed ? 'Contraer menú' : 'Expandir menú'}>
+            <IconButton
+              onClick={() => {
+                if (sidebarOpen) {
+                  toggleCollapsed();
+                } else {
+                  toggleSidebar();
+                }
+              }}
+              size="small"
+              sx={{
+                flexShrink: 0,
+                width: 44,
+                height: 44,
+                borderRadius: 2.5,
+                bgcolor: 'transparent',
+                border: theme.palette.mode === 'light'
+                  ? '0.5px solid rgba(0, 0, 0, 0.06)'
+                  : '0.5px solid rgba(255, 255, 255, 0.06)',
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark'
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.06)',
+                  border: theme.palette.mode === 'light'
+                    ? '0.5px solid rgba(0, 0, 0, 0.1)'
+                    : '0.5px solid rgba(255, 255, 255, 0.1)',
+                },
+              }}
+            >
+              <Logs size={22} style={{ color: '#637381' }} />
+            </IconButton>
+          </Tooltip>
         </Box>
       )}
 
@@ -639,16 +545,17 @@ const Header: React.FC = () => {
             size="small"
             onClick={() => navigate('/tickets')}
             sx={{
-              bgcolor: theme.palette.mode === 'dark'
-                ? 'rgba(255, 255, 255, 0.08)'
-                : 'rgba(0, 0, 0, 0.05)',
+              bgcolor: 'transparent',
+              border: theme.palette.mode === 'dark'
+                ? '1px solid rgba(255, 255, 255, 0.12)'
+                : '1px solid rgba(0, 0, 0, 0.12)',
               borderRadius: 2.5,
               width: 40,
               height: 40,
               '&:hover': {
-                bgcolor: theme.palette.mode === 'dark'
-                  ? 'rgba(255, 255, 255, 0.12)'
-                  : 'rgba(0, 0, 0, 0.08)',
+                borderColor: theme.palette.mode === 'dark'
+                  ? 'rgba(255, 255, 255, 0.2)'
+                  : 'rgba(0, 0, 0, 0.2)',
               },
             }}
           >
@@ -662,16 +569,17 @@ const Header: React.FC = () => {
             size="small"
             onClick={toggleTheme}
             sx={{ 
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.08)' 
-                : 'rgba(0, 0, 0, 0.05)',
+              bgcolor: 'transparent',
+              border: theme.palette.mode === 'dark' 
+                ? '1px solid rgba(255, 255, 255, 0.12)' 
+                : '1px solid rgba(0, 0, 0, 0.12)',
               borderRadius: 2.5,
               width: 40,
               height: 40,
               '&:hover': {
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.12)' 
-                  : 'rgba(0, 0, 0, 0.08)',
+                borderColor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.2)' 
+                  : 'rgba(0, 0, 0, 0.2)',
               },
             }}
           >
@@ -692,16 +600,17 @@ const Header: React.FC = () => {
             size="small"
             onClick={() => setSettingsDrawerOpen(true)}
             sx={{ 
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.08)' 
-                : 'rgba(0, 0, 0, 0.05)',
+              bgcolor: 'transparent',
+              border: theme.palette.mode === 'dark' 
+                ? '1px solid rgba(255, 255, 255, 0.12)' 
+                : '1px solid rgba(0, 0, 0, 0.12)',
               borderRadius: 2.5,
               width: 40,
               height: 40,
               '&:hover': {
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.12)' 
-                  : 'rgba(0, 0, 0, 0.08)',
+                borderColor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.2)' 
+                  : 'rgba(0, 0, 0, 0.2)',
               },
             }}
           >

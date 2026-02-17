@@ -118,10 +118,12 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
       fontWeight: 600,
     },
     body1: {
+      fontSize: '1rem', // 16px
       fontWeight: 400,
       letterSpacing: '0.01em',
     },
     body2: {
+      fontSize: '1rem', // 16px (antes 14px por defecto)
       fontWeight: 400,
       letterSpacing: '0.01em',
     },

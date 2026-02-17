@@ -32,6 +32,7 @@ import {
   LinkOff,
 } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
+import { Mail } from 'lucide-react';
 import { taxiMonterricoColors } from '../theme/colors';
 import api from '../config/api';
 import EmailComposer from '../components/EmailComposer';
@@ -542,11 +543,9 @@ const Emails: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '80px',
-                lineHeight: 1,
               }}
             >
-              📧
+              <Mail size={72} color={theme.palette.text.secondary} strokeWidth={1.5} />
             </Box>
             <Box sx={{ textAlign: 'center', maxWidth: '700px', width: '100%' }}>
               <Typography
@@ -554,7 +553,7 @@ const Emails: React.FC = () => {
                 sx={{
                   fontWeight: 700,
                   mb: 2,
-                  color: theme.palette.text.primary,
+                  color: theme.palette.text.secondary,
                   fontSize: { xs: '1.5rem', md: '1.75rem' },
                 }}
               >
@@ -577,18 +576,21 @@ const Emails: React.FC = () => {
                 disabled={connectingEmail}
                 startIcon={connectingEmail ? <CircularProgress size={20} /> : <Send />}
                 sx={{
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
-                  color: 'white',
+                  bgcolor: 'transparent',
+                  color: taxiMonterricoColors.green,
+                  border: `2px solid ${taxiMonterricoColors.green}`,
                   textTransform: 'none',
                   px: 4,
                   py: 1.5,
                   borderRadius: 2,
                   fontWeight: 600,
                   fontSize: '1rem',
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
+                  boxShadow: 'none',
                   '&:hover': {
-                    background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
-                    boxShadow: `0 6px 16px ${taxiMonterricoColors.greenLight}60`,
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : `${taxiMonterricoColors.green}15`,
+                    borderColor: taxiMonterricoColors.greenDark,
+                    color: taxiMonterricoColors.greenDark,
+                    boxShadow: 'none',
                   },
                   '&:disabled': {
                     opacity: 0.7,

@@ -176,7 +176,7 @@ const Automations: React.FC = () => {
       </TableContainer>
 
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
+        <DialogTitle sx={{ color: '#4BB280', fontWeight: 600 }}>
           {editingAutomation ? 'Editar Automatización' : 'Nueva Automatización'}
         </DialogTitle>
         <DialogContent>

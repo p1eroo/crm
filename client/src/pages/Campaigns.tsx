@@ -687,7 +687,7 @@ const Campaigns: React.FC = () => {
           }
         }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{ color: '#4BB280', fontWeight: 600 }}>
           {editingCampaign ? 'Editar Campaña' : 'Nueva Campaña'}
         </DialogTitle>
         <DialogContent>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Box, useTheme, useMediaQuery, IconButton } from "@mui/material";
-import { KeyboardArrowLeft, KeyboardArrowRight } from "@mui/icons-material";
+import { Box, useTheme, useMediaQuery } from "@mui/material";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { useSidebar } from "../../context/SidebarContext";
@@ -17,8 +16,7 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const theme = useTheme();
-  const { open, collapsed, toggleCollapsed, toggleSidebar, layoutMode } =
-    useSidebar();
+  const { open, collapsed, layoutMode } = useSidebar();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isHorizontal = layoutMode === "horizontal";
   const drawerWidth = collapsed ? (isMobile ? 0 : 90) : 300;
@@ -118,50 +116,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       >
         {/* Sidebar solo visible cuando no es horizontal */}
         {!isHorizontal && <Sidebar />}
-
-        {/* Botón para expandir/contraer sidebar - solo cuando no es horizontal */}
-        {!isMobile && !isHorizontal && (
-          <IconButton
-            onClick={() => {
-              if (open) {
-                toggleCollapsed();
-              } else {
-                toggleSidebar();
-              }
-            }}
-            sx={{
-              position: "fixed",
-              left: open ? (collapsed ? 75 : 285) : -14,
-              top: { xs: 0, sm: 22 },
-              zIndex: 1300,
-              width: 28,
-              height: 28,
-              transition: "left 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
-              bgcolor: theme.palette.background.default,
-              border:
-                theme.palette.mode === "light"
-                  ? "1px solid rgba(0, 0, 0, 0.05)"
-                  : "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "50%",
-              "&:hover": {
-                bgcolor:
-                  theme.palette.mode === "light"
-                    ? "rgba(0, 0, 0, 0.08)"
-                    : "rgba(255, 255, 255, 0.12)",
-                border:
-                  theme.palette.mode === "light"
-                    ? "1px solid rgba(0, 0, 0, 0.08)"
-                    : "1px solid rgba(255, 255, 255, 0.12)",
-              },
-            }}
-          >
-            {open && !collapsed ? (
-              <KeyboardArrowLeft sx={{ fontSize: 18, color: "#637381" }} />
-            ) : (
-              <KeyboardArrowRight sx={{ fontSize: 18, color: "#637381" }} />
-            )}
-          </IconButton>
-        )}
 
         <Box
           component="main"

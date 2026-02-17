@@ -3784,7 +3784,7 @@ const TaskDetail: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Editar Tarea</DialogTitle>
+        <DialogTitle sx={{ color: '#4BB280', fontWeight: 600 }}>Editar Tarea</DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
             <TextField
@@ -4972,7 +4972,7 @@ const TaskDetail: React.FC = () => {
               alignItems: "center",
             }}
           >
-            <Typography variant="h6">
+            <Typography variant="h6" sx={{ color: '#4BB280', fontWeight: 600 }}>
               {dealDialogTab === "create" ? "Nuevo Negocio" : "Agregar Negocio"}
             </Typography>
             <IconButton

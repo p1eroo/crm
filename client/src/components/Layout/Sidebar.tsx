@@ -9,20 +9,10 @@ import {
   useTheme,
   Typography,
   useMediaQuery,
+  Menu,
+  MenuItem,
 } from '@mui/material';
-import {
-  Dashboard as DashboardIcon,
-  Person as PersonIcon,
-  Business as BusinessIcon,
-  AttachMoney as AttachMoneyIcon,
-  Task as TaskIcon,
-  CalendarToday as CalendarTodayIcon,
-  Email as EmailIcon,
-  Assessment as AssessmentIcon,
-  Description as DescriptionIcon,
-  Security as SecurityIcon,
-  People as PeopleIcon,
-} from '@mui/icons-material';
+import { ChartPie, ContactRound, Building2, CircleDollarSign, ClipboardList, CalendarDays, Mail, FileChartColumn, UsersRound, FileClock, ShieldUser, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { taxiMonterricoColors } from '../../theme/colors';
@@ -34,31 +24,56 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
   const theme = useTheme();
-  const { open, collapsed } = useSidebar();
+  const { open, collapsed, setCollapsed } = useSidebar();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const expandedByHoverRef = React.useRef(false);
+  const [correoExpanded, setCorreoExpanded] = React.useState(() => location.pathname.startsWith('/emails'));
+  const [correoMenuAnchor, setCorreoMenuAnchor] = React.useState<null | HTMLElement>(null);
+
+  const handleSidebarMouseEnter = React.useCallback(() => {
+    if (collapsed && !isMobile) {
+      setCollapsed(false);
+      expandedByHoverRef.current = true;
+    }
+  }, [collapsed, isMobile, setCollapsed]);
+
+  const handleSidebarMouseLeave = React.useCallback(() => {
+    if (expandedByHoverRef.current) {
+      setCollapsed(true);
+      expandedByHoverRef.current = false;
+    }
+  }, [setCollapsed]);
+
+  React.useEffect(() => {
+    if (location.pathname.startsWith('/emails')) setCorreoExpanded(true);
+  }, [location.pathname]);
 
   const drawerWidth = collapsed 
     ? (isMobile ? 0 : 90) 
     : 300;
 
+const correoSubItems = [
+  { text: 'Buzón', path: '/emails' },
+  { text: 'Masivo', path: '/emails/masivo' },
+];
+
 const mainMenuItems = [
-  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Contactos', icon: PersonIcon, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Empresas', icon: BusinessIcon, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Negocios', icon: AttachMoneyIcon, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Tareas', icon: TaskIcon, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Dashboard', icon: ChartPie, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Contactos', icon: ContactRound, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Empresas', icon: Building2, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Negocios', icon: CircleDollarSign, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Tareas', icon: ClipboardList, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   // { text: 'Tickets', icon: <Support />, path: '/tickets', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Calendario', icon: CalendarTodayIcon, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Correos', icon: EmailIcon, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Masivo', icon: EmailIcon, path: '/emails/masivo', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Reportes', icon: AssessmentIcon, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Calendario', icon: CalendarDays, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Correo', icon: Mail, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'], subItems: correoSubItems },
+  { text: 'Reportes', icon: FileChartColumn, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   // { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
   // { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
 ];
 
 const adminMenuItems = [
-  { text: 'Logs del Sistema', icon: DescriptionIcon, path: '/system-logs', roles: ['admin'] },
-  { text: 'Roles y Permisos', icon: SecurityIcon, path: '/roles-permissions', roles: ['admin'] },
+  { text: 'Logs del Sistema', icon: FileClock, path: '/system-logs', roles: ['admin'] },
+  { text: 'Roles y Permisos', icon: ShieldUser, path: '/roles-permissions', roles: ['admin'] },
 ];
 
 
@@ -69,6 +84,8 @@ const adminMenuItems = [
   return (
     <Drawer
       variant="permanent"
+      onMouseEnter={handleSidebarMouseEnter}
+      onMouseLeave={handleSidebarMouseLeave}
       sx={{
         width: drawerWidth,
         flexShrink: 0,
@@ -76,6 +93,7 @@ const adminMenuItems = [
         height: '100vh',
         zIndex: 1200,
         top: 0,
+        transition: 'width 200ms ease-in-out',
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
@@ -98,7 +116,7 @@ const adminMenuItems = [
           position: 'fixed',
           height: '100vh',
           top: 0,
-          // Sin transición en width para evitar reflow cada frame (lag); solo se anima margin-left del contenido
+          transition: 'width 200ms ease-in-out',
         },
       }}
     >
@@ -162,11 +180,101 @@ const adminMenuItems = [
             return true;
           })
           .map((item) => {
-            // Para Dashboard, detectar tanto '/' como '/dashboard'
-            // Para otros, coincidir si el pathname comienza con el path del item
+            const hasSubItems = 'subItems' in item && item.subItems && item.subItems.length > 0;
+            const isCorreo = item.text === 'Correo';
             const isSelected = item.path === '/dashboard' 
               ? (location.pathname === '/dashboard' || location.pathname === '/')
-              : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+              : isCorreo
+                ? (location.pathname === '/emails' || location.pathname.startsWith('/emails/'))
+                : (location.pathname === item.path || location.pathname.startsWith(item.path + '/'));
+
+            if (hasSubItems && isCorreo) {
+              return (
+                <Box key={item.text} sx={{ mb: 0 }}>
+                  <ListItemButton
+                    selected={isSelected}
+                    onClick={(e) => {
+                      if (collapsed) setCorreoMenuAnchor(e.currentTarget);
+                      else setCorreoExpanded((v) => !v);
+                    }}
+                    sx={{
+                      minHeight: collapsed ? 64 : 44,
+                      borderRadius: 3,
+                      flexDirection: collapsed ? 'column' : 'row',
+                      justifyContent: collapsed ? 'center' : 'space-between',
+                      alignItems: 'center',
+                      px: collapsed ? 1 : 2,
+                      py: collapsed ? 1 : 0.875,
+                      mb: 0,
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&.Mui-selected': {
+                        background: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924',
+                        color: taxiMonterricoColors.greenLight,
+                        boxShadow: 'none',
+                        ...(collapsed ? {} : { mx: 1, width: 'calc(100% - 16px)' }),
+                        '&:hover': {
+                          background: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924',
+                          boxShadow: 'none',
+                        },
+                      },
+                      '&:hover': {
+                        ...(isSelected ? {
+                          background: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924',
+                        } : { backgroundColor: theme.palette.action.hover }),
+                      },
+                      '&:not(.Mui-selected)': { color: theme.palette.text.secondary, backgroundColor: 'transparent' },
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                      <ListItemIcon sx={{ minWidth: collapsed ? 'auto' : 36, justifyContent: 'center', margin: collapsed ? '0 0 4px 0' : 0, display: 'flex', alignItems: 'center', color: isSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : theme.palette.text.secondary }}>
+                        <Mail size={24} />
+                      </ListItemIcon>
+                      {!collapsed && (
+                        <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 600, color: isSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : theme.palette.text.secondary, ml: 0.8 }}>
+                          Correo
+                        </Typography>
+                      )}
+                    </Box>
+                    {!collapsed && (correoExpanded ? <ChevronDown size={18} style={{ color: theme.palette.text.secondary }} /> : <ChevronRight size={18} style={{ color: theme.palette.text.secondary }} />)}
+                    {collapsed && (
+                      <Typography variant="caption" sx={{ fontSize: '0.625rem', fontWeight: 600, color: isSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : theme.palette.text.secondary, textAlign: 'center', mt: 0.25 }}>Correo</Typography>
+                    )}
+                  </ListItemButton>
+                  {!collapsed && correoExpanded && item.subItems && item.subItems.map((sub: { text: string; path: string }, subIndex: number) => {
+                    const subSelected = location.pathname === sub.path || (sub.path !== '/emails' && location.pathname.startsWith(sub.path + '/'));
+                    return (
+                      <ListItemButton
+                        key={sub.text}
+                        selected={subSelected}
+                        onClick={() => navigate(sub.path)}
+                        sx={{
+                          minHeight: 40,
+                          borderRadius: 2,
+                          pl: 2.5,
+                          py: 0.75,
+                          ml: 6,
+                          mr: 1,
+                          mt: subIndex === 0 ? 1 : 0.5,
+                          width: 'calc(100% - 56px)',
+                          '&.Mui-selected': {
+                            background: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924',
+                            color: theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f',
+                            '&:hover': { background: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924' },
+                          },
+                          '&:hover': { backgroundColor: theme.palette.action.hover },
+                          '&:not(.Mui-selected)': { color: theme.palette.text.secondary, backgroundColor: 'transparent' },
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 600, color: subSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : 'inherit' }}>
+                          {sub.text}
+                        </Typography>
+                      </ListItemButton>
+                    );
+                  })}
+                </Box>
+              );
+            }
+
             return (
             <ListItemButton
               key={item.text}
@@ -183,24 +291,18 @@ const adminMenuItems = [
               mb: 0,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&.Mui-selected': {
-                  background: theme.palette.mode === 'dark' 
-                    ? `${taxiMonterricoColors.greenDark}33` 
-                    : `${taxiMonterricoColors.green}15`,
+                  background: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924',
                   color: taxiMonterricoColors.greenLight,
                   boxShadow: 'none',
                   ...(collapsed ? {} : { mx: 1, width: 'calc(100% - 16px)' }),
                   '&:hover': {
-                    background: theme.palette.mode === 'dark' 
-                      ? `${taxiMonterricoColors.greenDark}33` 
-                      : `${taxiMonterricoColors.green}15`,
+                    background: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924',
                     boxShadow: 'none',
                   },
                 },
                 '&:hover': {
                   ...(isSelected ? {
-                    background: theme.palette.mode === 'dark' 
-                      ? `${taxiMonterricoColors.greenDark}33` 
-                      : `${taxiMonterricoColors.green}15`,
+                    background: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924',
                   } : {
                     backgroundColor: theme.palette.action.hover,
                   }),
@@ -219,11 +321,11 @@ const adminMenuItems = [
                   display: 'flex',
                   alignItems: 'center',
                   color: isSelected 
-                    ? (theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green)
+                    ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                     : theme.palette.text.secondary,
                 }}
               >
-                {React.createElement(item.icon, {
+                {item.text === 'Dashboard' ? <ChartPie size={24} /> : item.text === 'Contactos' ? <ContactRound size={24} /> : item.text === 'Empresas' ? <Building2 size={24} /> : item.text === 'Negocios' ? <CircleDollarSign size={24} /> : item.text === 'Tareas' ? <ClipboardList size={24} /> : item.text === 'Calendario' ? <CalendarDays size={24} /> : item.text === 'Reportes' ? <FileChartColumn size={24} /> : React.createElement(item.icon as React.ComponentType<{ sx?: { fontSize?: number } }>, {
                   sx: { fontSize: 24 }
                 })}
               </ListItemIcon>
@@ -232,9 +334,9 @@ const adminMenuItems = [
                   variant="body2"
                   sx={{
                     fontSize: '0.875rem',
-                    fontWeight: isSelected ? 600 : 400,
+                    fontWeight: 600,
                     color: isSelected 
-                      ? (theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green)
+                      ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                       : theme.palette.text.secondary,
                     ml: 0.8,
                   }}
@@ -247,9 +349,9 @@ const adminMenuItems = [
                   variant="caption"
                   sx={{
                     fontSize: '0.625rem',
-                    fontWeight: isSelected ? 600 : 400,
+                    fontWeight: 600,
                     color: isSelected 
-                      ? (theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green)
+                      ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                       : theme.palette.text.secondary,
                     textAlign: 'center',
                     mt: 0.25,
@@ -260,6 +362,30 @@ const adminMenuItems = [
             </ListItemButton>
           );
         })}
+
+        <Menu
+          anchorEl={correoMenuAnchor}
+          open={Boolean(correoMenuAnchor)}
+          onClose={() => setCorreoMenuAnchor(null)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          slotProps={{ paper: { sx: { mt: 1.5, minWidth: 140, borderRadius: 2 } } }}
+        >
+          <MenuItem
+            onClick={() => { navigate('/emails'); setCorreoMenuAnchor(null); }}
+            selected={location.pathname === '/emails'}
+            sx={{ py: 1.25, '&.Mui-selected': { bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}25` : `${taxiMonterricoColors.green}15` } }}
+          >
+            Buzón
+          </MenuItem>
+          <MenuItem
+            onClick={() => { navigate('/emails/masivo'); setCorreoMenuAnchor(null); }}
+            selected={location.pathname === '/emails/masivo'}
+            sx={{ py: 1.25, '&.Mui-selected': { bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}25` : `${taxiMonterricoColors.green}15` } }}
+          >
+            Masivo
+          </MenuItem>
+        </Menu>
         
         {/* Opción de Administrar Usuarios - Solo visible para admins */}
         {(() => {
@@ -322,14 +448,14 @@ const adminMenuItems = [
                   : '#5a5c61',
               }}
             >
-              <PeopleIcon sx={{ fontSize: 24 }} />
+              <UsersRound size={24} />
             </ListItemIcon>
             {!collapsed && (
               <Typography
                 variant="body2"
                 sx={{
                   fontSize: '0.875rem',
-                  fontWeight: location.pathname === '/users' ? 600 : 400,
+                  fontWeight: 600,
                   color: location.pathname === '/users' 
                     ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                     : '#5a5c61',
@@ -344,7 +470,7 @@ const adminMenuItems = [
                 variant="caption"
                 sx={{
                   fontSize: '0.625rem',
-                  fontWeight: location.pathname === '/users' ? 600 : 400,
+                  fontWeight: 600,
                   color: location.pathname === '/users' 
                     ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                     : '#5a5c61',
@@ -430,7 +556,7 @@ const adminMenuItems = [
                         : '#5a5c61',
                     }}
                   >
-                    {React.createElement(item.icon, {
+                    {item.text === 'Dashboard' ? <ChartPie size={24} /> : item.text === 'Contactos' ? <ContactRound size={24} /> : item.text === 'Empresas' ? <Building2 size={24} /> : item.text === 'Negocios' ? <CircleDollarSign size={24} /> : item.text === 'Tareas' ? <ClipboardList size={24} /> : item.text === 'Calendario' ? <CalendarDays size={24} /> : item.text === 'Correos' ? <Mail size={24} /> : item.text === 'Reportes' ? <FileChartColumn size={24} /> : item.text === 'Logs del Sistema' ? <FileClock size={24} /> : item.text === 'Roles y Permisos' ? <ShieldUser size={24} /> : React.createElement(item.icon as React.ComponentType<{ sx?: { fontSize?: number } }>, {
                       sx: { fontSize: 24 }
                     })}
                   </ListItemIcon>
@@ -439,7 +565,7 @@ const adminMenuItems = [
                       variant="body2"
                       sx={{
                         fontSize: '0.875rem',
-                        fontWeight: isSelected ? 600 : 400,
+                        fontWeight: 600,
                         color: isSelected 
                           ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                           : '#5a5c61',
@@ -454,7 +580,7 @@ const adminMenuItems = [
                       variant="caption"
                       sx={{
                         fontSize: '0.625rem',
-                        fontWeight: isSelected ? 600 : 400,
+                        fontWeight: 600,
                         color: isSelected 
                           ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                           : '#5a5c61',

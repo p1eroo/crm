@@ -48,7 +48,7 @@ export const StageChipWithProgress: React.FC<StageChipWithProgressProps> = ({
         }}
         {...chipProps}
       />
-      <Box sx={{ position: 'relative', width: '100%', height: 8, borderRadius: 4, overflow: 'hidden', bgcolor: theme.palette.action.hover }}>
+      <Box sx={{ position: 'relative', width: '100%', height: 14, borderRadius: 4, overflow: 'hidden', bgcolor: theme.palette.action.hover }}>
         <LinearProgress
           variant="determinate"
           value={showValue}

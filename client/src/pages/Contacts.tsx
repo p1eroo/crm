@@ -1955,7 +1955,7 @@ const Contacts: React.FC = () => {
                           handleStatusMenuOpen(e, contact.id);
                         }}
                         disabled={updatingStatus[contact.id]}
-                        barWidth={80}
+                        barWidth={120}
                       />
                       <Menu
                         anchorEl={statusMenuAnchor[contact.id]}
@@ -2204,7 +2204,7 @@ const Contacts: React.FC = () => {
                       handleStatusMenuOpen(e, contact.id);
                     }}
                     disabled={updatingStatus[contact.id]}
-                    barWidth={90}
+                    barWidth={120}
                   />
                   <Menu
                     anchorEl={statusMenuAnchor[contact.id]}
@@ -3006,7 +3006,7 @@ const Contacts: React.FC = () => {
           },
         }}
       >
-        <DialogTitle>Nueva Empresa</DialogTitle>
+        <DialogTitle sx={{ color: '#4BB280', fontWeight: 600 }}>Nueva Empresa</DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
             {/* RUC y Tipo de Contribuyente */}

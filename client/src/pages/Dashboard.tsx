@@ -2287,7 +2287,7 @@ const Dashboard: React.FC = () => {
             ? `1px solid rgba(255, 255, 255, 0.08)` 
             : `1px solid ${theme.palette.divider}`,
         }}>
-          <Typography component="div" sx={{ fontWeight: 800, fontSize: '1.25rem', color: theme.palette.text.primary }}>
+          <Typography component="div" sx={{ fontWeight: 800, fontSize: '1.25rem', color: '#4BB280' }}>
             Editar Presupuesto {editingBudgetMonth !== null 
               ? monthNames[editingBudgetMonth]?.label.substring(0, 3) + '.' 
               : currentMonthAbbr}
