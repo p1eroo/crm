@@ -22,7 +22,7 @@ import {
   Collapse,
   LinearProgress,
 } from '@mui/material';
-import { Add, AttachMoney, ViewList, AccountTree, CalendarToday, Close, FileDownload, FilterList, ExpandMore, Remove, Bolt, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Add, AttachMoney, ViewList, AccountTree, CalendarToday, Close, FilterList, ExpandMore, Remove, Bolt, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { PencilLine, Eye, Trash } from 'lucide-react';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
@@ -33,19 +33,12 @@ import { useAuth } from '../context/AuthContext';
 import * as XLSX from 'xlsx';
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHandshake, faFilter } from "@fortawesome/free-solid-svg-icons";
+import { faHandshake, faFilter, faFileExport } from "@fortawesome/free-solid-svg-icons";
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 import UserAvatar from '../components/UserAvatar';
 import { FormDrawer } from '../components/FormDrawer';
 import { DealFormContent, getInitialDealFormData, type DealFormData } from '../components/DealFormContent';
 import { formatCurrencyPE, formatCurrencyPECompact } from '../utils/currencyUtils';
-import { getAvatarColors } from '../utils/avatarColors';
-
-const getCompanyInitials = (name: string): string => {
-  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return (name || '').slice(0, 2).toUpperCase() || '—';
-};
 
 interface Deal {
   id: number;
@@ -685,12 +678,9 @@ const Deals: React.FC = () => {
         <Typography 
           variant="h5" 
           sx={{ 
-            fontWeight: 700,
-            fontSize: { xs: '1.25rem', md: '1.5rem' },
-            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green} 100%)`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            fontWeight: 600,
+            fontSize: { xs: '1rem', md: '1.1375rem' },
+            color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
           }}
         >
           Negocios
@@ -706,24 +696,22 @@ const Deals: React.FC = () => {
           >
             <Button
               size="small"
-              startIcon={<FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+              startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
               onClick={handleExportToExcel}
               sx={{
-                border: `1.5px solid ${theme.palette.divider}`,
+                border: 'none',
                 borderRadius: 1.5,
-                bgcolor: 'transparent',
-                color: theme.palette.text.secondary,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.12)' : 'rgba(0, 150, 136, 0.08)',
+                color: theme.palette.mode === 'dark' ? '#4DB6AC' : '#00897B',
                 px: { xs: 1.25, sm: 1.5 },
                 py: { xs: 0.75, sm: 0.875 },
                 textTransform: 'none',
                 fontWeight: 600,
                 '&:hover': {
-                  borderColor: taxiMonterricoColors.green,
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? `${taxiMonterricoColors.green}1A` 
-                    : `${taxiMonterricoColors.green}0D`,
-                  color: taxiMonterricoColors.green,
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                  borderColor: '#00897B',
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
+                  color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
+                  boxShadow: '0 4px 12px rgba(0, 150, 136, 0.25)',
                 },
               }}
             >
@@ -736,24 +724,24 @@ const Deals: React.FC = () => {
             startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
             onClick={() => setShowColumnFilters(!showColumnFilters)}
             sx={{
-              border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+              border: 'none',
               borderRadius: 1.5,
               bgcolor: showColumnFilters 
                 ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
-                : 'transparent',
-              color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.12)' : 'rgba(255, 152, 0, 0.08)'),
+              color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFB74D' : '#E65100'),
               px: { xs: 1.25, sm: 1.5 },
               py: { xs: 0.75, sm: 0.875 },
               order: { xs: 5, sm: 0 },
               textTransform: 'none',
               fontWeight: 600,
               '&:hover': {
-                borderColor: taxiMonterricoColors.green,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? `${taxiMonterricoColors.green}33` 
-                  : `${taxiMonterricoColors.green}1A`,
-                color: taxiMonterricoColors.green,
-                boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                borderColor: showColumnFilters ? taxiMonterricoColors.green : '#FF9800',
+                bgcolor: showColumnFilters 
+                  ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}33` : `${taxiMonterricoColors.green}1A`)
+                  : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.14)'),
+                color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFCC80' : '#EF6C00'),
+                boxShadow: showColumnFilters ? `0 4px 12px ${taxiMonterricoColors.green}20` : '0 4px 12px rgba(255, 152, 0, 0.25)',
               },
             }}
           >
@@ -771,7 +759,7 @@ const Deals: React.FC = () => {
                 onClick={() => setViewMode('list')}
                 sx={{
                   ...(viewMode === 'list'
-                    ? { background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`, color: '#fff' }
+                    ? { bgcolor: '#13944C', color: '#fff' }
                     : {
                         bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.grey[100],
                         color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : theme.palette.text.primary,
@@ -785,7 +773,7 @@ const Deals: React.FC = () => {
                   },
                   '&:hover': {
                     ...(viewMode === 'list'
-                      ? { background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`, color: '#fff' }
+                      ? { bgcolor: '#0f7039', color: '#fff' }
                       : { bgcolor: theme.palette.action.hover }),
                     boxShadow: 'none',
                     '& .MuiSvgIcon-root': {
@@ -802,7 +790,7 @@ const Deals: React.FC = () => {
                 onClick={() => setViewMode('funnel')}
                 sx={{
                   ...(viewMode === 'funnel'
-                    ? { background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`, color: '#fff' }
+                    ? { bgcolor: '#13944C', color: '#fff' }
                     : {
                         bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.grey[100],
                         color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : theme.palette.text.primary,
@@ -816,7 +804,7 @@ const Deals: React.FC = () => {
                   },
                   '&:hover': {
                     ...(viewMode === 'funnel'
-                      ? { background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`, color: '#fff' }
+                      ? { bgcolor: '#0f7039', color: '#fff' }
                       : { bgcolor: theme.palette.action.hover }),
                     boxShadow: 'none',
                     '& .MuiSvgIcon-root': {
@@ -835,18 +823,16 @@ const Deals: React.FC = () => {
             startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
             onClick={() => handleOpen()}
             sx={{
-              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+              bgcolor: '#13944C',
               color: "white",
               borderRadius: 1.5,
               px: { xs: 1.25, sm: 1.5 },
               py: { xs: 0.75, sm: 0.875 },
-              boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
               order: { xs: 2, sm: 0 },
               textTransform: 'none',
               fontWeight: 600,
               '&:hover': {
-                boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                bgcolor: '#0f7039',
               },
             }}
           >
@@ -871,7 +857,7 @@ const Deals: React.FC = () => {
                   : `${taxiMonterricoColors.green}03`,
                 overflow: 'hidden',
                 display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.9fr 0.9fr 0.8fr 0.7fr' },
+                gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 0.8fr 1fr 0.9fr 0.9fr 0.7fr' },
                 columnGap: { xs: 1, md: 1.5 },
                 minWidth: { xs: 600, md: 'auto' },
                 maxWidth: '100%',
@@ -881,9 +867,9 @@ const Deals: React.FC = () => {
                 borderBottom: `2px solid ${theme.palette.divider}`,
               }}
             >
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, pl: { xs: 0.75, md: 1 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Nombre del Negocio</Typography>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Nombre</Typography>
                 {showColumnFilters && (
                   <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))} sx={{ p: 0.25, opacity: columnFilters.nombre ? 1 : 0.3 }}>
                     <FilterList sx={{ fontSize: 14 }} />
@@ -907,65 +893,10 @@ const Deals: React.FC = () => {
                 />
               )}
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Monto</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, monto: '' }))} sx={{ p: 0.25, opacity: columnFilters.monto ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.monto}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, monto: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
-            </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Etapa</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))} sx={{ p: 0.25, opacity: columnFilters.etapa ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.etapa}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, etapa: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
-            </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, pl: { xs: 0.75, md: 1 } }}>
               <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Fecha de Cierre</Typography>
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
-              <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Empresa</Typography>
-            </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, pl: { xs: 0.5, md: 0.75 }, pr: { xs: 0.5, md: 0.75 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Propietario</Typography>
                 {showColumnFilters && (
@@ -991,10 +922,66 @@ const Deals: React.FC = () => {
                 />
               )}
             </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, pl: { xs: 0.75, md: 1 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Etapa</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))} sx={{ p: 0.25, opacity: columnFilters.etapa ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.etapa}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, etapa: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
+            </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, pl: { xs: 0.5, md: 0.75 } }}>
+              <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Empresa</Typography>
+            </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, pl: { xs: 0.75, md: 1 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Monto</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, monto: '' }))} sx={{ p: 0.25, opacity: columnFilters.monto ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.monto}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, monto: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
+            </Box>
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.75, md: 1 },
-              justifyContent: 'flex-start'
+              pl: { xs: 0.75, md: 1 },
+              pr: { xs: 0.75, md: 1 },
+              justifyContent: 'center'
             }}>
                   Acciones
             </Box>
@@ -1011,7 +998,7 @@ const Deals: React.FC = () => {
                   bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                   cursor: 'pointer',
                   display: 'grid',
-                  gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.9fr 0.9fr 0.8fr 0.7fr' },
+                  gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 0.8fr 1fr 0.9fr 0.9fr 0.7fr' },
                   columnGap: { xs: 1, md: 1.5 },
                   minWidth: { xs: 600, md: 'auto' },
                   maxWidth: '100%',
@@ -1103,17 +1090,33 @@ const Deals: React.FC = () => {
                     </Box>
                   </Box>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.8125rem' }, color: theme.palette.text.secondary }}>
+                    {deal.closeDate ? new Date(deal.closeDate).toLocaleDateString('es-ES') : '--'}
+                  </Typography>
+                </Box>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                  {deal.Owner ? (
+                    <Tooltip title={`${deal.Owner.firstName} ${deal.Owner.lastName}`} arrow>
+                      <UserAvatar
+                        firstName={deal.Owner.firstName}
+                        lastName={deal.Owner.lastName}
+                        colorSeed={deal.Owner.id?.toString() || deal.Owner.email || `${deal.Owner.firstName}${deal.Owner.lastName}`}
+                        size={32}
+                      />
+                    </Tooltip>
+                  ) : (
                     <Typography 
                       variant="body2" 
                       sx={{ 
-                        color: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green,
+                        color: theme.palette.text.disabled,
                         fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                        fontWeight: 500,
+                        fontWeight: 400,
                       }}
                     >
-                    {formatCurrencyPE(deal.amount)}
+                      --
                     </Typography>
+                  )}
                 </Box>
                 <Box
                   sx={{
@@ -1188,7 +1191,6 @@ const Deals: React.FC = () => {
                         fontSize: '0.625rem',
                         fontWeight: 600,
                         color: showVal > 40 ? theme.palette.common.white : theme.palette.text.primary,
-                        textShadow: showVal > 40 ? '0 0 1px rgba(0,0,0,0.5)' : 'none',
                         pointerEvents: 'none',
                       }}
                     >
@@ -1242,57 +1244,35 @@ const Deals: React.FC = () => {
                       ))}
                     </Menu>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.8125rem' }, color: theme.palette.text.secondary }}>
-                    {deal.closeDate ? new Date(deal.closeDate).toLocaleDateString('es-ES') : '--'}
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: theme.palette.text.primary,
+                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                      fontWeight: 400,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title={deal.Company?.name || ''}
+                  >
+                    {deal.Company?.name || '—'}
                   </Typography>
                 </Box>
-                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                  {deal.Company?.name ? (
-                    <Tooltip title={deal.Company.name} arrow>
-                      <Avatar
-                        src={deal.Company.logo ?? undefined}
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          bgcolor: deal.Company.logo ? 'transparent' : getAvatarColors(deal.Company.name).bg,
-                          color: getAvatarColors(deal.Company.name).color,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {!deal.Company.logo && getCompanyInitials(deal.Company.name)}
-                      </Avatar>
-                    </Tooltip>
-                  ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>—</Typography>
-                  )}
-                </Box>
-                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                  {deal.Owner ? (
-                    <Tooltip title={`${deal.Owner.firstName} ${deal.Owner.lastName}`} arrow>
-                      <UserAvatar
-                        firstName={deal.Owner.firstName}
-                        lastName={deal.Owner.lastName}
-                        colorSeed={deal.Owner.id?.toString() || deal.Owner.email || `${deal.Owner.firstName}${deal.Owner.lastName}`}
-                        size={32}
-                      />
-                    </Tooltip>
-                  ) : (
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                     <Typography 
                       variant="body2" 
                       sx={{ 
-                        color: theme.palette.text.disabled,
+                        color: deal.amount != null ? (theme.palette.mode === 'dark' ? '#4ade80' : '#15803d') : theme.palette.text.primary,
                         fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                        fontWeight: 400,
+                        fontWeight: 500,
                       }}
                     >
-                      --
+                    {deal.amount != null ? formatCurrencyPE(deal.amount) : '--'}
                     </Typography>
-                  )}
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                       <Tooltip title="Editar">
                         <IconButton

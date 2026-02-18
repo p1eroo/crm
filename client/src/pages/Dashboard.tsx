@@ -1092,12 +1092,8 @@ const Dashboard: React.FC = () => {
             variant="h4" 
             sx={{ 
               fontWeight: 800, 
-              color: theme.palette.text.primary, 
+              color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary, 
               fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
-              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
               textTransform: 'uppercase',
               letterSpacing: '0.02em',
             }}
@@ -1305,7 +1301,7 @@ const Dashboard: React.FC = () => {
             onClick={handleDownloadDashboard}
             sx={{
               bgcolor: taxiMonterricoColors.green,
-              color: 'white',
+              color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
               borderRadius: 1,
             }}
           >
@@ -1667,12 +1663,8 @@ const Dashboard: React.FC = () => {
                 variant="h6" 
                 sx={{ 
                   fontWeight: 800, 
-                  color: theme.palette.text.primary, 
+                  color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary, 
                   fontSize: { xs: '1rem', md: '1.25rem' },
-                  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
                 }}
               >
                 Distribución de Ventas
@@ -1772,12 +1764,8 @@ const Dashboard: React.FC = () => {
                 variant="h6" 
                 sx={{ 
                   fontWeight: 800, 
-                  color: theme.palette.text.primary,
+                  color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
                   fontSize: { xs: '1rem', md: '1.25rem' },
-                  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
                 }}
               >
                 Ventas
@@ -1954,12 +1942,8 @@ const Dashboard: React.FC = () => {
                 variant="h6" 
                 sx={{ 
                   fontWeight: 800, 
-                  color: theme.palette.text.primary, 
+                  color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary, 
                   fontSize: { xs: '1rem', md: '1.25rem' },
-                  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
                 }}
               >
                 Ventas Semanales
@@ -2105,12 +2089,8 @@ const Dashboard: React.FC = () => {
                   variant="h6" 
                   sx={{ 
                     fontWeight: 800, 
-                    color: theme.palette.text.primary, 
+                    color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary, 
                     fontSize: { xs: '1rem', md: '1.25rem' },
-                    background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
                   }}
                 >
                   KPI's Área Comercial
@@ -2411,10 +2391,7 @@ const Dashboard: React.FC = () => {
             sx={{ 
               fontWeight: 700, 
               fontSize: { xs: '1.25rem', md: '1.75rem' },
-              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
             }}
           >
             Distribución de Ventas
@@ -2512,10 +2489,7 @@ const Dashboard: React.FC = () => {
               sx={{ 
                 fontWeight: 700, 
                 fontSize: { xs: '1.25rem', md: '1.75rem' },
-                background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
               }}
             >
               KPI's Área Comercial
@@ -2668,10 +2642,7 @@ const Dashboard: React.FC = () => {
             sx={{ 
               fontWeight: 700, 
               fontSize: { xs: '1.25rem', md: '1.75rem' },
-              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
             }}
           >
             Ventas Semanales
@@ -2817,10 +2788,7 @@ const Dashboard: React.FC = () => {
             sx={{ 
               fontWeight: 700, 
               fontSize: { xs: '1.25rem', md: '1.75rem' },
-              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
             }}
           >
             Ventas

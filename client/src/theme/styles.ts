@@ -226,7 +226,7 @@ export const pageStyles = {
    * Botón principal verde (contained)
    */
   primaryButton: {
-    bgcolor: taxiMonterricoColors.green,
+    bgcolor: '#13944C',
     color: 'white',
     textTransform: 'none' as const,
     fontWeight: 500,
@@ -234,7 +234,7 @@ export const pageStyles = {
     px: 2.5,
     py: 1,
     '&:hover': {
-      bgcolor: taxiMonterricoColors.greenDark,
+      bgcolor: '#0f7039',
     },
   } as SxProps<Theme>,
 

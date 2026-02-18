@@ -7,7 +7,7 @@ import {
   Tooltip,
   useTheme,
 } from '@mui/material';
-import { Notifications } from '@mui/icons-material';
+import { Bell } from 'lucide-react';
 import { NotificationPanel } from './NotificationPanel';
 import { NotificationDetail } from './NotificationDetail';
 import { Notification } from '../../types/notification';
@@ -102,20 +102,10 @@ export const NotificationBell: React.FC = () => {
           onClick={handleTogglePanel}
           sx={{
             bgcolor: 'transparent',
-            border: theme.palette.mode === 'dark' 
-              ? '1px solid rgba(255, 255, 255, 0.12)' 
-              : '1px solid rgba(0, 0, 0, 0.12)',
-            borderRadius: 2.5,
             width: 40,
             height: 40,
             position: 'relative',
             transition: 'all 0.2s ease',
-            '&:hover': {
-              borderColor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.2)' 
-                : 'rgba(0, 0, 0, 0.2)',
-              transform: 'scale(1.05)',
-            },
           }}
         >
           <Badge
@@ -145,15 +135,12 @@ export const NotificationBell: React.FC = () => {
               },
             }}
           >
-            <Notifications
-              sx={{
-                fontSize: 24,
-                color: theme.palette.text.secondary,
+            <Bell
+              size={24}
+              color={panelOpen ? taxiMonterricoColors.green : theme.palette.text.secondary}
+              style={{
                 transition: 'all 0.2s ease',
-                ...(panelOpen && {
-                  color: taxiMonterricoColors.green,
-                  transform: 'rotate(10deg)',
-                }),
+                ...(panelOpen && { transform: 'rotate(10deg)' }),
               }}
             />
           </Badge>

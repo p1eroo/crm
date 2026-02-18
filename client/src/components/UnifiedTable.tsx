@@ -1,12 +1,13 @@
 import React from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
-import { taxiMonterricoColors } from '../theme/colors';
 
 // Valor por defecto para itemsPerPage en todas las tablas
 export const DEFAULT_ITEMS_PER_PAGE = 10;
 
 interface UnifiedTableProps {
   title: string;
+  /** Color del título. Si no se pasa, en dark mode es white y en light mode text.primary. */
+  titleColor?: string;
   actions?: React.ReactNode;
   header: React.ReactNode;
   rows: React.ReactNode;
@@ -16,6 +17,7 @@ interface UnifiedTableProps {
 
 export const UnifiedTable: React.FC<UnifiedTableProps> = ({
   title,
+  titleColor,
   actions,
   header,
   rows,
@@ -56,16 +58,12 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
               py: { xs: 1.25, md: 1.5 },
               borderBottom: `2px solid ${theme.palette.divider}`,
               bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
-              background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}03 0%, transparent 100%)` : undefined,
             }}
           >
             <Typography variant="h5" sx={{ 
-              fontWeight: 700, 
-              fontSize: { xs: '1.25rem', md: '1.5rem' },
-              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              fontWeight: 600, 
+              fontSize: { xs: '1rem', md: '1.1375rem' },
+              color: titleColor ?? (theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary),
             }}>
               {title}
             </Typography>

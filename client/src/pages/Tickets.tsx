@@ -564,7 +564,16 @@ const Tickets: React.FC = () => {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   displayEmpty
-                  sx={pageStyles.select}
+                  sx={{
+                    borderRadius: 1.5,
+                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                    fontSize: '0.8125rem',
+                    border: 'none',
+                    boxShadow: 'none',
+                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                    '&:hover': { boxShadow: 'none' },
+                    '&.Mui-focused': { boxShadow: 'none' },
+                  }}
                 >
                   <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
                   <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
@@ -650,7 +659,7 @@ const Tickets: React.FC = () => {
                     minWidth: { xs: 100, md: 120 },
                     pr: { xs: 2, md: 3 }
                   }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     Acciones
                     </Box>
                   </TableCell>

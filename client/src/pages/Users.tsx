@@ -448,22 +448,15 @@ const Users: React.FC = () => {
               onClick={handleCreateUser}
               size="small"
               sx={{
-                bgcolor: taxiMonterricoColors.green,
+                bgcolor: '#13944C',
                 borderRadius: 1.5,
                 px: 2,
                 py: 0.75,
                 fontWeight: 600,
                 textTransform: 'none',
                 fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                boxShadow: theme.palette.mode === 'dark' 
-                  ? '0 2px 8px rgba(46, 125, 50, 0.3)' 
-                  : '0 2px 8px rgba(46, 125, 50, 0.2)',
                 '&:hover': {
-                  bgcolor: '#158a5f',
-                  boxShadow: theme.palette.mode === 'dark' 
-                    ? '0 4px 12px rgba(46, 125, 50, 0.4)' 
-                    : '0 4px 12px rgba(46, 125, 50, 0.3)',
-                  transform: 'translateY(-1px)',
+                  bgcolor: '#0f7039',
                 },
                 transition: 'all 0.3s ease',
               }}
@@ -515,7 +508,7 @@ const Users: React.FC = () => {
                       bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', 
                       background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined,
                     }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', pr: { xs: 2, md: 3 } }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', pr: { xs: 2, md: 3 } }}>
                         Acciones
                       </Box>
                     </TableCell>

@@ -1483,7 +1483,6 @@ const ContactDetail: React.FC = () => {
     return (
       <>
         <DetailPageLayout
-          pageTitle="Información del contacto"
           breadcrumbItems={[
             { label: 'Contactos', path: '/contacts' },
             { label: `${contact?.firstName || ''} ${contact?.lastName || ''}` },

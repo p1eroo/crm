@@ -14,7 +14,6 @@ import {
 } from "@mui/material";
 import { taxiMonterricoColors } from "../../theme/colors";
 import {
-  KeyboardArrowRight,
   History,
   Dashboard,
   Info,
@@ -63,7 +62,7 @@ interface ActivityLog {
 
 interface DetailPageLayoutProps {
   // Header
-  pageTitle: string;
+  pageTitle?: string;
   breadcrumbItems: Array<{ label: string; path?: string }>;
   onBack: () => void;
 
@@ -199,12 +198,16 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
           {breadcrumbItems.map((item, index) => (
             <React.Fragment key={index}>
               {index > 0 && (
-                <KeyboardArrowRight
+                <Typography
+                  component="span"
                   sx={{
-                    fontSize: { xs: 16, sm: 18 },
+                    fontSize: { xs: "0.75rem", sm: "0.875rem" },
                     color: theme.palette.text.disabled,
+                    mx: 0.25,
                   }}
-                />
+                >
+                  /
+                </Typography>
               )}
               {item.path ? (
                 <Typography
@@ -240,17 +243,19 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
           ))}
         </Box>
 
-        {/* Título */}
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 700,
-            color: theme.palette.common.white,
-            fontSize: { xs: "1.125rem", sm: "1.375rem", md: "1.5rem" },
-          }}
-        >
-          {pageTitle}
-        </Typography>
+        {/* Título (solo si se proporciona) */}
+        {pageTitle && (
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              color: theme.palette.common.white,
+              fontSize: { xs: "1.125rem", sm: "1.375rem", md: "1.5rem" },
+            }}
+          >
+            {pageTitle}
+          </Typography>
+        )}
       </Box>
 
       {/* Contenido principal */}

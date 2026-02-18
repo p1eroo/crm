@@ -1095,7 +1095,6 @@ const DealDetail: React.FC = () => {
     return (
       <>
         <DetailPageLayout
-          pageTitle="Información del negocio"
           breadcrumbItems={[
             { label: 'Negocios', path: '/deals' },
             { label: deal?.name || '' },

@@ -315,12 +315,9 @@ const Profile: React.FC = () => {
         variant="h5"
         sx={{
           px: 10,
-          fontWeight: 700,
-          fontSize: { xs: "1.25rem", md: "1.5rem" },
-          background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === "dark" ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green} 100%)`,
-          backgroundClip: "text",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
+          fontWeight: 600,
+          fontSize: { xs: "1rem", md: "1.1375rem" },
+          color: theme.palette.mode === "dark" ? "white" : theme.palette.text.primary,
         }}
       >
         Perfil

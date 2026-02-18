@@ -17,7 +17,6 @@ import {
   Divider,
   Tooltip,
   Select,
-  FormControl,
   useTheme,
   Radio,
   RadioGroup,
@@ -113,7 +112,7 @@ const Contacts: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const [totalContacts, setTotalContacts] = useState(0);
-  const [sortBy, setSortBy] = useState("newest");
+  const [sortBy] = useState("newest");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -1318,44 +1317,6 @@ const Contacts: React.FC = () => {
         title="Contactos"
         actions={
           <>
-            <FormControl
-              size="small"
-              sx={{
-                minWidth: { xs: "100%", sm: 130 },
-                order: { xs: 1, sm: 0 },
-              }}
-            >
-              <Select
-                id="contacts-sort-select"
-                name="contacts-sort"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                displayEmpty
-                sx={{
-                  borderRadius: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                  fontSize: { xs: "0.75rem", sm: "0.8125rem" },
-                  border: `1.5px solid ${theme.palette.divider}`,
-                  transition: 'all 0.2s ease',
-                  "& .MuiOutlinedInput-notchedOutline": {
-                    border: 'none',
-                  },
-                  "&:hover": {
-                    borderColor: taxiMonterricoColors.green,
-                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                  },
-                  "&.Mui-focused": {
-                    borderColor: taxiMonterricoColors.green,
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                  },
-                }}
-              >
-                <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
-                <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
-                <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
-                <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
-              </Select>
-            </FormControl>
             <Box
               sx={{
                 display: "flex",
@@ -1370,22 +1331,20 @@ const Contacts: React.FC = () => {
                 startIcon={<Description sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                 onClick={handleDownloadTemplate}
                 sx={{
-                  border: `1.5px solid ${theme.palette.divider}`,
+                  border: 'none',
                   borderRadius: 1.5,
-                  bgcolor: 'transparent',
-                  color: theme.palette.text.secondary,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.12)' : 'rgba(33, 150, 243, 0.08)',
+                  color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976D2',
                   px: { xs: 1.25, sm: 1.5 },
                   py: { xs: 0.75, sm: 0.875 },
                   textTransform: 'none',
                   fontWeight: 600,
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? `${taxiMonterricoColors.green}1A` 
-                      : `${taxiMonterricoColors.green}0D`,
-                    color: taxiMonterricoColors.green,
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    borderColor: '#1976D2',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.14)',
+                    color: theme.palette.mode === 'dark' ? '#90CAF9' : '#1565C0',
+                    boxShadow: '0 4px 12px rgba(33, 150, 243, 0.25)',
                   },
                 }}
               >
@@ -1397,22 +1356,20 @@ const Contacts: React.FC = () => {
                 onClick={handleImportFromExcel}
                 disabled={importing}
                 sx={{
-                  border: `1.5px solid ${theme.palette.divider}`,
+                  border: 'none',
                   borderRadius: 1.5,
-                  bgcolor: 'transparent',
-                  color: theme.palette.text.secondary,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.12)' : 'rgba(156, 39, 176, 0.08)',
+                  color: theme.palette.mode === 'dark' ? '#CE93D8' : '#7B1FA2',
                   px: { xs: 1.25, sm: 1.5 },
                   py: { xs: 0.75, sm: 0.875 },
                   textTransform: 'none',
                   fontWeight: 600,
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? `${taxiMonterricoColors.green}1A` 
-                      : `${taxiMonterricoColors.green}0D`,
-                    color: taxiMonterricoColors.green,
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    borderColor: '#7B1FA2',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.2)' : 'rgba(156, 39, 176, 0.14)',
+                    color: theme.palette.mode === 'dark' ? '#E1BEE7' : '#6A1B9A',
+                    boxShadow: '0 4px 12px rgba(156, 39, 176, 0.25)',
                   },
                   '&:disabled': { opacity: 0.5 },
                 }}
@@ -1431,22 +1388,20 @@ const Contacts: React.FC = () => {
                 startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
                 onClick={handleExportToExcel}
                 sx={{
-                  border: `1.5px solid ${theme.palette.divider}`,
+                  border: 'none',
                   borderRadius: 1.5,
-                  bgcolor: 'transparent',
-                  color: theme.palette.text.secondary,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.12)' : 'rgba(0, 150, 136, 0.08)',
+                  color: theme.palette.mode === 'dark' ? '#4DB6AC' : '#00897B',
                   px: { xs: 1.25, sm: 1.5 },
                   py: { xs: 0.75, sm: 0.875 },
                   textTransform: 'none',
                   fontWeight: 600,
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? `${taxiMonterricoColors.green}1A` 
-                      : `${taxiMonterricoColors.green}0D`,
-                    color: taxiMonterricoColors.green,
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    borderColor: '#00897B',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
+                    color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
+                    boxShadow: '0 4px 12px rgba(0, 150, 136, 0.25)',
                   },
                 }}
               >
@@ -1457,12 +1412,12 @@ const Contacts: React.FC = () => {
                 startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
                 onClick={() => setShowColumnFilters(!showColumnFilters)}
                 sx={{
-                  border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+                  border: 'none',
                   borderRadius: 1.5,
                   bgcolor: showColumnFilters 
                     ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
-                    : 'transparent',
-                  color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                    : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.12)' : 'rgba(255, 152, 0, 0.08)'),
+                  color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFB74D' : '#E65100'),
                   px: { xs: 1.25, sm: 1.5 },
                   py: { xs: 0.75, sm: 0.875 },
                   order: { xs: 5, sm: 0 },
@@ -1470,12 +1425,12 @@ const Contacts: React.FC = () => {
                   fontWeight: 600,
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? `${taxiMonterricoColors.green}33` 
-                      : `${taxiMonterricoColors.green}1A`,
-                    color: taxiMonterricoColors.green,
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    borderColor: showColumnFilters ? taxiMonterricoColors.green : '#FF9800',
+                    bgcolor: showColumnFilters 
+                      ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}33` : `${taxiMonterricoColors.green}1A`)
+                      : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.14)'),
+                    color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFCC80' : '#EF6C00'),
+                    boxShadow: showColumnFilters ? `0 4px 12px ${taxiMonterricoColors.green}20` : '0 4px 12px rgba(255, 152, 0, 0.25)',
                   },
                 }}
               >
@@ -1486,18 +1441,16 @@ const Contacts: React.FC = () => {
                 startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                 onClick={() => handleOpen()}
                 sx={{
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                  bgcolor: '#13944C',
                   color: "white",
                   borderRadius: 1.5,
                   px: { xs: 1.25, sm: 1.5 },
                   py: { xs: 0.75, sm: 0.875 },
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                   textTransform: 'none',
                   fontWeight: 600,
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
-                    background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                    bgcolor: '#0f7039',
                   },
                 }}
               >
@@ -1742,7 +1695,7 @@ const Contacts: React.FC = () => {
               sx={{
                 ...pageStyles.tableHeaderCell,
                 px: { xs: 0.75, md: 1 },
-                justifyContent: "flex-start",
+                justifyContent: "center",
                 alignItems: "center",
               }}
             >
@@ -2276,7 +2229,7 @@ const Contacts: React.FC = () => {
                     px: { sm: 0.75, md: 1 },
                     py: { xs: 0.5, md: 0.75 },
                     alignItems: "center",
-                    justifyContent: "flex-start",
+                    justifyContent: "center",
                   }}
                 >
                   <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>

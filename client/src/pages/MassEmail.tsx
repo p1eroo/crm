@@ -315,14 +315,7 @@ const MassEmail: React.FC = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, p: 2, mb: 0 }}>
         <Typography
           variant="h5"
-          sx={{ fontWeight: 700, fontSize: { xs: '1.25rem', md: '1.5rem' } }}
-          style={{
-            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green} 100%)`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            color: 'transparent',
-            WebkitTextFillColor: 'transparent',
-          }}
+          sx={{ fontWeight: 600, fontSize: { xs: '1rem', md: '1.1375rem' }, color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary }}
         >
           Masivo
         </Typography>
@@ -360,23 +353,22 @@ const MassEmail: React.FC = () => {
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2, flexWrap: 'wrap' }}>
               <Button
                 size="small"
-                startIcon={<Description sx={{ fontSize: 16, color: theme.palette.mode === 'dark' ? '#fff' : '#6A1B9A' }} />}
+                startIcon={<Description sx={{ fontSize: 16 }} />}
                 onClick={handleDownloadTemplate}
                 sx={{
-                  border: theme.palette.mode === 'light' ? '1px solid #7B1FA2' : 'none',
+                  border: 'none',
                   borderRadius: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' ? '#7B1FA2' : '#F3E5F5',
-                  color: theme.palette.mode === 'dark' ? '#fff' : '#6A1B9A',
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.12)' : 'rgba(33, 150, 243, 0.08)',
+                  color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976D2',
                   px: 1.5,
                   py: 0.875,
                   textTransform: 'none',
                   fontWeight: 600,
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? '#9C27B0' : '#E1BEE7',
-                    color: theme.palette.mode === 'dark' ? '#fff' : '#4A148C',
-                    borderColor: theme.palette.mode === 'light' ? '#4A148C' : undefined,
-                    boxShadow: '0 4px 12px rgba(123, 31, 162, 0.25)',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.14)',
+                    color: theme.palette.mode === 'dark' ? '#90CAF9' : '#1565C0',
+                    boxShadow: '0 4px 12px rgba(33, 150, 243, 0.25)',
                   },
                 }}
               >
@@ -384,23 +376,22 @@ const MassEmail: React.FC = () => {
               </Button>
               <Button
                 size="small"
-                startIcon={<FontAwesomeIcon icon={faFileImport} style={{ fontSize: 16, color: theme.palette.mode === 'dark' ? '#fff' : taxiMonterricoColors.greenDark }} />}
+                startIcon={<FontAwesomeIcon icon={faFileImport} style={{ fontSize: 16 }} />}
                 onClick={() => fileInputRef.current?.click()}
                 sx={{
-                  border: theme.palette.mode === 'light' ? `1px solid ${taxiMonterricoColors.green}` : 'none',
+                  border: 'none',
                   borderRadius: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : '#E8F5E9',
-                  color: theme.palette.mode === 'dark' ? '#fff' : taxiMonterricoColors.greenDark,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.12)' : 'rgba(156, 39, 176, 0.08)',
+                  color: theme.palette.mode === 'dark' ? '#CE93D8' : '#7B1FA2',
                   px: 1.5,
                   py: 0.875,
                   textTransform: 'none',
                   fontWeight: 600,
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : '#C8E6C9',
-                    color: theme.palette.mode === 'dark' ? '#fff' : taxiMonterricoColors.greenDark,
-                    borderColor: theme.palette.mode === 'light' ? taxiMonterricoColors.greenDark : undefined,
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.2)' : 'rgba(156, 39, 176, 0.14)',
+                    color: theme.palette.mode === 'dark' ? '#E1BEE7' : '#6A1B9A',
+                    boxShadow: '0 4px 12px rgba(156, 39, 176, 0.25)',
                   },
                 }}
               >
@@ -415,29 +406,27 @@ const MassEmail: React.FC = () => {
               />
               <Button
                 size="small"
-                startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16, color: theme.palette.mode === 'dark' ? '#fff' : '#455A64' }} />}
+                startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
                 onClick={handleExportContacts}
                 disabled={contacts.length === 0}
                 sx={{
-                  border: theme.palette.mode === 'light' ? '1px solid #546E7A' : 'none',
+                  border: 'none',
                   borderRadius: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' ? '#546E7A' : '#ECEFF1',
-                  color: theme.palette.mode === 'dark' ? '#fff' : '#37474F',
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.12)' : 'rgba(0, 150, 136, 0.08)',
+                  color: theme.palette.mode === 'dark' ? '#4DB6AC' : '#00897B',
                   px: 1.5,
                   py: 0.875,
                   textTransform: 'none',
                   fontWeight: 600,
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? '#607D8B' : '#CFD8DC',
-                    color: theme.palette.mode === 'dark' ? '#fff' : '#263238',
-                    borderColor: theme.palette.mode === 'light' ? '#37474F' : undefined,
-                    boxShadow: '0 4px 12px rgba(84, 110, 122, 0.25)',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
+                    color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
+                    boxShadow: '0 4px 12px rgba(0, 150, 136, 0.25)',
                   },
                   '&:disabled': {
-                    bgcolor: theme.palette.mode === 'dark' ? '#455A64' : '#ECEFF1',
-                    color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : theme.palette.text.disabled,
-                    borderColor: theme.palette.mode === 'light' ? 'rgba(84, 110, 122, 0.4)' : undefined,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.06)' : 'rgba(0, 150, 136, 0.04)',
+                    color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.5)' : theme.palette.text.disabled,
                     opacity: 1,
                   },
                 }}
@@ -631,8 +620,9 @@ const MassEmail: React.FC = () => {
               onClick={handleSend}
               disabled={sending || !subject.trim() || !body.trim()}
               sx={{
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+                bgcolor: '#13944C',
                 color: 'white',
+                '&:hover': { bgcolor: '#0f7039' },
               }}
             >
               {sending ? 'Enviando…' : 'Enviar correos'}

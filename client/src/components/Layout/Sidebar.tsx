@@ -99,20 +99,13 @@ const adminMenuItems = [
           boxSizing: 'border-box',
           overflowX: 'hidden',
           overflowY: 'visible',
-          bgcolor: 'transparent',
-          backgroundColor: 'transparent',
-          background: 'transparent',
           border: 'none', // Eliminar todos los bordes primero
           borderRight: theme.palette.mode === 'light'
             ? '0.5px solid rgba(0, 0, 0, 0.06)'
             : '0.5px solid rgba(255, 255, 255, 0.06)',
-          borderTop: 'none', // Asegurar que no haya borde superior
-          borderBottom: 'none', // Asegurar que no haya borde inferior
-          borderLeft: 'none', // Asegurar que no haya borde izquierdo
-          boxShadow: 'none',
           display: 'flex',
           flexDirection: 'column',
-          py: 0,
+          py: 1,
           position: 'fixed',
           height: '100vh',
           top: 0,

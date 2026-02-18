@@ -15,7 +15,6 @@ import {
   CircularProgress,
   Divider,
   Avatar,
-  FormControl,
   Select,
   Tooltip,
   Menu,
@@ -82,7 +81,7 @@ const Companies: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [search] = useState('');
-  const [sortBy, setSortBy] = useState('newest');
+  const [sortBy] = useState('newest');
   const [totalCompanies, setTotalCompanies] = useState(0);
   const companyFormDataRef = useRef<{ formData: CompanyFormData; setFormData: React.Dispatch<React.SetStateAction<CompanyFormData>> }>({
     formData: getInitialFormData(null),
@@ -1838,44 +1837,6 @@ const Companies: React.FC = () => {
           title="Empresas"
           actions={
             <>
-                <FormControl
-                  size="small"
-                  sx={{
-                    minWidth: { xs: "100%", sm: 130 },
-                    order: { xs: 1, sm: 0 },
-                  }}
-                >
-                  <Select
-                    id="companies-sort-select"
-                    name="companies-sort"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    displayEmpty
-                    sx={{
-                      borderRadius: 1.5,
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                      fontSize: { xs: "0.75rem", sm: "0.8125rem" },
-                      border: `1.5px solid ${theme.palette.divider}`,
-                      transition: 'all 0.2s ease',
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        border: 'none',
-                      },
-                      "&:hover": {
-                        borderColor: taxiMonterricoColors.green,
-                        boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                      },
-                      "&.Mui-focused": {
-                        borderColor: taxiMonterricoColors.green,
-                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                      },
-                    }}
-                  >
-                    <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
-                    <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
-                    <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
-                    <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
-                  </Select>
-                </FormControl>
                 <Box
                   sx={{
                     display: "flex",
@@ -1890,21 +1851,19 @@ const Companies: React.FC = () => {
                     startIcon={<Description sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                     onClick={handleDownloadTemplate}
                     sx={{
-                      border: `1.5px solid ${theme.palette.divider}`,
+                      border: 'none',
                       borderRadius: 1.5,
-                      bgcolor: 'transparent',
-                      color: theme.palette.text.secondary,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.12)' : 'rgba(33, 150, 243, 0.08)',
+                      color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976D2',
                       px: { xs: 1.25, sm: 1.5 },
                       py: { xs: 0.75, sm: 0.875 },
                       textTransform: 'none',
                       fontWeight: 600,
                       '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        bgcolor: theme.palette.mode === 'dark' 
-                          ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
-                          : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
-                        color: taxiMonterricoColors.green,
-                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                        borderColor: '#1976D2',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.14)',
+                        color: theme.palette.mode === 'dark' ? '#90CAF9' : '#1565C0',
+                        boxShadow: '0 4px 12px rgba(33, 150, 243, 0.25)',
                       },
                     }}
                   >
@@ -1916,21 +1875,19 @@ const Companies: React.FC = () => {
                     onClick={handleImportFromExcel}
                     disabled={importing}
                     sx={{
-                      border: `1.5px solid ${theme.palette.divider}`,
+                      border: 'none',
                       borderRadius: 1.5,
-                      bgcolor: 'transparent',
-                      color: theme.palette.text.secondary,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.12)' : 'rgba(156, 39, 176, 0.08)',
+                      color: theme.palette.mode === 'dark' ? '#CE93D8' : '#7B1FA2',
                       px: { xs: 1.25, sm: 1.5 },
                       py: { xs: 0.75, sm: 0.875 },
                       textTransform: 'none',
                       fontWeight: 600,
                       '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        bgcolor: theme.palette.mode === 'dark' 
-                          ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
-                          : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
-                        color: taxiMonterricoColors.green,
-                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                        borderColor: '#7B1FA2',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.2)' : 'rgba(156, 39, 176, 0.14)',
+                        color: theme.palette.mode === 'dark' ? '#E1BEE7' : '#6A1B9A',
+                        boxShadow: '0 4px 12px rgba(156, 39, 176, 0.25)',
                       },
                       '&:disabled': { opacity: 0.5 },
                     }}
@@ -1943,21 +1900,19 @@ const Companies: React.FC = () => {
                     startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
                     onClick={handleExportToExcel}
                     sx={{
-                      border: `1.5px solid ${theme.palette.divider}`,
+                      border: 'none',
                       borderRadius: 1.5,
-                      bgcolor: 'transparent',
-                      color: theme.palette.text.secondary,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.12)' : 'rgba(0, 150, 136, 0.08)',
+                      color: theme.palette.mode === 'dark' ? '#4DB6AC' : '#00897B',
                       px: { xs: 1.25, sm: 1.5 },
                       py: { xs: 0.75, sm: 0.875 },
                       textTransform: 'none',
                       fontWeight: 600,
                       '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        bgcolor: theme.palette.mode === 'dark' 
-                          ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
-                          : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
-                        color: taxiMonterricoColors.green,
-                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                        borderColor: '#00897B',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
+                        color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
+                        boxShadow: '0 4px 12px rgba(0, 150, 136, 0.25)',
                       },
                     }}
                   >
@@ -1968,24 +1923,24 @@ const Companies: React.FC = () => {
                     startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
                     onClick={() => setShowColumnFilters(!showColumnFilters)}
                     sx={{
-                      border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+                      border: 'none',
                       borderRadius: 1.5,
                       bgcolor: showColumnFilters 
                         ? (theme.palette.mode === 'dark' ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.15) : hexToRgba(taxiMonterricoColors.greenEmerald, 0.08))
-                        : 'transparent',
-                      color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                        : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.12)' : 'rgba(255, 152, 0, 0.08)'),
+                      color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFB74D' : '#E65100'),
                       px: { xs: 1.25, sm: 1.5 },
                       py: { xs: 0.75, sm: 0.875 },
                       order: { xs: 5, sm: 0 },
                       textTransform: 'none',
                       fontWeight: 600,
                       '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        bgcolor: theme.palette.mode === 'dark' 
-                          ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.2)
-                          : hexToRgba(taxiMonterricoColors.greenEmerald, 0.1),
-                        color: taxiMonterricoColors.green,
-                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                        borderColor: showColumnFilters ? taxiMonterricoColors.green : '#FF9800',
+                        bgcolor: showColumnFilters 
+                          ? (theme.palette.mode === 'dark' ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.2) : hexToRgba(taxiMonterricoColors.greenEmerald, 0.1))
+                          : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.14)'),
+                        color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFCC80' : '#EF6C00'),
+                        boxShadow: showColumnFilters ? `0 4px 12px ${taxiMonterricoColors.green}20` : '0 4px 12px rgba(255, 152, 0, 0.25)',
                       },
                     }}
                   >
@@ -1996,18 +1951,16 @@ const Companies: React.FC = () => {
                     startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                     onClick={() => handleOpen()}
                     sx={{
-                      background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                      bgcolor: '#13944C',
                       color: "white",
                       borderRadius: 1.5,
                       px: { xs: 1.25, sm: 1.5 },
                       py: { xs: 0.75, sm: 0.875 },
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                       order: { xs: 2, sm: 0 },
                       textTransform: 'none',
                       fontWeight: 600,
                       '&:hover': {
-                        boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
-                        background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                        bgcolor: '#0f7039',
                       },
                     }}
                   >
@@ -2204,32 +2157,6 @@ const Companies: React.FC = () => {
             </Box>
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Origen de lead</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, origenLead: '' }))} sx={{ p: 0.25, opacity: columnFilters.origenLead ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.origenLead}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, origenLead: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
-            </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Etapa</Typography>
                 {showColumnFilters && (
                   <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))} sx={{ p: 0.25, opacity: columnFilters.etapa ? 1 : 0.3 }}>
@@ -2254,9 +2181,36 @@ const Companies: React.FC = () => {
                 />
               )}
             </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 }, pl: { xs: 2, md: 2.5 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Origen de lead</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, origenLead: '' }))} sx={{ p: 0.25, opacity: columnFilters.origenLead ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.origenLead}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, origenLead: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
+            </Box>
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
               px: { xs: 0.5, md: 0.75 },
+              pl: { xs: 2, md: 2.5 },
               justifyContent: 'flex-start',
               alignItems: 'center'
             }}>
@@ -2265,7 +2219,7 @@ const Companies: React.FC = () => {
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
               px: { xs: 0.5, md: 0.75 },
-              justifyContent: 'flex-start',
+              justifyContent: 'center',
               alignItems: 'center'
             }}>
                   Acciones
@@ -2479,23 +2433,6 @@ const Companies: React.FC = () => {
                     {safeValue((company as any).email)}
                   </Typography>
                 </Box>
-                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      color: theme.palette.text.primary,
-                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                      fontWeight: 400,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      maxWidth: { xs: '120px', md: '150px' },
-                    }}
-                    title={getLeadSourceLabel((company as any).leadSource)}
-                  >
-                    {getLeadSourceLabel((company as any).leadSource)}
-                  </Typography>
-                </Box>
                 <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
                     <StageChipWithProgress
                       stage={company.lifecycleStage || 'lead'}
@@ -2558,16 +2495,31 @@ const Companies: React.FC = () => {
                     ))}
                     </Menu>
                 </Box>
-                
-                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, pl: { xs: 2, md: 2.5 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: company.estimatedRevenue 
-                        ? (theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green)
-                        : theme.palette.text.primary,
+                      color: theme.palette.text.primary,
                       fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                      fontWeight: 500,
+                      fontWeight: 400,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: { xs: '120px', md: '150px' },
+                    }}
+                    title={getLeadSourceLabel((company as any).leadSource)}
+                  >
+                    {getLeadSourceLabel((company as any).leadSource)}
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, pl: { xs: 2, md: 2.5 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: company.estimatedRevenue != null ? (theme.palette.mode === 'dark' ? '#4ade80' : '#15803d') : theme.palette.text.primary,
+                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                      fontWeight: 600,
                     }}
                   >
                     {company.estimatedRevenue != null

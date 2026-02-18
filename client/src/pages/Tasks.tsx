@@ -30,7 +30,7 @@ import {
   LinearProgress,
   Autocomplete,
 } from '@mui/material';
-import { Add, Search, Schedule, PendingActions, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday } from '@mui/icons-material';
+import { Add, Schedule, PendingActions, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday } from '@mui/icons-material';
 import { PencilLine, Eye, Trash } from 'lucide-react';
 import { RiFileWarningLine } from 'react-icons/ri';
 import { IoMdCheckboxOutline } from 'react-icons/io';
@@ -89,8 +89,7 @@ const Tasks: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [search, setSearch] = useState('');
-  const [searchInput, setSearchInput] = useState(''); // Estado local para el input
+  const [search] = useState('');
   const [sortBy] = useState('newest');
   const [formData, setFormData] = useState({
     title: '',
@@ -168,15 +167,6 @@ const Tasks: React.FC = () => {
   const totalPages = Math.ceil(totalTasks / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalTasks);
-
-  // Debounce para la búsqueda
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(searchInput);
-    }, 500); // Esperar 500ms después de que el usuario deje de escribir
-
-    return () => clearTimeout(timer);
-  }, [searchInput]);
 
   // Resetear a la página 1 cuando cambien los filtros
   useEffect(() => {
@@ -1079,68 +1069,26 @@ const Tasks: React.FC = () => {
               <Typography 
                 variant="h5" 
                 sx={{
-                  fontWeight: 700,
-                  fontSize: { xs: '1.25rem', md: '1.5rem' },
-                  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  fontWeight: 600,
+                  fontSize: { xs: '1rem', md: '1.1375rem' },
+                  color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
                 }}
               >
                 Tareas
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, alignItems: 'center', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-              <TextField
-                size="small"
-                placeholder="Buscar"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                InputProps={{
-                  startAdornment: <Search sx={{ 
-                    mr: 1, 
-                    color: theme.palette.text.secondary, 
-                    fontSize: { xs: 18, sm: 20 },
-                  }} />,
-                }}
-                sx={{ 
-                  minWidth: { xs: '100%', sm: 150 },
-                  maxWidth: { xs: '100%', sm: 180 },
-                  bgcolor: theme.palette.background.paper,
-                  borderRadius: 1.5,
-                  order: { xs: 1, sm: 0 },
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                    border: `1.5px solid ${theme.palette.divider}`,
-                    '& fieldset': {
-                      border: 'none',
-                    },
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    },
-                    '&.Mui-focused': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                    },
-                    '& input::placeholder': {
-                      fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                      opacity: 0.7,
-                    },
-                  },
-                }}
-              />
               <Button
                 size="small"
                 onClick={() => setShowColumnFilters(!showColumnFilters)}
                 startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
                 sx={{
-                  border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+                  border: 'none',
                   borderRadius: 1.5,
                   bgcolor: showColumnFilters
                     ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
-                    : (theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.grey[100]),
-                  color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                    : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.12)' : 'rgba(255, 152, 0, 0.08)'),
+                  color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFB74D' : '#E65100'),
                   px: { xs: 1.25, sm: 1.5 },
                   py: { xs: 0.75, sm: 0.875 },
                   order: { xs: 2, sm: 0 },
@@ -1148,12 +1096,12 @@ const Tasks: React.FC = () => {
                   fontWeight: 600,
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor: theme.palette.mode === 'dark'
-                      ? `${taxiMonterricoColors.green}33`
-                      : `${taxiMonterricoColors.green}1A`,
-                    color: taxiMonterricoColors.green,
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    borderColor: 'transparent',
+                    bgcolor: showColumnFilters
+                      ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}33` : `${taxiMonterricoColors.green}1A`)
+                      : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.14)'),
+                    color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFCC80' : '#EF6C00'),
+                    boxShadow: showColumnFilters ? `0 4px 12px ${taxiMonterricoColors.green}20` : '0 4px 12px rgba(255, 152, 0, 0.25)',
                   },
                 }}
               >
@@ -1164,18 +1112,16 @@ const Tasks: React.FC = () => {
                 onClick={() => handleOpen()}
                 startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                 sx={{
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                  bgcolor: '#13944C',
                   color: "white",
                   borderRadius: 1.5,
                   px: { xs: 1.25, sm: 1.5 },
                   py: { xs: 0.75, sm: 0.875 },
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                   order: { xs: 3, sm: 0 },
                   textTransform: 'none',
                   fontWeight: 600,
                   '&:hover': {
-                    background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}40`,
+                    bgcolor: '#0f7039',
                   },
                 }}
               >

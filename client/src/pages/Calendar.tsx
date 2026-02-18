@@ -27,7 +27,6 @@ import {
 } from '@mui/icons-material';
 import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
-import { taxiMonterricoColors } from '../theme/colors';
 import {
   getCalendarDays,
   isToday as isTodayUtil,
@@ -337,15 +336,9 @@ const Calendar: React.FC = () => {
         <Typography
           variant="h5"
           sx={{
-            fontWeight: 700,
-            fontSize: { xs: '1.25rem', md: '1.5rem' },
-          }}
-          style={{
-            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green} 100%)`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            color: 'transparent',
-            WebkitTextFillColor: 'transparent',
+            fontWeight: 600,
+            fontSize: { xs: '1rem', md: '1.1375rem' },
+            color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
           }}
         >
           Calendario

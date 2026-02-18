@@ -20,11 +20,7 @@ import { alpha } from '@mui/material/styles';
 import { 
   Search, 
   Contacts as PersonIcon,
-  DarkMode,
-  LightMode,
   Logout,
-  Menu as MenuIcon,
-  Settings,
   Dashboard as DashboardIcon,
   Business as BusinessIcon,
   AttachMoney as AttachMoneyIcon,
@@ -34,9 +30,8 @@ import {
   Assessment as AssessmentIcon,
   Description as DescriptionIcon,
   Security as SecurityIcon,
-  Support as SupportIcon,
 } from '@mui/icons-material';
-import { Logs } from 'lucide-react';
+import { TextAlignStart, Settings, Sun, Moon, Tag } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
@@ -271,20 +266,11 @@ const Header: React.FC = () => {
                 onClick={() => navigate('/tickets')}
                 sx={{
                   bgcolor: 'transparent',
-                  border: theme.palette.mode === 'dark'
-                    ? '1px solid rgba(255, 255, 255, 0.12)'
-                    : '1px solid rgba(0, 0, 0, 0.12)',
-                  borderRadius: 2.5,
                   width: 40,
                   height: 40,
-                  '&:hover': {
-                    borderColor: theme.palette.mode === 'dark'
-                      ? 'rgba(255, 255, 255, 0.2)'
-                      : 'rgba(0, 0, 0, 0.2)',
-                  },
                 }}
               >
-                <SupportIcon sx={{ fontSize: 24, color: '#637381' }} />
+                <Tag size={24} color={theme.palette.text.secondary} />
               </IconButton>
             </Tooltip>
 
@@ -295,23 +281,14 @@ const Header: React.FC = () => {
                 onClick={toggleTheme}
                 sx={{ 
                   bgcolor: 'transparent',
-                  border: theme.palette.mode === 'dark' 
-                    ? '1px solid rgba(255, 255, 255, 0.12)' 
-                    : '1px solid rgba(0, 0, 0, 0.12)',
-                  borderRadius: 2.5,
                   width: 40,
                   height: 40,
-                  '&:hover': {
-                    borderColor: theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.2)' 
-                      : 'rgba(0, 0, 0, 0.2)',
-                  },
                 }}
               >
                 {mode === 'light' ? (
-                  <DarkMode sx={{ fontSize: 24, color: '#637381' }} />
+                  <Moon size={24} color={theme.palette.text.secondary} />
                 ) : (
-                  <LightMode sx={{ fontSize: 24, color: '#637381' }} />
+                  <Sun size={24} color={theme.palette.text.secondary} />
                 )}
               </IconButton>
             </Tooltip>
@@ -326,20 +303,11 @@ const Header: React.FC = () => {
                 onClick={() => setSettingsDrawerOpen(true)}
                 sx={{ 
                   bgcolor: 'transparent',
-                  border: theme.palette.mode === 'dark' 
-                    ? '1px solid rgba(255, 255, 255, 0.12)' 
-                    : '1px solid rgba(0, 0, 0, 0.12)',
-                  borderRadius: 2.5,
                   width: 40,
                   height: 40,
-                  '&:hover': {
-                    borderColor: theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.2)' 
-                      : 'rgba(0, 0, 0, 0.2)',
-                  },
                 }}
               >
-                <Settings sx={{ fontSize: 24, color: '#637381' }} />
+                <Settings size={24} color={theme.palette.text.secondary} />
               </IconButton>
             </Tooltip>
 
@@ -483,7 +451,7 @@ const Header: React.FC = () => {
               },
             }}
           >
-            <MenuIcon sx={{ fontSize: 24, color: '#637381' }} />
+            <TextAlignStart size={24} color={theme.palette.text.secondary} />
           </IconButton>
         </Box>
       )}
@@ -515,22 +483,15 @@ const Header: React.FC = () => {
                 flexShrink: 0,
                 width: 44,
                 height: 44,
-                borderRadius: 2.5,
                 bgcolor: 'transparent',
-                border: theme.palette.mode === 'light'
-                  ? '0.5px solid rgba(0, 0, 0, 0.06)'
-                  : '0.5px solid rgba(255, 255, 255, 0.06)',
                 '&:hover': {
                   bgcolor: theme.palette.mode === 'dark'
                     ? 'rgba(255, 255, 255, 0.08)'
                     : 'rgba(0, 0, 0, 0.06)',
-                  border: theme.palette.mode === 'light'
-                    ? '0.5px solid rgba(0, 0, 0, 0.1)'
-                    : '0.5px solid rgba(255, 255, 255, 0.1)',
                 },
               }}
             >
-              <Logs size={22} style={{ color: '#637381' }} />
+              <TextAlignStart size={32} color={theme.palette.text.secondary} />
             </IconButton>
           </Tooltip>
         </Box>
@@ -546,20 +507,11 @@ const Header: React.FC = () => {
             onClick={() => navigate('/tickets')}
             sx={{
               bgcolor: 'transparent',
-              border: theme.palette.mode === 'dark'
-                ? '1px solid rgba(255, 255, 255, 0.12)'
-                : '1px solid rgba(0, 0, 0, 0.12)',
-              borderRadius: 2.5,
               width: 40,
               height: 40,
-              '&:hover': {
-                borderColor: theme.palette.mode === 'dark'
-                  ? 'rgba(255, 255, 255, 0.2)'
-                  : 'rgba(0, 0, 0, 0.2)',
-              },
             }}
           >
-            <SupportIcon sx={{ fontSize: 24, color: '#637381' }} />
+            <Tag size={24} color={theme.palette.text.secondary} />
           </IconButton>
         </Tooltip>
 
@@ -570,23 +522,14 @@ const Header: React.FC = () => {
             onClick={toggleTheme}
             sx={{ 
               bgcolor: 'transparent',
-              border: theme.palette.mode === 'dark' 
-                ? '1px solid rgba(255, 255, 255, 0.12)' 
-                : '1px solid rgba(0, 0, 0, 0.12)',
-              borderRadius: 2.5,
               width: 40,
               height: 40,
-              '&:hover': {
-                borderColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.2)' 
-                  : 'rgba(0, 0, 0, 0.2)',
-              },
             }}
           >
             {mode === 'light' ? (
-              <DarkMode sx={{ fontSize: 24, color: '#637381' }} />
+              <Moon size={24} color={theme.palette.text.secondary} />
             ) : (
-              <LightMode sx={{ fontSize: 24, color: '#637381' }} />
+              <Sun size={24} color={theme.palette.text.secondary} />
             )}
           </IconButton>
         </Tooltip>
@@ -601,20 +544,11 @@ const Header: React.FC = () => {
             onClick={() => setSettingsDrawerOpen(true)}
             sx={{ 
               bgcolor: 'transparent',
-              border: theme.palette.mode === 'dark' 
-                ? '1px solid rgba(255, 255, 255, 0.12)' 
-                : '1px solid rgba(0, 0, 0, 0.12)',
-              borderRadius: 2.5,
               width: 40,
               height: 40,
-              '&:hover': {
-                borderColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.2)' 
-                  : 'rgba(0, 0, 0, 0.2)',
-              },
             }}
           >
-            <Settings sx={{ fontSize: 24, color: '#637381' }} />
+            <Settings size={24} color={theme.palette.text.secondary} />
           </IconButton>
         </Tooltip>
 

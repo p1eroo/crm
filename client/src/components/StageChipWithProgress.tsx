@@ -71,7 +71,6 @@ export const StageChipWithProgress: React.FC<StageChipWithProgressProps> = ({
             fontSize: '0.625rem',
             fontWeight: 600,
             color: showValue > 40 ? theme.palette.common.white : theme.palette.text.primary,
-            textShadow: showValue > 40 ? '0 0 1px rgba(0,0,0,0.5)' : 'none',
             pointerEvents: 'none',
           }}
         >

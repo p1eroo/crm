@@ -1612,7 +1612,6 @@ const tab2Content = (
       onChange={handleLogoUpload}
     />
     <DetailPageLayout
-      pageTitle="Detalles de la empresa"
       breadcrumbItems={[
         { label: 'Empresas', path: '/companies' },
         { label: company?.name || '' },
