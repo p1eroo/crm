@@ -50,6 +50,7 @@ interface ContactRow {
   id: string;
   email: string;
   nombre: string;
+  empresa?: string;
 }
 
 const STEPS = ['Cargar contactos', 'Crear email', 'Resultados'];
@@ -78,6 +79,7 @@ const processFile = (file: File): Promise<ContactRow[]> => {
         const headers = (json[0] as string[]).map((h) => String(h || '').toLowerCase());
         const emailIdx = headers.findIndex((h) => /^(email|correo|e-mail|mail)$/.test(h));
         const nombreIdx = headers.findIndex((h) => /^(nombre|name|cliente|client)$/.test(h));
+        const empresaIdx = headers.findIndex((h) => /^(empresa|company|compañía|compania|razón social|razon social)$/.test(h));
         if (emailIdx === -1) reject(new Error('Falta columna email/correo'));
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const rows = json.slice(1) as (string | number)[][];
@@ -85,12 +87,14 @@ const processFile = (file: File): Promise<ContactRow[]> => {
         rows.forEach((row, i) => {
           const email = String(row[emailIdx] ?? '').trim().toLowerCase();
           const nombre = nombreIdx >= 0 ? String(row[nombreIdx] ?? '').trim() : '';
+          const empresa = empresaIdx >= 0 ? String(row[empresaIdx] ?? '').trim() : '';
           if (!email) return;
           if (!emailRegex.test(email)) return;
           contacts.push({
             id: `c_${Date.now()}_${i}`,
             email,
             nombre: nombre || '',
+            empresa: empresa || undefined,
           });
         });
         const uniq = contacts.filter((c, i, a) => a.findIndex((x) => x.email === c.email) === i);
@@ -114,7 +118,7 @@ const processContent = (html: string, contact: ContactRow): string =>
     .replace(/\{\{nombre\}\}/g, contact.nombre || '')
     .replace(/\{\{email\}\}/g, contact.email || '')
     .replace(/\{\{fecha\}\}/g, new Date().toLocaleDateString('es-ES'))
-    .replace(/\{\{empresa\}\}/g, 'Taxi Monterrico');
+    .replace(/\{\{empresa\}\}/g, contact.empresa || 'Taxi Monterrico');
 
 interface AttachmentRow {
   name: string;
@@ -144,7 +148,7 @@ const MassEmail: React.FC = () => {
 
   const handleDownloadTemplate = () => {
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([['email', 'nombre']]);
+    const ws = XLSX.utils.aoa_to_sheet([['email', 'nombre', 'empresa']]);
     XLSX.utils.book_append_sheet(wb, ws, 'Contactos');
     XLSX.writeFile(wb, 'Plantilla_masivo_contactos.xlsx');
   };
@@ -152,7 +156,7 @@ const MassEmail: React.FC = () => {
   const handleExportContacts = () => {
     if (contacts.length === 0) return;
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(contacts.map((c) => ({ email: c.email, nombre: c.nombre })));
+    const ws = XLSX.utils.json_to_sheet(contacts.map((c) => ({ email: c.email, nombre: c.nombre, empresa: c.empresa || '' })));
     XLSX.utils.book_append_sheet(wb, ws, 'Contactos');
     XLSX.writeFile(wb, `contactos_masivo_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
@@ -195,6 +199,7 @@ const MassEmail: React.FC = () => {
       html: processContent(body, c),
       attachments: baseAttachments,
       recipientName: c.nombre || '',
+      companyName: c.empresa || undefined,
     }));
   };
 
@@ -459,6 +464,7 @@ const MassEmail: React.FC = () => {
                   <TableRow>
                     <TableCell sx={{ color: theme.palette.mode === 'dark' ? '#A0AEC0' : theme.palette.text.secondary, fontWeight: 500, fontSize: '15px', py: 1.5 }}>Nombre</TableCell>
                     <TableCell sx={{ color: theme.palette.mode === 'dark' ? '#A0AEC0' : theme.palette.text.secondary, fontWeight: 500, fontSize: '15px', py: 1.5 }}>Email</TableCell>
+                    <TableCell sx={{ color: theme.palette.mode === 'dark' ? '#A0AEC0' : theme.palette.text.secondary, fontWeight: 500, fontSize: '15px', py: 1.5 }}>Empresa</TableCell>
                     <TableCell align="right" sx={{ color: theme.palette.mode === 'dark' ? '#A0AEC0' : theme.palette.text.secondary, fontWeight: 500, fontSize: '15px', py: 1.5 }}>Acciones</TableCell>
                   </TableRow>
                 </TableHead>
@@ -466,7 +472,7 @@ const MassEmail: React.FC = () => {
                   {contacts.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={3}
+                        colSpan={4}
                         align="center"
                         sx={{
                           py: 6,
@@ -483,6 +489,7 @@ const MassEmail: React.FC = () => {
                       <TableRow key={c.id}>
                         <TableCell sx={{ color: theme.palette.text.primary, fontSize: '15px' }}>{c.nombre}</TableCell>
                         <TableCell sx={{ color: theme.palette.text.primary, fontSize: '15px' }}>{c.email}</TableCell>
+                        <TableCell sx={{ color: theme.palette.text.primary, fontSize: '15px' }}>{c.empresa || '—'}</TableCell>
                         <TableCell align="right">
                           <IconButton size="small" onClick={() => removeContact(c.id)} sx={pageStyles.actionButtonDelete(theme)}>
                             <Trash size={18} />

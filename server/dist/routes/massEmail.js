@@ -54,13 +54,41 @@ async function ensureCompanyByDomain(domain, ownerId) {
     });
     return company;
 }
-/** Asegura que exista un contacto con ese email; si no, lo crea. Crea empresa por dominio y vincula el contacto. */
-async function ensureContactByEmail(email, recipientName, ownerId) {
+/** Asegura que exista una empresa con ese nombre; si no, la crea. Siempre asigna/actualiza domain con el del correo. */
+async function ensureCompanyByName(name, domain, ownerId) {
+    const normalizedName = name.trim();
+    if (!normalizedName)
+        return null;
+    let company = await Company_1.Company.findOne({
+        where: { name: { [sequelize_1.Op.iLike]: normalizedName } },
+    });
+    if (company) {
+        if (domain && !company.domain) {
+            await company.update({ domain: domain.trim().toLowerCase() });
+        }
+        return company;
+    }
+    company = await Company_1.Company.create({
+        name: normalizedName,
+        domain: domain?.trim().toLowerCase() ?? undefined,
+        ownerId: ownerId ?? null,
+        lifecycleStage: 'lead',
+    });
+    return company;
+}
+/** Asegura que exista un contacto con ese email; si no, lo crea. Si hay companyName usa ese nombre con dominio del correo; si no, empresa por dominio (nombre = dominio). */
+async function ensureContactByEmail(email, recipientName, ownerId, companyName) {
     const normalized = email.trim().toLowerCase();
     if (!normalized)
         return;
     const domain = getDomainFromEmail(normalized);
-    const company = domain ? await ensureCompanyByDomain(domain, ownerId) : null;
+    let company = null;
+    if (companyName && String(companyName).trim()) {
+        company = await ensureCompanyByName(String(companyName).trim(), domain, ownerId);
+    }
+    else if (domain) {
+        company = await ensureCompanyByDomain(domain, ownerId);
+    }
     const companyId = company?.id ?? null;
     const existing = await Contact_1.Contact.findOne({
         where: { email: { [sequelize_1.Op.iLike]: normalized } },
@@ -169,7 +197,7 @@ router.post('/send-bulk', async (req, res) => {
         }
         const userId = req.userId ?? null;
         for (const e of emails) {
-            await ensureContactByEmail(e.to, e.recipientName, userId);
+            await ensureContactByEmail(e.to, e.recipientName, userId, e.companyName ?? e.empresa);
         }
         const result = await (0, massEmailService_1.sendBulkEmails)(emails);
         for (const r of result.results) {
@@ -214,7 +242,7 @@ router.post('/send-bulk-stream', async (req, res) => {
         }
         const userId = req.userId ?? null;
         for (const e of emails) {
-            await ensureContactByEmail(e.to, e.recipientName, userId);
+            await ensureContactByEmail(e.to, e.recipientName, userId, e.companyName ?? e.empresa);
         }
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
