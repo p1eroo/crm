@@ -271,6 +271,11 @@ const AppContent: React.FC = () => {
   const theme = React.useMemo(() => getTheme(effectiveMode), [effectiveMode]);
   const { user, loading } = useAuth();
 
+  // Sincronizar data-theme en el root para estilos de PrimeReact (Calendar) en modo oscuro
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', effectiveMode);
+  }, [effectiveMode]);
+
   // Estado para forzar re-render cuando cambie la preferencia del sistema
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
 

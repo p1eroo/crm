@@ -205,8 +205,8 @@ const Header: React.FC = () => {
         alignItems: isHorizontal ? 'stretch' : 'center',
         justifyContent: 'flex-start',
         gap: isHorizontal ? 1 : 0,
-        height: isHorizontal ? 'auto' : { xs: 64, sm: 77 },
-        minHeight: isHorizontal ? 'auto' : { xs: 64, sm: 77 },
+        height: isHorizontal ? 'auto' : { xs: 56, sm: 67 },
+        minHeight: isHorizontal ? 'auto' : { xs: 56, sm: 64 },
         position: { xs: 'fixed', sm: 'sticky' },
         top: 0,
         left: { 

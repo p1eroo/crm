@@ -1101,7 +1101,6 @@ const Tasks: React.FC = () => {
                       ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}33` : `${taxiMonterricoColors.green}1A`)
                       : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.14)'),
                     color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFCC80' : '#EF6C00'),
-                    boxShadow: showColumnFilters ? `0 4px 12px ${taxiMonterricoColors.green}20` : '0 4px 12px rgba(255, 152, 0, 0.25)',
                   },
                 }}
               >

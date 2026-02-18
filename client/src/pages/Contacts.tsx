@@ -1344,7 +1344,6 @@ const Contacts: React.FC = () => {
                     borderColor: '#1976D2',
                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.14)',
                     color: theme.palette.mode === 'dark' ? '#90CAF9' : '#1565C0',
-                    boxShadow: '0 4px 12px rgba(33, 150, 243, 0.25)',
                   },
                 }}
               >
@@ -1369,7 +1368,6 @@ const Contacts: React.FC = () => {
                     borderColor: '#7B1FA2',
                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.2)' : 'rgba(156, 39, 176, 0.14)',
                     color: theme.palette.mode === 'dark' ? '#E1BEE7' : '#6A1B9A',
-                    boxShadow: '0 4px 12px rgba(156, 39, 176, 0.25)',
                   },
                   '&:disabled': { opacity: 0.5 },
                 }}
@@ -1401,7 +1399,6 @@ const Contacts: React.FC = () => {
                     borderColor: '#00897B',
                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
                     color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
-                    boxShadow: '0 4px 12px rgba(0, 150, 136, 0.25)',
                   },
                 }}
               >
@@ -1430,7 +1427,6 @@ const Contacts: React.FC = () => {
                       ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}33` : `${taxiMonterricoColors.green}1A`)
                       : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.14)'),
                     color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFCC80' : '#EF6C00'),
-                    boxShadow: showColumnFilters ? `0 4px 12px ${taxiMonterricoColors.green}20` : '0 4px 12px rgba(255, 152, 0, 0.25)',
                   },
                 }}
               >

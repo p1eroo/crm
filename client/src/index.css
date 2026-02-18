@@ -1,3 +1,59 @@
+/* PrimeReact Calendar (selector de mes en Dashboard) */
+@import 'primereact/resources/themes/lara-light-blue/theme.css';
+@import 'primereact/resources/primereact.min.css';
+@import 'primeicons/primeicons.css';
+
+/* Modo oscuro: adaptar Calendar de PrimeReact al tema oscuro del CRM */
+[data-theme="dark"] .p-calendar .p-inputtext,
+[data-theme="dark"] .p-calendar.p-inputwrapper {
+  background-color: transparent !important;
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+}
+[data-theme="dark"] .p-calendar .p-inputtext::placeholder {
+  color: #fff !important;
+}
+[data-theme="dark"] .p-datepicker.p-component {
+  background: #1c252e !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #E5E7EB !important;
+}
+[data-theme="dark"] .p-datepicker-header {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #E5E7EB !important;
+}
+[data-theme="dark"] .p-datepicker-title,
+[data-theme="dark"] .p-datepicker-calendar th,
+[data-theme="dark"] .p-monthpicker-month {
+  color: #E5E7EB !important;
+}
+[data-theme="dark"] .p-monthpicker-month:hover,
+[data-theme="dark"] .p-monthpicker-month.p-highlight {
+  background: rgba(34, 197, 94, 0.2) !important;
+  color: #fff !important;
+}
+[data-theme="dark"] .p-datepicker-prev .p-icon,
+[data-theme="dark"] .p-datepicker-next .p-icon,
+[data-theme="dark"] .p-datepicker-prev,
+[data-theme="dark"] .p-datepicker-next {
+  color: #94A3B8 !important;
+}
+[data-theme="dark"] .p-datepicker-buttonbar {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+[data-theme="dark"] .p-datepicker-buttonbar .p-button {
+  background: transparent !important;
+  color: #94A3B8 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+[data-theme="dark"] .p-datepicker-buttonbar .p-button:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #E5E7EB !important;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;

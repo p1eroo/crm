@@ -129,7 +129,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             minWidth: 0,
             boxSizing: "border-box",
             overflowY: "auto",
-            paddingTop: { xs: "64px", sm: 0 },
+            paddingTop: { xs: "56px", sm: 2 },
             transition: "margin-left 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         >
@@ -137,14 +137,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             sx={{
               flex: 1,
               bgcolor: theme.palette.background.default,
-              pl: isReportsPage ? { xs: 2, sm: 2.5, md: 3 } : { xs: 3.5, sm: 5, md: 6, lg: 5, xl: 8 },
-              pr: isReportsPage ? { xs: 2, sm: 2.5, md: 3 } : { xs: 4.5, sm: 6, md: 7, lg: 6, xl: 9 },
+              pl: isReportsPage ? { xs: 2, sm: 2.5, md: 3 } : { xs: 2, sm: 3, md: 4, lg: 4, xl: 5 },
+              pr: isReportsPage ? { xs: 2, sm: 2.5, md: 3 } : { xs: 2, sm: 3, md: 4, lg: 4, xl: 5 },
               pt: isHorizontal ? { xs: 3, sm: 4 } : { xs: 1.5, sm: 2.5 },
               pb: 0,
               width: "100%",
-              maxWidth: isReportsPage ? "none" : { lg: "1680px", xl: "1680px" },
-              marginLeft: "auto",
-              marginRight: "auto",
+              maxWidth: "none",
               boxSizing: "border-box",
             }}
           >

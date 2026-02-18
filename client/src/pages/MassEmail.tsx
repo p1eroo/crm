@@ -368,7 +368,6 @@ const MassEmail: React.FC = () => {
                   '&:hover': {
                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.14)',
                     color: theme.palette.mode === 'dark' ? '#90CAF9' : '#1565C0',
-                    boxShadow: '0 4px 12px rgba(33, 150, 243, 0.25)',
                   },
                 }}
               >
@@ -391,7 +390,6 @@ const MassEmail: React.FC = () => {
                   '&:hover': {
                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.2)' : 'rgba(156, 39, 176, 0.14)',
                     color: theme.palette.mode === 'dark' ? '#E1BEE7' : '#6A1B9A',
-                    boxShadow: '0 4px 12px rgba(156, 39, 176, 0.25)',
                   },
                 }}
               >
@@ -422,7 +420,6 @@ const MassEmail: React.FC = () => {
                   '&:hover': {
                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
                     color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
-                    boxShadow: '0 4px 12px rgba(0, 150, 136, 0.25)',
                   },
                   '&:disabled': {
                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.06)' : 'rgba(0, 150, 136, 0.04)',

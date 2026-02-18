@@ -2,8 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   Typography,
   Box,
-  Card,
-  CardContent,
+  Paper,
   CircularProgress,
   Button,
   IconButton,
@@ -15,28 +14,24 @@ import {
   useTheme,
   Snackbar,
   Alert,
-  Popover,
 } from '@mui/material';
 import {
-  Download,
   Close,
   TrendingUp,
   TrendingDown,
-  CalendarToday,
   Assessment,
   ArrowOutward,
-  ChevronLeft,
-  ChevronRight,
 } from '@mui/icons-material';
+import { Calendar } from 'primereact/calendar';
+import { addLocale, locale } from 'primereact/api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCoins, faTags, faBuilding, faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
+import { faCoins, faTags, faBuilding, faPeopleGroup, faFileExport } from '@fortawesome/free-solid-svg-icons';
+import ReactApexChart from 'react-apexcharts';
 import {
   AreaChart,
   Area,
   LineChart,
   Line,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -97,56 +92,6 @@ interface DashboardStats {
     converted: number;
   };
 }
-
-// Componente Tooltip personalizado para el gráfico de KPI
-const CustomKPITooltip = ({ active, payload }: any) => {
-  const theme = useTheme();
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    const userName = data.name || '';
-    const value = data.value || 0;
-    // Obtener el color del segmento desde el payload (puede estar en diferentes ubicaciones)
-    const segmentColor = payload[0].color || payload[0].fill || data.fill || data.color || taxiMonterricoColors.green;
-    
-    return (
-      <Box
-        sx={{
-          backgroundColor: 
-          theme.palette.mode === 'dark' 
-            ?' rgba(18,18,18,0.85)'
-            :' rgba(255,255,255,0.9)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: '8px',
-          padding: '8px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px', 
-          boxShadow: 
-            theme.palette.mode === 'dark'
-            ? '0 4px 6px rgba(0, 0, 0, 0.5)'
-            : '0 4px 6px rgba(0, 0, 0, 0.1)',
-        }}
-      >
-        <Box
-          sx={{
-            width: '12px',
-            height: '12px',
-            borderRadius: '50%',
-            backgroundColor: segmentColor,
-            flexShrink: 0,
-          }}
-        />
-        <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 900, fontSize: '0.95rem' }}>
-          {userName}: {typeof value === 'number' ? value.toFixed(1) : '0'}%
-        </Typography>
-      </Box>
-    );
-  }
-  return null;
-};
 
 // Componente Tooltip personalizado para el gráfico de Distribución de Ventas
 const CustomSalesDistributionTooltip = ({ active, payload }: any) => {
@@ -214,8 +159,26 @@ const Dashboard: React.FC = () => {
   const [maximizedKPIArea, setMaximizedKPIArea] = useState(false);
   const [maximizedWeeklySales, setMaximizedWeeklySales] = useState(false);
   const [maximizedSales, setMaximizedSales] = useState(false);
-  const [calendarAnchorEl, setCalendarAnchorEl] = useState<HTMLElement | null>(null);
-  
+  // Valor para PrimeReact Calendar (mes/año): null = Todo el año
+  const periodDate = selectedMonth !== null
+    ? new Date(parseInt(selectedYear), parseInt(selectedMonth), 1)
+    : null;
+
+  // Locale español para PrimeReact Calendar (meses y botones)
+  useEffect(() => {
+    addLocale('es', {
+      firstDayOfWeek: 0,
+      dayNames: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+      dayNamesShort: ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'],
+      dayNamesMin: ['D', 'L', 'M', 'X', 'J', 'V', 'S'],
+      monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+      monthNamesShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+      today: 'Hoy',
+      clear: 'Limpiar',
+    });
+    locale('es');
+  }, []);
+
   // Generar lista de meses
   const monthNames = [
     { value: '0', label: 'Enero' },
@@ -815,6 +778,15 @@ const Dashboard: React.FC = () => {
         
         const chartData: Array<{ name: string; value: number; color: string }> = [];
         
+        // Paleta distinta por categoría para que Ganados, Reunión Efectiva, etc. no se confundan
+        const otherStagesPalette = [
+          taxiMonterricoColors.orange,
+          taxiMonterricoColors.teal,
+          '#7C4DFF', // violeta
+          '#0288D1', // azul
+          taxiMonterricoColors.orangeDark,
+        ];
+        
         if (wonTotal > 0) {
           chartData.push({
             name: 'Ganados',
@@ -831,14 +803,14 @@ const Dashboard: React.FC = () => {
           });
         }
         
-        // Agregar otras etapas (hasta completar 5 elementos totales)
+        // Agregar otras etapas (hasta 5 elementos) con colores distintos
         const remainingSlots = 5 - chartData.length;
         const sortedOtherStages = otherStages.sort((a, b) => b.count - a.count);
         sortedOtherStages.slice(0, remainingSlots).forEach((deal, index) => {
           chartData.push({
             name: getStageLabel(deal.stage),
             value: deal.count,
-            color: [taxiMonterricoColors.orange, theme.palette.primary.main, theme.palette.secondary.main][index % 3],
+            color: otherStagesPalette[index % otherStagesPalette.length],
           });
         });
         
@@ -850,15 +822,196 @@ const Dashboard: React.FC = () => {
         { name: 'Sin datos', value: 1, color: theme.palette.grey[300] }
       ];
 
-  // Datos para Weekly Sales (últimas 7 semanas)
-  const weeklySalesData = Array.from({ length: 7 }, (_, i) => {
+  // Opciones para el gráfico donut (Distribución de Ventas) — espaciado entre segmentos
+  const strokeGapColor = theme.palette.background.paper;
+  const salesDistributionChartOptions = {
+    chart: {
+      type: 'donut' as const,
+      background: 'transparent',
+    },
+    stroke: {
+      show: true,
+      width: 3,
+      colors: [strokeGapColor],
+    },
+    labels: salesDistributionData.map((d) => d.name),
+    colors: salesDistributionData.map((d) => d.color),
+    legend: {
+      position: 'bottom' as const,
+      horizontalAlign: 'center' as const,
+      fontSize: '12px',
+      itemMargin: { horizontal: 8, vertical: 6 },
+      markers: { size: 6, strokeWidth: 0 },
+    },
+    dataLabels: { enabled: true },
+    plotOptions: {
+      pie: {
+        stroke: { width: 3, colors: [strokeGapColor] },
+        donut: {
+          size: '65%',
+          labels: {
+            show: true,
+            total: { show: true },
+          },
+        },
+      },
+    },
+    theme: {
+      mode: theme.palette.mode as 'light' | 'dark',
+    },
+    responsive: [
+      {
+        breakpoint: 480,
+        options: {
+          chart: { width: 200 },
+          legend: { position: 'bottom' as const },
+        },
+      },
+    ],
+  };
+
+  const salesDistributionChartSeries = salesDistributionData.map((d) => d.value);
+
+  // KPI's Área Comercial — polar area (datos por usuario)
+  const kpiAreaUserPerformance = (stats?.deals?.userPerformance && Array.isArray(stats.deals.userPerformance))
+    ? stats.deals.userPerformance
+    : [];
+  const kpiAreaChartSeries = kpiAreaUserPerformance.map((u) => u.performance ?? 0);
+  const kpiAreaChartLabels = kpiAreaUserPerformance.map((u) => `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Usuario');
+  const kpiAreaChartColors = [
+    taxiMonterricoColors.greenLight,
+    taxiMonterricoColors.green,
+    taxiMonterricoColors.greenDark,
+    theme.palette.primary.main,
+    theme.palette.primary.dark,
+    taxiMonterricoColors.orange,
+    taxiMonterricoColors.teal,
+    '#7C4DFF',
+    '#0288D1',
+  ];
+  const kpiAreaChartOptions = {
+    chart: {
+      type: 'polarArea' as const,
+      background: 'transparent',
+    },
+    labels: kpiAreaChartLabels,
+    colors: kpiAreaChartLabels.map((_, i) => kpiAreaChartColors[i % kpiAreaChartColors.length]),
+    stroke: {
+      colors: ['#fff'],
+      width: 2,
+    },
+    fill: { opacity: 0.85 },
+    plotOptions: {
+      polarArea: {
+        rings: {
+          strokeWidth: 1,
+          strokeColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+        },
+        spokes: {
+          strokeWidth: 1,
+          connectorColors: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+        },
+      },
+    },
+    legend: { position: 'bottom' as const, horizontalAlign: 'center' as const },
+    theme: { mode: theme.palette.mode as 'light' | 'dark' },
+    responsive: [
+      {
+        breakpoint: 480,
+        options: {
+          chart: { width: 200 },
+          legend: { position: 'bottom' as const },
+        },
+      },
+    ],
+  };
+
+  // Datos para Weekly Sales: solo últimas 5 semanas (al conectar datos reales, usar .slice(-5) para que vaya corriendo)
+  const weeklySalesData = Array.from({ length: 5 }, (_, i) => {
     const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - (6 - i) * 7);
+    weekStart.setDate(weekStart.getDate() - (4 - i) * 7);
     return {
       week: `Sem ${i + 1}`,
       value: Math.floor(Math.random() * 20000) + 10000, // Datos simulados
     };
   });
+
+  // Gráfico de barras horizontales - Ventas Semanales (ApexCharts)
+  const weeklySalesChartSeries = [{ name: 'Ventas', data: weeklySalesData.map((d) => d.value) }];
+  const weeklySalesChartColors = [
+    taxiMonterricoColors.green,
+    taxiMonterricoColors.greenLight,
+    taxiMonterricoColors.greenDark,
+    taxiMonterricoColors.greenEmerald,
+    taxiMonterricoColors.teal,
+  ];
+  const weeklySalesChartOptions = {
+    chart: {
+      type: 'bar' as const,
+      height: 400,
+      toolbar: { show: false },
+      background: 'transparent',
+    },
+    plotOptions: {
+      bar: {
+        distributed: true,
+        horizontal: true,
+        barHeight: '75%',
+        borderRadius: 8,
+        dataLabels: { position: 'bottom' as const },
+      },
+    },
+    dataLabels: {
+      enabled: true,
+      textAnchor: 'start' as const,
+      style: {
+        colors: [theme.palette.mode === 'dark' ? '#fff' : '#304758'],
+      },
+      formatter: (_val: number, opts: { w: { globals: { labels: string[] } }; dataPointIndex: number }) =>
+        opts.w.globals.labels[opts.dataPointIndex],
+      offsetX: 0,
+      dropShadow: { enabled: false },
+    },
+    colors: weeklySalesChartColors,
+    xaxis: {
+      categories: weeklySalesData.map((d) => d.week),
+      labels: {
+        style: { colors: theme.palette.text.secondary },
+        formatter: (val: number) => (val === 0 ? '0' : val >= 1000 ? `${(val / 1000).toFixed(1)}k` : String(val)),
+      },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+    },
+    yaxis: {
+      labels: { show: false },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+    },
+    grid: {
+      borderColor: theme.palette.divider,
+      strokeDashArray: 3,
+      xaxis: { lines: { show: false } },
+      yaxis: { lines: { show: false } },
+    },
+    tooltip: {
+      theme: theme.palette.mode,
+      x: { show: false },
+      y: {
+        title: {
+          formatter: (_: string, opts: { w: { globals: { labels: string[] } }; dataPointIndex: number }) =>
+            opts.w.globals.labels[opts.dataPointIndex],
+        },
+        formatter: (val: number) => formatCurrencyPE(val),
+      },
+    },
+    legend: { show: false },
+    states: {
+      active: {
+        filter: { type: 'darken' as const, value: 1 },
+      },
+    },
+    theme: { mode: theme.palette.mode as 'light' | 'dark' },
+  };
 
   // Calcular valores para las tarjetas KPI
   const ordersInLine = stats.deals.total || 0;
@@ -881,8 +1034,7 @@ const Dashboard: React.FC = () => {
   const currentMonthNameForBudget = monthNames[currentMonth]?.label || '';
   const currentMonthAbbr = currentMonthNameForBudget.substring(0, 3) + '.';
   
-  // Buscar el presupuesto del mes actual
-  // Primero buscar en budgets (presupuestos guardados), luego en monthly como fallback
+  // Buscar el presupuesto del mes actual solo en budgets (meta), no en ventas realizadas
   const currentMonthAbbrLower = currentMonthNameForBudget.substring(0, 3).toLowerCase();
   const currentMonthNameLower = currentMonthNameForBudget.toLowerCase();
   
@@ -892,16 +1044,6 @@ const Dashboard: React.FC = () => {
            monthStr.includes(currentYear.toString());
   });
   
-  // Si no se encuentra en budgets, buscar en monthly (fallback)
-  if (!currentMonthData) {
-    currentMonthData = stats.payments?.monthly?.find(item => {
-      const monthStr = item.month.toLowerCase();
-      return (monthStr.includes(currentMonthNameLower) || monthStr.includes(currentMonthAbbrLower)) &&
-             monthStr.includes(currentYear.toString());
-    });
-  }
-  
-  // Si no se encuentra con el año, buscar sin el año
   if (!currentMonthData) {
     currentMonthData = stats.payments?.budgets?.find(item => {
       const monthStr = item.month.toLowerCase();
@@ -909,44 +1051,23 @@ const Dashboard: React.FC = () => {
     });
   }
   
-  if (!currentMonthData) {
-    currentMonthData = stats.payments?.monthly?.find(item => {
-      const monthStr = item.month.toLowerCase();
-      return monthStr.includes(currentMonthNameLower) || monthStr.includes(currentMonthAbbrLower);
-    });
-  }
-  
-  const monthlyBudget = currentMonthData?.amount || 0;
+  const monthlyBudget = currentMonthData?.amount ?? 0;
 
-  // Calcular presupuesto del mes seleccionado (para mostrar en el gráfico)
-  const selectedMonthBudget = selectedMonth !== null && (stats.payments?.budgets || stats.payments?.monthly)
+  // Calcular presupuesto del mes seleccionado (solo desde budgets = meta, no ventas)
+  const selectedMonthBudget = selectedMonth !== null && stats.payments?.budgets
     ? (() => {
         const monthIndex = parseInt(selectedMonth);
         const monthName = monthNames[monthIndex]?.label || '';
         const year = parseInt(selectedYear);
-        
-        // El backend formatea los meses como "nov 2025" (abreviado)
-        // Pero también puede estar guardado como "Noviembre" o "Noviembre 2025"
-        const monthAbbr = monthName.substring(0, 3).toLowerCase(); // "nov" para "Noviembre"
+        const monthAbbr = monthName.substring(0, 3).toLowerCase();
         const monthNameLower = monthName.toLowerCase();
         
-        // Buscar primero en budgets (presupuestos guardados)
         let monthData = stats.payments?.budgets?.find(item => {
           const monthStr = item.month.toLowerCase();
           return (monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr)) &&
                  monthStr.includes(year.toString());
         });
         
-        // Si no se encuentra en budgets, buscar en monthly (fallback)
-        if (!monthData) {
-          monthData = stats.payments?.monthly?.find(item => {
-            const monthStr = item.month.toLowerCase();
-            return (monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr)) &&
-                   monthStr.includes(year.toString());
-          });
-        }
-        
-        // Si no se encuentra con el año, buscar sin el año
         if (!monthData) {
           monthData = stats.payments?.budgets?.find(item => {
             const monthStr = item.month.toLowerCase();
@@ -954,18 +1075,97 @@ const Dashboard: React.FC = () => {
           });
         }
         
-        if (!monthData) {
-          monthData = stats.payments?.monthly?.find(item => {
-            const monthStr = item.month.toLowerCase();
-            return monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr);
-          });
-        }
-        
-        const budget = monthData?.amount || 0;
-        
-        return budget;
+        return monthData?.amount ?? 0;
       })()
     : 0;
+
+  // Gráfico de barras de Ventas por meses (o por días si hay mes seleccionado)
+  const safeSalesChartData = Array.isArray(salesChartData) ? salesChartData : [];
+  const salesChartApexCategories = selectedMonth !== null
+    ? safeSalesChartData.map((d) => (d as { day: string }).day ?? '')
+    : safeSalesChartData.map((d) => (d as { month: string }).month ?? '');
+  const salesChartApexSeries = [{ name: 'Ventas', data: safeSalesChartData.map((d) => (d?.value ?? 0)) }];
+  const salesChartApexOptions = {
+    chart: {
+      type: 'bar' as const,
+      height: 460,
+      background: 'transparent',
+      toolbar: { show: false },
+    },
+    fill: { opacity: 1, type: 'solid' as const },
+    plotOptions: {
+      bar: {
+        borderRadius: 10,
+        dataLabels: { position: 'top' as const },
+      },
+    },
+    states: {
+      normal: { filter: { type: 'none' as const } },
+      hover: { filter: { type: 'none' as const } },
+      active: { filter: { type: 'none' as const } },
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: (val: number) => formatCurrencyPE(val),
+      offsetY: -52,
+      style: {
+        fontSize: '12px',
+        colors: [theme.palette.mode === 'dark' ? '#E5E7EB' : '#304758'],
+      },
+    },
+    xaxis: {
+      categories: salesChartApexCategories,
+      position: 'top' as const,
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: {
+        style: { colors: theme.palette.text.secondary },
+        offsetY: -8,
+      },
+    },
+    yaxis: {
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: {
+        show: false,
+        formatter: (val: number) => formatCurrencyPE(val),
+      },
+    },
+    grid: {
+      borderColor: theme.palette.divider,
+      strokeDashArray: 3,
+      xaxis: { lines: { show: false } },
+      padding: { top: 10, left: 0, right: 0, bottom: 0 },
+    },
+    tooltip: {
+      theme: theme.palette.mode,
+      y: { formatter: (val: number) => formatCurrencyPEDecimals(val) },
+    },
+    legend: { show: false },
+    colors: [theme.palette.mode === 'dark' ? '#E5AC03' : '#FFD54F'],
+    theme: { mode: theme.palette.mode as 'light' | 'dark' },
+    stroke: { show: false, width: 0 },
+    ...(selectedMonth !== null &&
+      selectedMonthBudget > 0 && {
+        annotations: {
+          yaxis: [
+            {
+              y: selectedMonthBudget,
+              borderColor: taxiMonterricoColors.green,
+              strokeDashArray: 5,
+              borderWidth: 2,
+              label: {
+                show: true,
+                borderColor: taxiMonterricoColors.green,
+                style: { color: theme.palette.text.primary, background: theme.palette.background.paper },
+                text: `Presupuesto: ${formatCurrencyPE(selectedMonthBudget)}`,
+                position: 'right' as const,
+              },
+            },
+          ],
+        },
+      }),
+  };
 
   // Handler para abrir modal de edición de presupuesto
   const handleBudgetClick = (monthIndex: number | null = null) => {
@@ -980,7 +1180,7 @@ const Dashboard: React.FC = () => {
       const monthAbbr = monthName.substring(0, 3).toLowerCase();
       const monthNameLower = monthName.toLowerCase();
       
-      // Buscar primero en budgets (presupuestos guardados)
+      // Solo presupuestos guardados (meta), no ventas realizadas
       let monthData = stats.payments?.budgets?.find(item => {
         const monthStr = item.month.toLowerCase();
         const matchesMonth = monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr);
@@ -988,17 +1188,6 @@ const Dashboard: React.FC = () => {
         return matchesMonth && (matchesYear || !monthStr.match(/\d{4}/));
       });
       
-      // Si no se encuentra en budgets, buscar en monthly (fallback)
-      if (!monthData) {
-        monthData = stats.payments?.monthly?.find(item => {
-          const monthStr = item.month.toLowerCase();
-          const matchesMonth = monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr);
-          const matchesYear = monthStr.includes(yearToEdit.toString());
-          return matchesMonth && (matchesYear || !monthStr.match(/\d{4}/));
-        });
-      }
-      
-      // Si no se encuentra con el año, buscar sin el año
       if (!monthData) {
         monthData = stats.payments?.budgets?.find(item => {
           const monthStr = item.month.toLowerCase();
@@ -1006,14 +1195,7 @@ const Dashboard: React.FC = () => {
         });
       }
       
-      if (!monthData) {
-        monthData = stats.payments?.monthly?.find(item => {
-          const monthStr = item.month.toLowerCase();
-          return monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr);
-        });
-      }
-      
-      const budgetToEdit = monthData?.amount || 0;
+      const budgetToEdit = monthData?.amount ?? 0;
       
       setBudgetValue(budgetToEdit.toString());
       setBudgetModalOpen(true);
@@ -1091,14 +1273,13 @@ const Dashboard: React.FC = () => {
           <Typography 
             variant="h4" 
             sx={{ 
-              fontWeight: 800, 
+              fontWeight: 600, 
               color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary, 
-              fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
-              textTransform: 'uppercase',
+              fontSize: { xs: '1.35rem', sm: '1.6rem', md: '2.00rem' },
               letterSpacing: '0.02em',
             }}
           >
-            HOLA, {user?.firstName?.toUpperCase() || 'USUARIO'}
+            Hola, {user?.firstName ? user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1).toLowerCase() : 'Usuario'}
           </Typography>
         </Box>
         <Box sx={{ 
@@ -1109,204 +1290,54 @@ const Dashboard: React.FC = () => {
           width: { xs: '100%', sm: 'auto' },
           mt: { xs: 2, sm: 3, md: 0 },
         }}>
-          {/* Botón que abre el calendario de meses */}
-          <IconButton
-            size="small"
-            onClick={(e) => setCalendarAnchorEl(e.currentTarget)}
-            sx={{
-              border: `1.5px solid ${taxiMonterricoColors.green}`,
-              borderRadius: 1.5,
-              color: taxiMonterricoColors.green,
-            }}
-          >
-            <CalendarToday sx={{ fontSize: 22 }} />
-          </IconButton>
-
-          {/* Popover con el calendario de meses */}
-          <Popover
-            open={Boolean(calendarAnchorEl)}
-            anchorEl={calendarAnchorEl}
-            onClose={() => setCalendarAnchorEl(null)}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'left',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            PaperProps={{
-              sx: {
-                borderRadius: 2,
-                minWidth: 320,
-                maxWidth: 400,
-                p: 2,
-                mt: 1,
-                bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : theme.palette.background.paper,
-                border: theme.palette.mode === 'dark' ? 'none' : `1px solid ${theme.palette.divider}`,
-                boxShadow: theme.palette.mode === 'dark' 
-                  ? '0 8px 32px rgba(0, 0, 0, 0.4)' 
-                  : '0 8px 32px rgba(0, 0, 0, 0.12)',
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <IconButton
-                size="small"
-                onClick={() => {
-                  const newYear = parseInt(selectedYear) - 1;
-                  if (newYear >= 2025) {
-                    setSelectedYear(newYear.toString());
-                  }
-                }}
-                disabled={parseInt(selectedYear) <= 2025}
-                sx={{
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.05)' 
-                    : theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : theme.palette.divider}`,
-                  color: theme.palette.text.secondary,
-                  '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.08)' 
-                      : theme.palette.action.hover,
-                    borderColor: theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.15)' 
-                      : theme.palette.divider,
-                    color: theme.palette.text.primary,
-                  },
-                  '&:disabled': {
-                    opacity: 0.3,
-                    color: theme.palette.text.disabled,
-                  },
-                }}
-              >
-                <ChevronLeft />
-              </IconButton>
-              <Typography 
-                component="div" 
-                onClick={() => {
+          {/* Selector de periodo con PrimeReact Calendar (month picker) */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <Calendar
+              value={periodDate}
+              onChange={(e) => {
+                const v = e.value as Date | null;
+                if (v) {
+                  setSelectedYear(v.getFullYear().toString());
+                  setSelectedMonth(v.getMonth().toString());
+                } else {
                   setSelectedMonth(null);
-                  setCalendarAnchorEl(null);
-                }}
-                sx={{ 
-                  fontWeight: 800, 
-                  fontSize: '1.25rem',
-                  cursor: 'pointer',
-                  color: theme.palette.text.primary,
-                  '&:hover': {
-                    color: taxiMonterricoColors.green,
-                  },
-                }}
-              >
-                {selectedYear}
-              </Typography>
-              <IconButton
-                size="small"
-                onClick={() => {
-                  const newYear = parseInt(selectedYear) + 1;
-                  if (newYear <= currentYear) {
-                    setSelectedYear(newYear.toString());
-                  }
-                }}
-                disabled={parseInt(selectedYear) >= currentYear}
-                sx={{
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.05)' 
-                    : theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : theme.palette.divider}`,
-                  color: theme.palette.text.secondary,
-                  '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.08)' 
-                      : theme.palette.action.hover,
-                    borderColor: theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.15)' 
-                      : theme.palette.divider,
-                    color: theme.palette.text.primary,
-                  },
-                  '&:disabled': {
-                    opacity: 0.3,
-                    color: theme.palette.text.disabled,
-                  },
-                }}
-              >
-                <ChevronRight />
-              </IconButton>
-            </Box>
-
-            {/* Grid de meses (3 columnas x 4 filas) */}
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: 1,
+                  setSelectedYear(currentYear.toString());
+                }
               }}
-            >
-              {monthNames.map((month) => {
-                const isSelected = selectedMonth === month.value;
-                const isCurrentMonth = 
-                  parseInt(month.value) === new Date().getMonth() && 
-                  parseInt(selectedYear) === currentYear;
-                
-                return (
-                  <Button
-                    key={month.value}
-                    variant={isSelected ? "contained" : "outlined"}
-                    onClick={() => {
-                      setSelectedMonth(month.value);
-                      setCalendarAnchorEl(null);
-                    }}
-                    sx={{
-                      minHeight: 48,
-                      textTransform: 'none',
-                      fontSize: '0.875rem',
-                      bgcolor: isSelected 
-                        ? taxiMonterricoColors.green 
-                        : theme.palette.mode === 'dark' 
-                          ? 'rgba(255, 255, 255, 0.03)' 
-                          : 'transparent',
-                      color: isSelected 
-                        ? 'white' 
-                        : theme.palette.text.primary,
-                      borderColor: isCurrentMonth && !isSelected 
-                        ? (theme.palette.mode === 'dark' 
-                            ? 'rgba(46, 125, 50, 0.5)' 
-                            : taxiMonterricoColors.green)
-                        : (theme.palette.mode === 'dark' 
-                            ? 'rgba(255, 255, 255, 0.1)' 
-                            : theme.palette.divider),
-                      borderWidth: isCurrentMonth && !isSelected ? 2 : 1,
-                      fontWeight: isCurrentMonth ? 800 : 700,
-                      '&:hover': {
-                        bgcolor: isSelected 
-                          ? taxiMonterricoColors.greenDark 
-                          : theme.palette.mode === 'dark'
-                            ? 'rgba(46, 125, 50, 0.15)'
-                            : `${taxiMonterricoColors.green}0A`,
-                        borderColor: theme.palette.mode === 'dark'
-                          ? 'rgba(46, 125, 50, 0.6)'
-                          : taxiMonterricoColors.green,
-                      },
-                    }}
-                  >
-                    {month.label}
-                  </Button>
-                );
-              })}
-            </Box>
-          </Popover>
-          <IconButton
+              view="month"
+              dateFormat="mm/yy"
+              showButtonBar
+              showIcon={false}
+              minDate={new Date(2025, 0, 1)}
+              maxDate={new Date(currentYear, 11, 31)}
+              placeholder="Todo el año"
+              locale="es"
+              inputClassName="p-inputtext-sm"
+              style={{ width: '100%', minWidth: 140 }}
+            />
+          </Box>
+          <Button
             size="small"
+            startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
             onClick={handleDownloadDashboard}
             sx={{
-              bgcolor: taxiMonterricoColors.green,
-              color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
-              borderRadius: 1,
+              border: 'none',
+              borderRadius: 1.5,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.12)' : 'rgba(0, 150, 136, 0.08)',
+              color: theme.palette.mode === 'dark' ? '#4DB6AC' : '#00897B',
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: '#00897B',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
+                color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
+              },
             }}
           >
-            <Download sx={{ fontSize: 22 }} />
-          </IconButton>
+            Exportar
+          </Button>
         </Box>
       </Box>
 
@@ -1319,23 +1350,20 @@ const Dashboard: React.FC = () => {
         mb: { xs: 2, sm: 3, md: 4 } 
       }}>
         {/* Monthly Budget */}
-        <Card 
+        <Paper
+          elevation={0}
           onClick={canEditBudget ? handleBudgetCardClick : undefined}
-          sx={{ 
-            minHeight: { xs: 140, sm: 160, md: 185 },
-            borderRadius: 4,
+          sx={{
+            borderRadius: 2,
             boxShadow: 'none',
-            bgcolor: 'rgb(212, 249, 226)',
-            color: '#004B50',
+            bgcolor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+            minHeight: { xs: 140, sm: 160, md: 185 },
             overflow: 'hidden',
-            border: 'none',
             cursor: canEditBudget ? 'pointer' : 'default',
           }}
         >
-          <CardContent sx={{ 
-            p: { xs: 2, sm: 2.5, md: 3 },
-            position: 'relative',
-          }}>
+          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative' }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between',
@@ -1353,7 +1381,7 @@ const Dashboard: React.FC = () => {
                 <FontAwesomeIcon 
                   icon={faCoins} 
                   style={{
-                    color: "#1aae7a",
+                    color: theme.palette.mode === 'dark' ? theme.palette.primary.main : "#1aae7a",
                     fontSize: 36,
                   }} 
                 />
@@ -1361,7 +1389,7 @@ const Dashboard: React.FC = () => {
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: '#004B50',
+                      color: theme.palette.mode === 'dark' ? 'white' : '#004B50',
                       mb: 1.5,
                       fontSize: '0.875rem',
                       fontWeight: 600,
@@ -1376,7 +1404,7 @@ const Dashboard: React.FC = () => {
                       fontWeight: 600, 
                       fontSize: '1.5rem',
                       lineHeight: 1.2,
-                      color: '#004B50',
+                      color: theme.palette.mode === 'dark' ? 'white' : '#004B50',
                     }}
                   >
                     {formatCurrencyPE(monthlyBudget)}
@@ -1415,23 +1443,22 @@ const Dashboard: React.FC = () => {
                 </ResponsiveContainer>
               </Box>
             </Box>
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
 
         {/* Orders In Line */}
-        <Card sx={{ 
-          minHeight: { xs: 140, sm: 160, md: 185 },
-          borderRadius: 4,
-          boxShadow: 'none',
-          bgcolor: '#edd6ff',
-          color: theme.palette.text.primary,
-          overflow: 'hidden',
-          border: 'none',
-        }}>
-          <CardContent sx={{ 
-            p: { xs: 2, sm: 2.5, md: 3 },
-            position: 'relative',
-          }}>
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            boxShadow: 'none',
+            bgcolor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+            minHeight: { xs: 140, sm: 160, md: 185 },
+            overflow: 'hidden',
+          }}
+        >
+          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative' }}>
             <Box sx={{ 
               display: 'flex', 
               flexDirection: 'column',
@@ -1449,7 +1476,7 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: '#27097a',
+                    color: theme.palette.mode === 'dark' ? 'white' : '#27097a',
                     mb: 1.5,
                     fontSize: '0.875rem',
                     fontWeight: 600,
@@ -1464,31 +1491,30 @@ const Dashboard: React.FC = () => {
                     fontWeight: 600, 
                     fontSize: '1.5rem',
                     lineHeight: 1.2,
-                    color: '#27097a',
+                    color: theme.palette.mode === 'dark' ? 'white' : '#27097a',
                   }}
                 >
                   {ordersInLine}
                 </Typography>
               </Box>
             </Box>
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
 
         {/* New Clients */}
-        <Card sx={{ 
-          minHeight: { xs: 140, sm: 160, md: 185 },
-          borderRadius: 4,
-          boxShadow: 'none',
-          bgcolor: '#fff1c9',
-          color: theme.palette.text.primary,
-          overflow: 'hidden',
-          position: 'relative',
-          border: 'none',
-        }}>
-          <CardContent sx={{ 
-            p: { xs: 2, sm: 2.5, md: 3 },
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            boxShadow: 'none',
+            bgcolor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+            minHeight: { xs: 140, sm: 160, md: 185 },
+            overflow: 'hidden',
             position: 'relative',
-          }}>
+          }}
+        >
+          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative' }}>
             <Box sx={{ 
               display: 'flex', 
               flexDirection: 'column',
@@ -1506,7 +1532,7 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: '#944100',
+                    color: theme.palette.mode === 'dark' ? 'white' : '#944100',
                     mb: 1.5,
                     fontSize: '0.875rem',
                     fontWeight: 600,
@@ -1521,31 +1547,30 @@ const Dashboard: React.FC = () => {
                     fontWeight: 600, 
                     fontSize: '1.5rem',
                     lineHeight: 1.2,
-                    color: '#944100',
+                    color: theme.palette.mode === 'dark' ? 'white' : '#944100',
                   }}
                 >
                   {newCompanies}
                 </Typography>
               </Box>
             </Box>
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
 
         {/* Team KPI */}
-        <Card sx={{ 
-          minHeight: { xs: 140, sm: 160, md: 185 },
-          borderRadius: 4,
-          boxShadow: 'none',
-          bgcolor: '#ffe4d5',
-          color: theme.palette.text.primary,
-          overflow: 'hidden',
-          position: 'relative',
-          border: 'none',
-        }}>
-          <CardContent sx={{ 
-            p: { xs: 2, sm: 2.5, md: 3 },
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            boxShadow: 'none',
+            bgcolor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+            minHeight: { xs: 140, sm: 160, md: 185 },
+            overflow: 'hidden',
             position: 'relative',
-          }}>
+          }}
+        >
+          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative' }}>
             <Box sx={{ 
               display: 'flex', 
               flexDirection: 'column',
@@ -1563,7 +1588,7 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: '#b24930',
+                    color: theme.palette.mode === 'dark' ? 'white' : '#b24930',
                     mb: 1.5,
                     fontSize: '0.875rem',
                     fontWeight: 600,
@@ -1583,7 +1608,7 @@ const Dashboard: React.FC = () => {
                       fontWeight: 600, 
                       fontSize: '1.5rem',
                       lineHeight: 1.2,
-                      color: '#b24930',
+                      color: theme.palette.mode === 'dark' ? 'white' : '#b24930',
                     }}
                   >
                     {teamKPI.toFixed(1)}%
@@ -1598,14 +1623,14 @@ const Dashboard: React.FC = () => {
                       <TrendingUp 
                         sx={{ 
                           fontSize: 20,
-                          color: '#7a0916',
+                          color: theme.palette.success.main,
                         }} 
                       />
                     ) : (
                       <TrendingDown 
                         sx={{ 
                           fontSize: 20,
-                          color: '#7a0916',
+                          color: theme.palette.error.main,
                         }} 
                       />
                     )}
@@ -1613,7 +1638,7 @@ const Dashboard: React.FC = () => {
                       variant="body2" 
                       sx={{ 
                         fontSize: '0.875rem',
-                        color: '#7a0916',
+                        color: isKPIIncreasing ? theme.palette.success.main : theme.palette.error.main,
                         fontWeight: 600,
                       }}
                     >
@@ -1623,8 +1648,8 @@ const Dashboard: React.FC = () => {
                 </Box>
               </Box>
             </Box>
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
       </Box>
 
       {/* Sección: Distribución de Ventas y Ventas */}
@@ -1632,27 +1657,27 @@ const Dashboard: React.FC = () => {
         display: 'grid',
         gridTemplateColumns: { 
           xs: '1fr', 
-          md: '0.72fr 1.5fr',
-          lg: '0.72fr 1.5fr',
-          xl: '0.72fr 1.5fr' 
+          md: '0.85fr 1.35fr',
+          lg: '0.85fr 1.35fr',
+          xl: '0.85fr 1.35fr' 
         },
         gap: { xs: 1.5, sm: 2, md: 3 },
         mb: { xs: 2, sm: 2.5, md: 3 } 
       }}>
-        {/* Sales Distribution */}
-        <Card sx={{ 
-            borderRadius: 3, 
-            boxShadow: theme.palette.mode === 'dark' 
-              ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
-              : '0 4px 20px rgba(0, 0, 0, 0.08)',
-            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-            border: `none`,
+        {/* Sales Distribution - mismo componente y estilos que la card de perfil (Paper) */}
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            boxShadow: 'none',
+            bgcolor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
             minHeight: { xs: 400, sm: 480 },
             position: 'relative',
             overflow: 'hidden',
           }}
         >
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+          <Box sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -1662,7 +1687,7 @@ const Dashboard: React.FC = () => {
               <Typography 
                 variant="h6" 
                 sx={{ 
-                  fontWeight: 800, 
+                  fontWeight: 600, 
                   color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary, 
                   fontSize: { xs: '1rem', md: '1.25rem' },
                 }}
@@ -1689,71 +1714,44 @@ const Dashboard: React.FC = () => {
                 <ArrowOutward />
               </IconButton>
             </Box>
-            <ResponsiveContainer width="100%" height={320}>
-              <PieChart>
-                <defs>
-                  {salesDistributionData.map((entry, index) => (
-                    <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor={entry.color} stopOpacity={1} />
-                      <stop offset="100%" stopColor={entry.color} stopOpacity={0.7} />
-                    </linearGradient>
-                  ))}
-                </defs>
-                <Pie
-                  data={salesDistributionData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={120}
-                  innerRadius={60}
-                  fill={theme.palette.primary.main}
-                  dataKey="value"
-                  stroke="none"
-                  paddingAngle={2}
-                >
-                  {salesDistributionData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={`url(#gradient-${index})`} 
-                      stroke={theme.palette.background.paper}
-                      strokeWidth={2}
-                      style={{
-                        filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
-                        transition: 'all 0.2s ease',
-                      }}
-                    />
-                  ))}
-                </Pie>
-                <RechartsTooltip content={<CustomSalesDistributionTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, justifyContent: 'center' }}>
-              {salesDistributionData.map((entry, index) => (
-                <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: entry.color }} />
-                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 900, fontSize: '0.875rem' }}>
-                    {entry.name}
-                  </Typography>
-                </Box>
-              ))}
+            <Box sx={{ width: '100%', height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', pt: 9 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  width: '100%',
+                  maxWidth: 360,
+                  '& .apexcharts-legend-marker': { stroke: 'none' },
+                }}
+              >
+                <ReactApexChart
+                  options={salesDistributionChartOptions}
+                  series={salesDistributionChartSeries}
+                  type="donut"
+                  height={350}
+                  width={1000}
+                />
+              </Box>
             </Box>
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
 
         {/* Sales Chart */}
-        <Card sx={{ 
-          borderRadius: 3, 
-          boxShadow: theme.palette.mode === 'dark' 
-              ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
-              : '0 4px 20px rgba(0, 0, 0, 0.08)',
-            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-            border: `none`,
-          alignSelf: 'start',
-          minHeight: { xs: 395, sm: 440 },
-          position: 'relative',
-          overflow: 'hidden', 
-        }}> 
-          <CardContent sx={{ p: { xs: 2, md: 2.5 }, pt: { xs: 1.75, md: 2.25 } }}>
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            boxShadow: 'none',
+            bgcolor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+            alignSelf: 'start',
+            minHeight: { xs: 505, sm: 460 },
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <Box sx={{ p: { xs: 2, md: 2.5 }, pt: { xs: 1.75, md: 2.25 } }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -1763,7 +1761,7 @@ const Dashboard: React.FC = () => {
               <Typography 
                 variant="h6" 
                 sx={{ 
-                  fontWeight: 800, 
+                  fontWeight: 600, 
                   color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
                   fontSize: { xs: '1rem', md: '1.25rem' },
                 }}
@@ -1790,107 +1788,19 @@ const Dashboard: React.FC = () => {
                 <ArrowOutward />
               </IconButton>
             </Box>
-            <Box sx={{ width: '100%', height: { xs: 250, sm: 300 }, minHeight: { xs: 250, sm: 300 }, minWidth: 0, position:'relative'}}>
-              <ResponsiveContainer width="100%" height={380} minHeight={250}>
-                <AreaChart 
-                  data={salesChartData}
-                  margin={selectedMonth !== null ? { top: 5, right: 5, bottom: 0, left: -15 } : { top: 19, right: 5, bottom: 35, left: -15 }}
-                >
-                <defs>
-                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={taxiMonterricoColors.green} stopOpacity={0.4}/>
-                    <stop offset="50%" stopColor={taxiMonterricoColors.green} stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor={taxiMonterricoColors.green} stopOpacity={0}/>
-                  </linearGradient>
-                  <filter id="glow">
-                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                    <feMerge>
-                      <feMergeNode in="coloredBlur"/>
-                      <feMergeNode in="SourceGraphic"/>
-                    </feMerge>
-                  </filter>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
-                <XAxis 
-                  dataKey={selectedMonth !== null ? "day" : "month"} 
-                  stroke={theme.palette.text.secondary}
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                  angle={selectedMonth !== null ? -45 : 0}
-                  textAnchor={selectedMonth !== null ? "end" : "middle"}
-                  height={selectedMonth !== null ? 50 : 40}
-                  dy={selectedMonth !== null ? 5 : 10}
+            <Box sx={{ width: '100%', height: 400, minWidth: 0 }}>
+              {salesChartApexSeries[0]?.data && (
+                <ReactApexChart
+                  options={salesChartApexOptions}
+                  series={salesChartApexSeries}
+                  type="bar"
+                  height={400}
+                  width="100%"
                 />
-                <YAxis 
-                  stroke={theme.palette.text.secondary}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => {
-                    if (value === 0) return '0';
-                    const valueInK = value / 1000;
-                    // Si es un número entero, mostrar sin decimales
-                    if (valueInK % 1 === 0) {
-                      return `${valueInK}k`;
-                    }
-                    // Si tiene decimales, mostrar con 1 decimal
-                    return `${valueInK.toFixed(1)}k`;
-                  }}
-                  domain={selectedMonth !== null && selectedMonthBudget > 0 
-                    ? [0, selectedMonthBudget * 1.1] 
-                    : [0, 'dataMax']}
-                />
-                <RechartsTooltip 
-                  formatter={(value: any) => {
-                    const numValue = typeof value === 'number' ? value : Number(value);
-                    return numValue !== undefined && !isNaN(numValue) 
-                      ? [formatCurrencyPEDecimals(numValue), 'Ventas'] 
-                      : ['', 'Ventas'];
-                  }}
-                  labelFormatter={(label: any) => selectedMonth !== null ? `Día ${label}` : label}
-                  contentStyle={{
-                    backgroundColor: theme.palette.background.paper,
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '8px',
-                  }}
-                />
-                {selectedMonth !== null && selectedMonthBudget > 0 && (
-                  <ReferenceLine 
-                    y={selectedMonthBudget} 
-                    stroke={taxiMonterricoColors.green} 
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    label={{ 
-                      value: `Presupuesto: ${formatCurrencyPE(selectedMonthBudget)}`, 
-                      position: "right",
-                      fill: taxiMonterricoColors.green,
-                      fontSize: 12,
-                    }}
-                  />
-                )}
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke={taxiMonterricoColors.green} 
-                  strokeWidth={3}
-                  fill="url(#colorSales)"
-                  dot={false}
-                  activeDot={{ 
-                    r: 8, 
-                    fill: taxiMonterricoColors.green,
-                    stroke: theme.palette.common.white,
-                    strokeWidth: 2,
-                    filter: 'drop-shadow(0 2px 4px rgba(16, 185, 129, 0.4))',
-                  }}
-                  style={{
-                    filter: 'drop-shadow(0 2px 4px rgba(16, 185, 129, 0.2))',
-                  }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+              )}
             </Box>
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
       </Box>
 
       {/* Sección: Pipeline de Ventas */}
@@ -1913,25 +1823,26 @@ const Dashboard: React.FC = () => {
         display: 'grid',
         gridTemplateColumns: { 
           xs: '1fr', 
-          md: '1.5fr 1fr',
-          lg: '1.5fr 1fr',
-          xl: '2fr 1fr'   
+          md: '1.4fr 1.25fr',
+          lg: '1.4fr 1.25fr',
+          xl: '1.65fr 1.25fr'   
         },
         gap: { xs: 1.5, sm: 2, md: 3 },
         mb: { xs: 2, sm: 2.5, md: 3 } 
       }}>
         {/* Ventas Semanales */}
-        <Card sx={{ 
-          borderRadius: 3, 
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 20px rgba(0, 0, 0, 0.08)',
-          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-          border: `none`,
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            boxShadow: 'none',
+            bgcolor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <Box sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -1941,7 +1852,7 @@ const Dashboard: React.FC = () => {
               <Typography 
                 variant="h6" 
                 sx={{ 
-                  fontWeight: 800, 
+                  fontWeight: 600, 
                   color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary, 
                   fontSize: { xs: '1rem', md: '1.25rem' },
                 }}
@@ -1968,117 +1879,31 @@ const Dashboard: React.FC = () => {
                 <ArrowOutward />
               </IconButton>
             </Box>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart 
-                data={weeklySalesData}
-                layout="vertical"
-                margin={{ top: 5, right: 30, bottom: -10, left: 0 }}
-                barCategoryGap="80%"
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={true} />
-                <XAxis 
-                  type="number" 
-                  stroke={theme.palette.text.secondary}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis 
-                  type="category" 
-                  dataKey="week" 
-                  stroke={theme.palette.text.secondary} 
-                  width={60}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <RechartsTooltip 
-                  trigger="hover"
-                  shared={false}
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length && payload[0] && payload[0].value !== undefined && payload[0].value !== null) {
-                      const value = payload[0].value as number;
-                      if (isNaN(value)) return null;
-                      return (
-                        <Box
-                          sx={{
-                            backgroundColor: theme.palette.background.paper,
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: 2,
-                            padding: 1.5,
-                            boxShadow: theme.palette.mode === 'dark' 
-                              ? '0 4px 12px rgba(0, 0, 0, 0.4)' 
-                              : '0 2px 8px rgba(0, 0, 0, 0.15)',
-                            minWidth: 140,
-                          }}
-                        >
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: theme.palette.text.secondary,
-                              fontSize: '0.875rem',
-                              fontWeight: 900,
-                              mb: 0.5,
-                            }}
-                          >
-                            {label}
-                          </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-                            <Typography 
-                              variant="h6" 
-                              sx={{ 
-                                color: theme.palette.secondary.main,
-                                fontSize: '1.125rem',
-                                fontWeight: 800,
-                              }}
-                            >
-                              {formatCurrencyPE(value)}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={30}>
-                  {weeklySalesData.map((entry, index) => {
-                    const colors = [
-                      taxiMonterricoColors.green,
-                      theme.palette.error.main,
-                      theme.palette.secondary.main,
-                      taxiMonterricoColors.orange,
-                      theme.palette.primary.main,
-                      taxiMonterricoColors.greenLight,
-                      taxiMonterricoColors.orangeDark
-                    ];
-                    return (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={colors[index % colors.length]}
-                        style={{
-                          filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
-                          transition: 'all 0.2s ease',
-                        }}
-                      />
-                    );
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+            <Box sx={{ width: '100%', height: 400 }}>
+              <ReactApexChart
+                options={weeklySalesChartOptions}
+                series={weeklySalesChartSeries}
+                type="bar"
+                height={400}
+                width="100%"
+              />
+            </Box>
+          </Box>
+        </Paper>
 
         {/* Desempeño por Usuario */}
-        <Card sx={{ 
-            borderRadius: 3, 
-            boxShadow: theme.palette.mode === 'dark' 
-              ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
-              : '0 4px 20px rgba(0, 0, 0, 0.08)',
-            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-            border: `none`,
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            boxShadow: 'none',
+            bgcolor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
             position: 'relative',
-            overflow: 'hidden', 
-          }}>
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            overflow: 'hidden',
+          }}
+        >
+          <Box sx={{ p: { xs: 2, md: 3 } }}>
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -2088,7 +1913,7 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="h6" 
                   sx={{ 
-                    fontWeight: 800, 
+                    fontWeight: 600, 
                     color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary, 
                     fontSize: { xs: '1rem', md: '1.25rem' },
                   }}
@@ -2115,111 +1940,38 @@ const Dashboard: React.FC = () => {
                   <ArrowOutward />
                 </IconButton>
               </Box>
-              {(() => {
-                // Asegurar que siempre tengamos un array válido
-                const userPerformance = (stats?.deals?.userPerformance && Array.isArray(stats.deals.userPerformance)) 
-                  ? stats.deals.userPerformance 
-                  : [];
-                const hasData = userPerformance.length > 0;
-                
-                if (hasData) {
-                  return (
-                    <Box>
-                      <ResponsiveContainer width="100%" height={400}>
-                        <PieChart>
-                          <defs>
-                            {(() => {
-                              const colors = [
-                                taxiMonterricoColors.greenLight,
-                                taxiMonterricoColors.green,
-                                taxiMonterricoColors.greenDark,
-                                theme.palette.primary.main,
-                                theme.palette.primary.dark,
-                                taxiMonterricoColors.greenLight,
-                              ];
-                              return userPerformance.map((user, index) => (
-                                <linearGradient key={`kpi-gradient-${index}`} id={`kpi-gradient-${index}`} x1="0" y1="0" x2="1" y2="1">
-                                  <stop offset="0%" stopColor={colors[index % colors.length]} stopOpacity={1} />
-                                  <stop offset="100%" stopColor={colors[index % colors.length]} stopOpacity={0.7} />
-                                </linearGradient>
-                              ));
-                            })()}
-                          </defs>
-                          {(() => {
-                            // Colores en tonos verdes/teal
-                            const colors = [
-                              taxiMonterricoColors.greenLight,
-                              taxiMonterricoColors.green,
-                              taxiMonterricoColors.greenDark,
-                              theme.palette.primary.main,
-                              theme.palette.primary.dark,
-                              taxiMonterricoColors.greenLight,
-                            ];
-                            return (
-                              <Pie
-                                data={userPerformance.map((user, index) => ({
-                                  name: `${user.firstName} ${user.lastName}`,
-                                  value: user.performance,
-                                  percentage: user.performance,
-                                  fill: colors[index % colors.length],
-                                }))}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={false}
-                                outerRadius={130}
-                                innerRadius={90}
-                                fill={theme.palette.primary.main}
-                                dataKey="value"
-                                stroke="none"
-                                paddingAngle={2}
-                              >
-                                {userPerformance.map((user, index) => (
-                                  <Cell 
-                                    key={`cell-${index}`} 
-                                    fill={`url(#kpi-gradient-${index})`} 
-                                    stroke={theme.palette.background.paper}
-                                    strokeWidth={2}
-                                    style={{
-                                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
-                                      transition: 'all 0.2s ease',
-                                    }}
-                                  />
-                                ))}
-                              </Pie>
-                            );
-                          })()}
-                          <RechartsTooltip content={<CustomKPITooltip />} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </Box>
-                  );
-                }
-                
-                // Siempre mostrar el icono cuando no hay datos
-                return (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    py: 6,
-                    minHeight: 300,
-                    width: '100%',
-                  }}>
-                    <Assessment 
-                      sx={{ 
-                        fontSize: 80, 
-                        color: theme.palette.text.disabled,
-                        opacity: 0.3,
-                        mb: 2,
-                      }} 
-                    />
-                  </Box>
-                );
-              })()}
-            </CardContent>
-          </Card>
+              {kpiAreaChartSeries.length > 0 ? (
+                <Box sx={{ width: '100%', height: 400, pt:3, }}>
+                  <ReactApexChart
+                    options={kpiAreaChartOptions}
+                    series={kpiAreaChartSeries}
+                    type="polarArea"
+                    height={360}
+                    width="100%"
+                  />
+                </Box>
+              ) : (
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  py: 6,
+                  minHeight: 300,
+                  width: '100%',
+                }}>
+                  <Assessment 
+                    sx={{ 
+                      fontSize: 80, 
+                      color: theme.palette.text.disabled,
+                      opacity: 0.3,
+                      mb: 2,
+                    }} 
+                  />
+                </Box>
+              )}
+            </Box>
+          </Paper>
 
       </Box>
 
@@ -2241,7 +1993,7 @@ const Dashboard: React.FC = () => {
         PaperProps={{
           sx: {
             borderRadius: 4,
-            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : theme.palette.background.paper,
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
             boxShadow: theme.palette.mode === 'dark'
               ? '0 8px 32px rgba(0, 0, 0, 0.6)'
               : '0 4px 12px rgba(0,0,0,0.15)',
@@ -2262,7 +2014,7 @@ const Dashboard: React.FC = () => {
           justifyContent: 'space-between', 
           alignItems: 'center',
           pb: 1,
-          bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent',
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent',
           borderBottom: theme.palette.mode === 'dark' 
             ? `1px solid rgba(255, 255, 255, 0.08)` 
             : `1px solid ${theme.palette.divider}`,
@@ -2289,7 +2041,7 @@ const Dashboard: React.FC = () => {
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ 
-          bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent',
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent',
           pt: 3,
         }}>
           <TextField
@@ -2513,109 +2265,39 @@ const Dashboard: React.FC = () => {
             </IconButton>
           </DialogTitle>
           <DialogContent sx={{ p: 4 }}>
-            {(() => {
-              const userPerformance = (stats?.deals?.userPerformance && Array.isArray(stats.deals.userPerformance)) 
-                ? stats.deals.userPerformance 
-                : [];
-              
-              if (userPerformance.length === 0) {
-                return (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    py: 12,
-                    minHeight: 600,
-                    width: '100%',
-                  }}>
-                    <Assessment 
-                      sx={{ 
-                        fontSize: 120, 
-                        color: theme.palette.text.disabled,
-                        opacity: 0.3,
-                        mb: 2,
-                      }} 
-                    />
-                    <Typography variant="h6" sx={{ color: theme.palette.text.secondary, fontWeight: 900 }}>
-                      No hay datos disponibles
-                    </Typography>
-                  </Box>
-                );
-              }
-              
-              return (
-                <Box>
-                  <ResponsiveContainer width="100%" height={700}>
-                    <PieChart>
-                      <defs>
-                        {(() => {
-                          const colors = [
-                            taxiMonterricoColors.greenLight,
-                            taxiMonterricoColors.green,
-                            taxiMonterricoColors.greenDark,
-                            theme.palette.primary.main,
-                            theme.palette.primary.dark,
-                            taxiMonterricoColors.greenLight,
-                          ];
-                          return userPerformance.map((user, index) => (
-                            <linearGradient key={`kpi-fullscreen-gradient-${index}`} id={`kpi-fullscreen-gradient-${index}`} x1="0" y1="0" x2="1" y2="1">
-                              <stop offset="0%" stopColor={colors[index % colors.length]} stopOpacity={1} />
-                              <stop offset="100%" stopColor={colors[index % colors.length]} stopOpacity={0.7} />
-                            </linearGradient>
-                          ));
-                        })()}
-                      </defs>
-                      {(() => {
-                        // Colores en tonos verdes/teal
-                        const colors = [
-                          taxiMonterricoColors.greenLight,
-                          taxiMonterricoColors.green,
-                          taxiMonterricoColors.greenDark,
-                          theme.palette.primary.main,
-                          theme.palette.primary.dark,
-                          taxiMonterricoColors.greenLight,
-                        ];
-                        return (
-                          <Pie
-                            data={userPerformance.map((user, index) => ({
-                              name: `${user.firstName} ${user.lastName}`,
-                              value: user.performance,
-                              percentage: user.performance,
-                              fill: colors[index % colors.length],
-                            }))}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={false}
-                            outerRadius={260}
-                            innerRadius={190}
-                            fill={theme.palette.primary.main}
-                            dataKey="value"
-                            stroke="none"
-                            paddingAngle={2}
-                          >
-                            {userPerformance.map((user, index) => (
-                              <Cell 
-                                key={`cell-${index}`} 
-                                fill={`url(#kpi-fullscreen-gradient-${index})`} 
-                                stroke={theme.palette.background.paper}
-                                strokeWidth={2}
-                                style={{
-                                  filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
-                                  transition: 'all 0.2s ease',
-                                }}
-                              />
-                            ))}
-                          </Pie>
-                        );
-                      })()}
-                      <RechartsTooltip content={<CustomKPITooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Box>
-              );
-            })()}
+            {kpiAreaChartSeries.length > 0 ? (
+              <Box sx={{ width: '100%', height: 700 }}>
+                <ReactApexChart
+                  options={kpiAreaChartOptions}
+                  series={kpiAreaChartSeries}
+                  type="polarArea"
+                  height={700}
+                  width="100%"
+                />
+              </Box>
+            ) : (
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                py: 12,
+                minHeight: 600,
+                width: '100%',
+              }}>
+                <Assessment 
+                  sx={{ 
+                    fontSize: 120, 
+                    color: theme.palette.text.disabled,
+                    opacity: 0.3,
+                    mb: 2,
+                  }} 
+                />
+                <Typography variant="h6" sx={{ color: theme.palette.text.secondary, fontWeight: 900 }}>
+                  No hay datos disponibles
+                </Typography>
+              </Box>
+            )}
           </DialogContent>
         </Dialog>
 
@@ -2666,102 +2348,15 @@ const Dashboard: React.FC = () => {
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 4 }}>
-          <ResponsiveContainer width="100%" height={600}>
-            <BarChart 
-              data={weeklySalesData}
-              layout="vertical"
-              margin={{ top: 5, right: 30, bottom: 20, left: 0 }}
-              barCategoryGap="30%"
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={true} />
-              <XAxis 
-                type="number" 
-                stroke={theme.palette.text.secondary}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis 
-                type="category" 
-                dataKey="week" 
-                stroke={theme.palette.text.secondary} 
-                width={80}
-                axisLine={false}
-                tickLine={false}
-              />
-              <RechartsTooltip 
-                trigger="hover"
-                shared={false}
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length && payload[0] && payload[0].value !== undefined && payload[0].value !== null) {
-                    const value = payload[0].value as number;
-                    if (isNaN(value)) return null;
-                    return (
-                      <Box
-                        sx={{
-                          backgroundColor: theme.palette.background.paper,
-                          border: `1px solid ${theme.palette.divider}`,
-                          borderRadius: 2,
-                          padding: 2,
-                          boxShadow: theme.palette.mode === 'dark' 
-                            ? '0 4px 12px rgba(0, 0, 0, 0.4)' 
-                            : '0 2px 8px rgba(0, 0, 0, 0.15)',
-                          minWidth: 160,
-                        }}
-                      >
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: theme.palette.text.secondary,
-                            fontSize: '1rem',
-                            fontWeight: 900,
-                            mb: 0.75,
-                          }}
-                        >
-                          {label}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-                          <Typography 
-                            variant="h6" 
-                            sx={{ 
-                              color: theme.palette.secondary.main,
-                              fontSize: '1.25rem',
-                              fontWeight: 800,
-                            }}
-                          >
-                            {formatCurrencyPE(value)}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={40}>
-                {weeklySalesData.map((entry, index) => {
-                  const colors = [
-                    taxiMonterricoColors.green,
-                    theme.palette.error.main,
-                    theme.palette.secondary.main,
-                    taxiMonterricoColors.orange,
-                    theme.palette.primary.main,
-                    taxiMonterricoColors.greenLight,
-                    taxiMonterricoColors.orangeDark
-                  ];
-                  return (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={colors[index % colors.length]}
-                      style={{
-                        filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
-                        transition: 'all 0.2s ease',
-                      }}
-                    />
-                  );
-                })}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <Box sx={{ width: '100%', height: 600 }}>
+            <ReactApexChart
+              options={{ ...weeklySalesChartOptions, chart: { ...weeklySalesChartOptions.chart, height: 600 } }}
+              series={weeklySalesChartSeries}
+              type="bar"
+              height={600}
+              width="100%"
+            />
+          </Box>
         </DialogContent>
       </Dialog>
 
