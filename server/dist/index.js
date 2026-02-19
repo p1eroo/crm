@@ -129,8 +129,8 @@ app.use((0, cors_1.default)({
     exposedHeaders: ['Authorization'],
 }));
 // Aumentar el límite del body parser para permitir imágenes en base64
-app.use(express_1.default.json({ limit: '50mb' }));
-app.use(express_1.default.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express_1.default.json({ limit: '100mb' }));
+app.use(express_1.default.urlencoded({ extended: true, limit: '100mb' }));
 // Logging para debug de conexiones
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url} from ${req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress}`);

@@ -34,6 +34,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Description,
+  Person,
 } from "@mui/icons-material";
 import { PencilLine, Eye, Trash } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -2273,33 +2274,28 @@ const Contacts: React.FC = () => {
         }
         emptyState={
           contacts.length === 0 ? (
-            <Box sx={pageStyles.emptyState}>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 2,
-                  py: 6,
-                }}
-              >
+            <Box sx={{ ...pageStyles.emptyState, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper, py: 8 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                 <Box
                   sx={{
                     width: 120,
                     height: 120,
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? theme.palette.action.disabledBackground
+                    bgcolor: theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.05)'
                       : theme.palette.grey[100],
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    mb: 1,
-                    fontSize: '64px',
                     lineHeight: 1,
                   }}
                 >
-                  👤🏽
+                  <Person
+                    sx={{
+                      fontSize: 64,
+                      color: theme.palette.text.secondary,
+                    }}
+                  />
                 </Box>
                 <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
                   <Typography
@@ -2307,16 +2303,16 @@ const Contacts: React.FC = () => {
                     sx={{
                       fontWeight: 700,
                       mb: 1,
-                      color: theme.palette.text.primary,
+                      color: theme.palette.text.secondary,
                       fontSize: { xs: '1.25rem', md: '1.5rem' },
                     }}
                   >
                     No hay contactos para mostrar
                   </Typography>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      color: theme.palette.text.primary,
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: theme.palette.text.secondary,
                       lineHeight: 1.6,
                       fontSize: { xs: '0.875rem', md: '0.9375rem' },
                     }}

@@ -69,8 +69,8 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
       dark: taxiMonterricoColors.orangeDark,
     },
     background: {
-      default: mode === 'light' ? '#fafafa' : '#1A2027', // Gris azulado muy oscuro, más cercano al negro
-      paper: mode === 'light' ? '#ffffff' : '#1c252e', // Mismo tono que las tablas en modo oscuro
+      default: mode === 'light' ? '#f2f2f2' : '#1A2027', // Gris azulado muy oscuro, más cercano al negro
+      paper: mode === 'light' ? '#fafafa' : '#1c252e', // Contenido, cards, tablas en modo claro
     },
     text: {
       primary: mode === 'light' ? '#1F2937' : '#E5E7EB', // Gris claro premium
@@ -169,16 +169,24 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
         }),
       },
     },
-    // MuiCard: mismo color que MuiPaper (card izquierda) para unificar cards derecha/izquierda
+    // MuiTableContainer: fondo #fafafa en modo claro para tablas
+    MuiTableContainer: {
+      styleOverrides: {
+        root: ({ theme }: { theme: Theme }) => ({
+          ...(theme.palette.mode === 'light' && {
+            backgroundColor: '#fafafa',
+          }),
+        }),
+      },
+    },
+    // MuiCard: mismo color que Reportes (#1c252ea6) para Dashboard y Reportes
     MuiCard: {
       styleOverrides: {
         root: ({ theme }: { theme: Theme }) => ({
           borderRadius: 16,
           border: 'none',
-          backgroundColor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 2px 8px rgba(0, 0, 0, 0.3)' 
-            : '0 2px 8px rgba(0, 0, 0, 0.1)',
+          backgroundColor: theme.palette.mode === 'dark' ? '#1c252ea6' : theme.palette.background.paper,
+          boxShadow: 'none',
           // Deshabilitar transiciones solo para propiedades relacionadas con el tema
           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         }),

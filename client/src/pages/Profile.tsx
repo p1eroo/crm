@@ -542,7 +542,7 @@ const Profile: React.FC = () => {
                   },
                 }}
               >
-                {disconnectingEmail ? "Desconectando..." : "Desconectar correo"}
+                {disconnectingEmail ? "Desconectando..." : "Desconectar"}
               </Button>
             )}
           </Box>

@@ -113,12 +113,15 @@ const processFile = (file: File): Promise<ContactRow[]> => {
   });
 };
 
-const processContent = (html: string, contact: ContactRow): string =>
-  html
+const processContent = (html: string, contact: ContactRow): string => {
+  const content = html
     .replace(/\{\{nombre\}\}/g, contact.nombre || '')
     .replace(/\{\{email\}\}/g, contact.email || '')
     .replace(/\{\{fecha\}\}/g, new Date().toLocaleDateString('es-ES'))
-    .replace(/\{\{empresa\}\}/g, contact.empresa || 'Taxi Monterrico');
+    .replace(/\{\{empresa\}\}/g, contact.empresa || 'Taxi Monterrico')
+    .replace(/\n/g, '<br>');
+  return `<div lang="es">${content}</div>`;
+};
 
 interface AttachmentRow {
   name: string;
@@ -128,6 +131,8 @@ interface AttachmentRow {
 const MassEmail: React.FC = () => {
   const theme = useTheme();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const attachmentInputRef = React.useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [subject, setSubject] = useState('');
@@ -221,6 +226,9 @@ const MassEmail: React.FC = () => {
       });
       if (!response.ok || !response.body) {
         const errData = await response.json().catch(() => ({}));
+        if (response.status === 413) {
+          throw new Error('El archivo o la cantidad de contactos excede el límite. Prueba con un archivo más pequeño o menos contactos.');
+        }
         throw new Error(errData.error || `Error ${response.status}`);
       }
       const reader = response.body.getReader();
@@ -304,6 +312,40 @@ const MassEmail: React.FC = () => {
 
   const removeAttachment = (name: string) => {
     setAttachments((prev) => prev.filter((a) => a.name !== name));
+  };
+
+  const handleAttachmentFiles = (files: FileList | null) => {
+    if (!files) return;
+    for (let i = 0; i < files.length; i++) addAttachment(files[i]);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragOver(true);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const files = e.dataTransfer.files;
+    if (files?.length) handleAttachmentFiles(files);
   };
 
   return (
@@ -539,10 +581,55 @@ const MassEmail: React.FC = () => {
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
                 Adjuntos (opcional)
               </Typography>
-              <Button variant="outlined" size="small" component="label" startIcon={<AttachFile />} sx={{ mr: 1 }}>
-                Añadir archivo
-                <input type="file" hidden multiple onChange={(e) => { const files = e.target.files; if (files) for (let i = 0; i < files.length; i++) addAttachment(files[i]); e.target.value = ''; }} />
-              </Button>
+              <Box
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => attachmentInputRef.current?.click()}
+                sx={{
+                  border: `2px dashed ${isDragOver ? taxiMonterricoColors.green : theme.palette.divider}`,
+                  borderRadius: 2,
+                  py: 3,
+                  px: 2,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1.5,
+                  cursor: 'pointer',
+                  bgcolor: isDragOver ? (theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.08)' : 'rgba(0, 150, 136, 0.04)') : 'transparent',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.06)' : 'rgba(0, 150, 136, 0.03)',
+                  },
+                }}
+              >
+                <AttachFile sx={{ fontSize: 40, color: theme.palette.text.secondary }} />
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                  Arrastra archivos aquí o haz clic para seleccionar
+                </Typography>
+                <Button
+                  type="button"
+                  variant="contained"
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); attachmentInputRef.current?.click(); }}
+                  sx={{
+                    bgcolor: taxiMonterricoColors.green,
+                    '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
+                  }}
+                >
+                  Seleccionar archivo
+                </Button>
+                <input
+                  ref={attachmentInputRef}
+                  type="file"
+                  multiple
+                  hidden
+                  onChange={(e) => { handleAttachmentFiles(e.target.files); e.target.value = ''; }}
+                />
+              </Box>
               {attachments.length > 0 && (
                 <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                   {attachments.map((a) => (

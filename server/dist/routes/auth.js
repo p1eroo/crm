@@ -27,20 +27,21 @@ router.post('/register', [
             return res.status(400).json({ errors: errors.array() });
         }
         const { usuario, email, password, firstName, lastName, role } = req.body;
-        // Construir condición de búsqueda: siempre buscar por usuario, y por email solo si existe
+        const usuarioNormalized = (usuario || '').trim().toLowerCase();
+        // Construir condición de búsqueda: usuario case-insensitive, email exacto
         const whereCondition = email && email.trim()
             ? {
                 [sequelize_1.Op.or]: [
-                    { usuario },
+                    { usuario: { [sequelize_1.Op.iLike]: usuarioNormalized } },
                     { email: email.trim() }
                 ]
             }
-            : { usuario };
+            : { usuario: { [sequelize_1.Op.iLike]: usuarioNormalized } };
         const existingUser = await User_1.User.findOne({
             where: whereCondition
         });
         if (existingUser) {
-            if (existingUser.usuario === usuario) {
+            if (existingUser.usuario.toLowerCase() === usuarioNormalized) {
                 return res.status(400).json({ error: 'El usuario ya existe' });
             }
             if (email && existingUser.email === email.trim()) {
@@ -55,7 +56,7 @@ router.post('/register', [
         }
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
         const userData = {
-            usuario,
+            usuario: usuarioNormalized,
             password: hashedPassword,
             firstName,
             lastName,
@@ -98,6 +99,7 @@ router.post('/login-monterrico', [
             return res.status(400).json({ errors: errors.array() });
         }
         const { usuario, password } = req.body;
+        const usuarioNormalized = (usuario || '').trim().toLowerCase();
         // Llamar a la API de Monterrico
         let monterricoData;
         try {
@@ -196,9 +198,9 @@ router.post('/login-monterrico', [
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
         // Solo si la autenticación con Monterrico fue exitosa, proceder con el usuario local
-        // Buscar o crear usuario local
+        // Buscar o crear usuario local (búsqueda case-insensitive)
         let user = await User_1.User.findOne({
-            where: { usuario },
+            where: { usuario: { [sequelize_1.Op.iLike]: usuarioNormalized } },
             include: [{ model: Role_1.Role, as: 'Role' }]
         });
         if (!user) {
@@ -209,13 +211,13 @@ router.post('/login-monterrico', [
             if (!defaultRole) {
                 return res.status(500).json({ error: 'No se pudo asignar un rol al usuario' });
             }
-            // Crear usuario local basado en datos de Monterrico
+            // Crear usuario local basado en datos de Monterrico (guardar usuario en minúsculas)
             const hashedPassword = await bcryptjs_1.default.hash(password, 10);
             user = await User_1.User.create({
-                usuario,
-                email: monterricoData.email || `${usuario}@monterrico.app`,
+                usuario: usuarioNormalized,
+                email: monterricoData.email || `${usuarioNormalized}@monterrico.app`,
                 password: hashedPassword,
-                firstName: monterricoData.nombre || monterricoData.firstName || usuario,
+                firstName: monterricoData.nombre || monterricoData.firstName || usuarioNormalized,
                 lastName: monterricoData.apellido || monterricoData.lastName || '',
                 roleId: defaultRole.id,
                 isActive: true,
@@ -270,8 +272,9 @@ router.post('/login', [
             return res.status(400).json({ errors: errors.array() });
         }
         const { usuario, password } = req.body;
+        const usuarioNormalized = (usuario || '').trim().toLowerCase();
         const user = await User_1.User.findOne({
-            where: { usuario },
+            where: { usuario: { [sequelize_1.Op.iLike]: usuarioNormalized } },
             include: [{ model: Role_1.Role, as: 'Role' }]
         });
         if (!user || !user.isActive) {

@@ -27,7 +27,6 @@ import {
   Paper,
   useTheme,
   InputAdornment,
-  LinearProgress,
   Autocomplete,
 } from '@mui/material';
 import { Add, Schedule, PendingActions, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday } from '@mui/icons-material';
@@ -45,6 +44,8 @@ import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import { FormDrawer } from '../components/FormDrawer';
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
+import { CallModal, MeetingModal, NoteModal } from '../components/ActivityModals';
+import EmailComposer from '../components/EmailComposer';
 
 library.add(far);
 
@@ -63,10 +64,12 @@ interface Task {
   description?: string;
   companyId?: number;
   contactId?: number;
+  dealId?: number;
   AssignedTo?: { firstName: string; lastName: string; avatar?: string | null };
   User?: { firstName: string; lastName: string; avatar?: string | null }; // Para actividades
   Company?: { id: number; name: string };
-  Contact?: { id: number; firstName: string; lastName: string };
+  Contact?: { id: number; firstName: string; lastName: string; email?: string };
+  Deal?: { id: number; name: string };
   isActivity?: boolean;
 }
 
@@ -126,8 +129,6 @@ const Tasks: React.FC = () => {
   const [completing, setCompleting] = useState(false);
   const [linkPromptOpen, setLinkPromptOpen] = useState(false);
   const [taskJustCompletedForLink, setTaskJustCompletedForLink] = useState<Task | null>(null);
-  const LINK_PROMPT_TOTAL_MS = 8000;
-  const [linkPromptRemainingMs, setLinkPromptRemainingMs] = useState(LINK_PROMPT_TOTAL_MS);
   const [companySearchInput, setCompanySearchInput] = useState('');
   const [contactSearchInput, setContactSearchInput] = useState('');
   const [linkedTaskLockCompanyContact, setLinkedTaskLockCompanyContact] = useState(false);
@@ -156,6 +157,9 @@ const Tasks: React.FC = () => {
   const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
   const [taskStats, setTaskStats] = useState({ overdue: 0, dueToday: 0, pending: 0, completed: 0 });
   const [taskDetailDrawerTaskId, setTaskDetailDrawerTaskId] = useState<number | null>(null);
+  const [completeAsModalTask, setCompleteAsModalTask] = useState<Task | null>(null);
+  const [completeAsModalPayload, setCompleteAsModalPayload] = useState<{ date: string; time: string; observations: string } | null>(null);
+  const [contactEmailForComplete, setContactEmailForComplete] = useState<{ email: string; name: string } | null>(null);
 
   // Estadísticas totales para los cards (no dependen de la página actual)
   const overdueTasks = taskStats.overdue;
@@ -425,22 +429,6 @@ const Tasks: React.FC = () => {
     fetchCompaniesAndContacts();
   }, [fetchCompaniesAndContacts]);
 
-  useEffect(() => {
-    if (!linkPromptOpen || !taskJustCompletedForLink) return;
-    const interval = setInterval(() => {
-      setLinkPromptRemainingMs((prev) => {
-        if (prev <= 100) {
-          clearInterval(interval);
-          setLinkPromptOpen(false);
-          setTaskJustCompletedForLink(null);
-          return 0;
-        }
-        return prev - 100;
-      });
-    }, 100);
-    return () => clearInterval(interval);
-  }, [linkPromptOpen, taskJustCompletedForLink]);
-
   const getDescriptionWithoutCompletada = (desc: string) => {
     const s = (desc || '').replace(/\r\n/g, '\n');
     let idx = s.indexOf('\n\n--- Completada ---');
@@ -593,10 +581,14 @@ const Tasks: React.FC = () => {
       else submitData.companyId = null;
       if (formData.contactId) submitData.contactId = parseInt(formData.contactId);
       else submitData.contactId = null;
-      if (formData.dueDate && formData.estimatedTime) {
-        submitData.dueDate = `${formData.dueDate}T${formData.estimatedTime}:00`;
-      } else if (formData.dueDate) {
-        submitData.dueDate = formData.dueDate;
+      if (formData.dueDate) {
+        // Incluir offset de zona horaria para que la fecha/hora se interprete correctamente (evitar desfase UTC)
+        const tzOffset = -new Date().getTimezoneOffset();
+        const tzSign = tzOffset >= 0 ? '+' : '-';
+        const tzHours = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2, '0');
+        const tzMins = String(Math.abs(tzOffset) % 60).padStart(2, '0');
+        const timePart = formData.estimatedTime ? `${formData.estimatedTime}:00` : '00:00:00';
+        submitData.dueDate = `${formData.dueDate}T${timePart}${tzSign}${tzHours}:${tzMins}`;
       }
 
       if (editingTask) {
@@ -610,7 +602,7 @@ const Tasks: React.FC = () => {
             description: descriptionToSave,
             type: 'task',
             startDate: formData.startDate || undefined,
-            dueDate: formData.dueDate || undefined,
+            dueDate: submitData.dueDate || formData.dueDate || undefined,
           });
         } else {
           await api.put(`/tasks/${editingTask.id}`, { ...submitData, description: descriptionToSave });
@@ -688,6 +680,50 @@ const Tasks: React.FC = () => {
     }
   };
 
+  const getEntityForTask = (task: Task): { entityType: 'company' | 'contact' | 'deal'; entityId: number; entityName: string } | null => {
+    if (task.dealId && task.Deal) {
+      return { entityType: 'deal', entityId: task.dealId, entityName: task.Deal.name };
+    }
+    if (task.companyId && task.Company) {
+      return { entityType: 'company', entityId: task.companyId, entityName: task.Company.name };
+    }
+    if (task.contactId && task.Contact) {
+      const name = [task.Contact.firstName, task.Contact.lastName].filter(Boolean).join(' ') || 'Contacto';
+      return { entityType: 'contact', entityId: task.contactId, entityName: name };
+    }
+    return null;
+  };
+
+  const markTaskCompleted = useCallback(async (task: Task, descriptionPayload?: { date: string; time: string; observations: string }) => {
+    const taskId = task.id;
+    const previousStatus = task.status;
+    let description: string | undefined;
+    if (descriptionPayload) {
+      const dateStr = descriptionPayload.date || new Date().toISOString().slice(0, 10);
+      const timeStr = descriptionPayload.time || new Date().toTimeString().slice(0, 5);
+      const completedAtLabel = `Completada el ${dateStr.split('-').reverse().join('/')} a las ${timeStr}\n\n`;
+      description = `${(task as any).description || ''}\n\n--- Completada ---\n${completedAtLabel}${(descriptionPayload.observations || '').trim()}`.trim();
+    }
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' as const } : t));
+    try {
+      if (task.isActivity) {
+        await api.put(`/activities/${taskId}`, { status: 'completed', ...(description != null ? { description } : {}) });
+      } else {
+        await api.put(`/tasks/${taskId}`, { status: 'completed', ...(description != null ? { description } : {}) });
+      }
+      fetchTasks();
+      fetchTaskStats();
+      if ((task as any).companyId != null) {
+        setTaskJustCompletedForLink(task);
+        setLinkPromptOpen(true);
+      }
+    } catch (err) {
+      console.error('Error al completar la tarea:', err);
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: previousStatus } : t));
+      throw err;
+    }
+  }, [fetchTasks, fetchTaskStats]);
+
   const handleOpenCompleteModal = (task: Task) => {
     setStatusMenuAnchor(null);
     setCompleteModalTask(task);
@@ -745,12 +781,33 @@ const Tasks: React.FC = () => {
     if (!completeModalTask) return;
     const task = completeModalTask;
     const taskId = task.id;
-    const previousStatus = task.status;
-
-    setCompleting(true);
+    const hasEntity = task.companyId || task.contactId || task.dealId;
+    const type = (task.type || 'todo') as TaskType;
     const dateStr = completeDate || new Date().toISOString().slice(0, 10);
     const timeStr = completeTime || new Date().toTimeString().slice(0, 5);
-    const completedAtLabel = completeDate || completeTime
+    const payload = { date: dateStr, time: timeStr, observations: completeObservations };
+
+    if ((type === 'call' || type === 'meeting' || type === 'note' || type === 'email') && hasEntity) {
+      handleCloseCompleteModal();
+      setCompleteAsModalTask(task);
+      setCompleteAsModalPayload(payload);
+      if (type === 'email' && task.contactId) {
+        api.get(`/contacts/${task.contactId}`).then(res => {
+          const c = res.data;
+          if (c?.email) {
+            setContactEmailForComplete({
+              email: c.email,
+              name: [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email,
+            });
+          }
+        }).catch(() => {});
+      }
+      return;
+    }
+
+    const previousStatus = task.status;
+    setCompleting(true);
+    const completedAtLabel = dateStr || timeStr
       ? `Completada el ${dateStr.split('-').reverse().join('/')} a las ${timeStr}\n\n`
       : '';
     const newDescription = `${(task as any).description || ''}\n\n--- Completada ---\n${completedAtLabel}${completeObservations.trim()}`.trim();
@@ -777,7 +834,6 @@ const Tasks: React.FC = () => {
       fetchTaskStats();
       if (hadCompany) {
         setTaskJustCompletedForLink(task);
-        setLinkPromptRemainingMs(LINK_PROMPT_TOTAL_MS);
         setLinkPromptOpen(true);
       }
     } catch (error) {
@@ -848,20 +904,13 @@ const Tasks: React.FC = () => {
       {/* Cards de resumen */}
       <Card sx={{ 
         borderRadius: 3,
-        boxShadow: theme.palette.mode === 'dark' 
-          ? '0 4px 16px rgba(0,0,0,0.3)' 
-          : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
+        boxShadow: 'none',
         overflow: 'hidden',
-        bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+        bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
         border: '1px solid',
         borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
         mb: 2.5,
         transition: 'all 0.3s ease',
-        '&:hover': {
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 8px 24px rgba(0,0,0,0.4)' 
-            : `0 8px 24px ${taxiMonterricoColors.greenLight}25`,
-        },
       }}>
         <CardContent sx={{ 
           px: { xs: 1.5, sm: 2, md: 2 },
@@ -1043,19 +1092,12 @@ const Tasks: React.FC = () => {
       {/* Sección de tabla */}
       <Card sx={{ 
         borderRadius: 3,
-        boxShadow: theme.palette.mode === 'dark' 
-          ? '0 4px 16px rgba(0,0,0,0.3)' 
-          : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
+        boxShadow: 'none',
         overflow: 'hidden',
-        bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+        bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
         border: '1px solid',
         borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
         transition: 'all 0.3s ease',
-        '&:hover': {
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 8px 24px rgba(0,0,0,0.4)' 
-            : `0 8px 24px ${taxiMonterricoColors.greenLight}25`,
-        },
       }}>
         <Box sx={{ 
           px: { xs: 2, md: 3 }, 
@@ -1146,9 +1188,9 @@ const Tasks: React.FC = () => {
               border: 'none',
               boxShadow: 'none',
               paddingRight: 0,
-              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
+              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
             },
-            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
             '&::-webkit-scrollbar': {
               height: 8,
             },
@@ -1235,7 +1277,7 @@ const Tasks: React.FC = () => {
                           sx={{
                             height: 28,
                             fontSize: '0.75rem',
-                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
                             '& .MuiSelect-select': { py: 0.5 },
                           }}
                         >
@@ -1282,7 +1324,7 @@ const Tasks: React.FC = () => {
                           sx={{
                             height: 28,
                             fontSize: '0.75rem',
-                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
                             '& .MuiSelect-select': {
                               py: 0.5,
                             },
@@ -1325,7 +1367,7 @@ const Tasks: React.FC = () => {
                           '& .MuiOutlinedInput-root': {
                             height: 28,
                             fontSize: '0.75rem',
-                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
                             '& input::-webkit-calendar-picker-indicator': {
                               filter: theme.palette.mode === 'dark' ? 'invert(1)' : 'none',
                             },
@@ -1363,7 +1405,7 @@ const Tasks: React.FC = () => {
                           '& .MuiOutlinedInput-root': {
                             height: 28,
                             fontSize: '0.75rem',
-                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
                             '& input::-webkit-calendar-picker-indicator': {
                               filter: theme.palette.mode === 'dark' ? 'invert(1)' : 'none',
                             },
@@ -1491,7 +1533,7 @@ const Tasks: React.FC = () => {
                           sx={{
                             height: 28,
                             fontSize: '0.75rem',
-                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
                             '& .MuiSelect-select': { py: 0.5 },
                           }}
                         >
@@ -1523,7 +1565,7 @@ const Tasks: React.FC = () => {
             </TableHead>
             <TableBody>
               {tasks.length === 0 ? (
-                <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper }}>
+                <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa' }}>
                   <TableCell colSpan={10} sx={{ py: 8, textAlign: 'center', border: 'none', bgcolor: 'transparent' }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <Box
@@ -1577,7 +1619,7 @@ const Tasks: React.FC = () => {
                   onClick={() => setTaskDetailDrawerTaskId(task.id)}
                   sx={{ 
                     cursor: 'pointer',
-                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
                     borderBottom: theme.palette.mode === 'light' 
                       ? '1px solid rgba(0, 0, 0, 0.08)' 
                       : '1px solid rgba(255, 255, 255, 0.08)',
@@ -1996,7 +2038,7 @@ const Tasks: React.FC = () => {
             sx={{
               bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
               borderRadius: '0 0 6px 6px',
-              boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+              boxShadow: 'none',
               borderTop: 'none',
               px: { xs: 2, md: 3 },
               py: { xs: 1, md: 1.5 },
@@ -2767,6 +2809,80 @@ const Tasks: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Modales por tipo al completar: Llamada, Reunión, Nota, Correo (se abren después del modal genérico) */}
+      {completeAsModalTask && getEntityForTask(completeAsModalTask) && (
+        <>
+          {completeAsModalTask.type === 'call' && (
+            <CallModal
+              open={true}
+              onClose={() => { setCompleteAsModalTask(null); setCompleteAsModalPayload(null); }}
+              entityType={getEntityForTask(completeAsModalTask)!.entityType}
+              entityId={getEntityForTask(completeAsModalTask)!.entityId}
+              entityName={getEntityForTask(completeAsModalTask)!.entityName}
+              user={user}
+              onSave={async () => {
+                await markTaskCompleted(completeAsModalTask, completeAsModalPayload || undefined);
+                setCompleteAsModalTask(null);
+                setCompleteAsModalPayload(null);
+              }}
+              relatedEntityIds={{
+                contactId: completeAsModalTask.contactId,
+                companyId: completeAsModalTask.companyId,
+              }}
+            />
+          )}
+          {completeAsModalTask.type === 'meeting' && (
+            <MeetingModal
+              open={true}
+              onClose={() => { setCompleteAsModalTask(null); setCompleteAsModalPayload(null); }}
+              entityType={getEntityForTask(completeAsModalTask)!.entityType}
+              entityId={getEntityForTask(completeAsModalTask)!.entityId}
+              entityName={getEntityForTask(completeAsModalTask)!.entityName}
+              user={user}
+              onSave={async () => {
+                await markTaskCompleted(completeAsModalTask, completeAsModalPayload || undefined);
+                setCompleteAsModalTask(null);
+                setCompleteAsModalPayload(null);
+              }}
+            />
+          )}
+          {completeAsModalTask.type === 'note' && (
+            <NoteModal
+              open={true}
+              onClose={() => { setCompleteAsModalTask(null); setCompleteAsModalPayload(null); }}
+              entityType={getEntityForTask(completeAsModalTask)!.entityType}
+              entityId={getEntityForTask(completeAsModalTask)!.entityId}
+              entityName={getEntityForTask(completeAsModalTask)!.entityName}
+              user={user}
+              onSave={async () => {
+                await markTaskCompleted(completeAsModalTask, completeAsModalPayload || undefined);
+                setCompleteAsModalTask(null);
+                setCompleteAsModalPayload(null);
+              }}
+            />
+          )}
+          {completeAsModalTask.type === 'email' && (
+            <EmailComposer
+              open={true}
+              onClose={() => {
+                setCompleteAsModalTask(null);
+                setCompleteAsModalPayload(null);
+                setContactEmailForComplete(null);
+              }}
+              recipientEmail={contactEmailForComplete?.email}
+              recipientName={contactEmailForComplete?.name}
+              initialSubject={completeAsModalTask.title}
+              onSend={async () => {
+                await markTaskCompleted(completeAsModalTask, completeAsModalPayload || undefined);
+                setCompleteAsModalTask(null);
+                setCompleteAsModalPayload(null);
+                setContactEmailForComplete(null);
+              }}
+            />
+          )}
+        </>
+      )}
+
       {/* Aviso: crear nueva tarea vinculada a la misma empresa */}
       <Dialog
         open={linkPromptOpen}
@@ -2786,18 +2902,6 @@ const Tasks: React.FC = () => {
           <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 2 }}>
             ¿Desea crear una nueva tarea vinculada a la misma empresa?
           </Typography>
-          <LinearProgress
-            variant="determinate"
-            value={(linkPromptRemainingMs / LINK_PROMPT_TOTAL_MS) * 100}
-            sx={{
-              height: 6,
-              borderRadius: 1,
-              bgcolor: theme.palette.action.hover,
-              '& .MuiLinearProgress-bar': {
-                bgcolor: taxiMonterricoColors.green,
-              },
-            }}
-          />
         </DialogContent>
         <DialogActions sx={pageStyles.dialogActions}>
           <Button

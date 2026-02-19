@@ -500,45 +500,47 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
     setSaving(true);
     try {
-      // Si es una reunión, guardar en /activities
-      if (taskData.type === 'meeting') {
-        const response = await api.post("/activities", {
-          type: "meeting",
-          subject: taskData.title,
-          description: taskData.description,
-          [`${entityType}Id`]: Number(entityId),
-        });
-        const newActivity = response.data;
-        // Convertir a formato compatible con onSave para la UI de donde se llama
-        const taskAsActivity = {
-          id: newActivity.id,
-          type: "meeting",
-          title: newActivity.subject,
-          description: newActivity.description,
-          dueDate: taskData.dueDate || undefined,
-          createdAt: newActivity.createdAt,
-          CreatedBy: newActivity.User,
-          AssignedTo: newActivity.User,
-          companyId: newActivity.companyId,
-          contactId: newActivity.contactId,
-          dealId: newActivity.dealId,
-        };
-        onSave(taskAsActivity);
-      } else {
-        // Si es una tarea (todo), guardar en /tasks
-        const response = await api.post("/tasks", {
-          title: taskData.title,
-          description: taskData.description,
-          type: taskData.type || "todo",
-          status: taskData.status || "pending",
-          priority: taskData.priority || "medium",
-          dueDate: taskData.dueDate || undefined,
-          startDate: taskData.startDate || undefined,
-          [`${entityType}Id`]: Number(entityId),
-        });
-        const newTask = response.data;
-        onSave(newTask);
+      // Construir dueDate con hora y zona horaria para evitar desfase
+      let dueDateToSend: string | undefined = undefined;
+      if (taskData.dueDate) {
+        const tzOffset = -new Date().getTimezoneOffset();
+        const tzSign = tzOffset >= 0 ? "+" : "-";
+        const tzHours = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2, "0");
+        const tzMins = String(Math.abs(tzOffset) % 60).padStart(2, "0");
+        const timePart = taskData.estimatedTime ? `${taskData.estimatedTime}:00` : "00:00:00";
+        dueDateToSend = `${taskData.dueDate}T${timePart}${tzSign}${tzHours}:${tzMins}`;
       }
+      // Guardar siempre como tarea en /tasks (incluyendo reuniones) para que aparezca en la lista de tareas
+      const response = await api.post("/tasks", {
+        title: taskData.title,
+        description: taskData.description,
+        type: taskData.type || "todo",
+        status: taskData.status || "pending",
+        priority: taskData.priority || "medium",
+        dueDate: dueDateToSend,
+        startDate: taskData.startDate || undefined,
+        [`${entityType}Id`]: Number(entityId),
+      });
+      const newTask = response.data;
+      // Convertir a formato compatible con onSave para la UI de actividades (CompanyDetail, ContactDetail, DealDetail)
+      const taskAsActivity = {
+        id: newTask.id,
+        type: "task",
+        taskSubType: newTask.type || "todo",
+        subject: newTask.title,
+        title: newTask.title,
+        description: newTask.description,
+        dueDate: newTask.dueDate,
+        createdAt: newTask.createdAt,
+        User: newTask.CreatedBy || newTask.AssignedTo,
+        isTask: true,
+        status: newTask.status,
+        priority: newTask.priority,
+        companyId: newTask.companyId,
+        contactId: newTask.contactId,
+        dealId: newTask.dealId,
+      };
+      onSave(taskAsActivity);
       onClose();
     } catch (error) {
       console.error("Error saving task:", error);

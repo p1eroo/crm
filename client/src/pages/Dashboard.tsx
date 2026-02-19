@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   Typography,
   Box,
-  Paper,
+  Card,
   CircularProgress,
   Button,
   IconButton,
@@ -144,6 +144,7 @@ const CustomSalesDistributionTooltip = ({ active, payload }: any) => {
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const theme = useTheme();
+  const dashboardCardBg = theme.palette.mode === 'light' ? '#fafafa' : '#1c252ea6';
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const currentYear = new Date().getFullYear();
@@ -836,16 +837,11 @@ const Dashboard: React.FC = () => {
     },
     labels: salesDistributionData.map((d) => d.name),
     colors: salesDistributionData.map((d) => d.color),
-    legend: {
-      position: 'bottom' as const,
-      horizontalAlign: 'center' as const,
-      fontSize: '12px',
-      itemMargin: { horizontal: 8, vertical: 6 },
-      markers: { size: 6, strokeWidth: 0 },
-    },
+    legend: { show: false },
     dataLabels: { enabled: true },
     plotOptions: {
       pie: {
+        distributed: true,
         stroke: { width: 3, colors: [strokeGapColor] },
         donut: {
           size: '65%',
@@ -864,7 +860,6 @@ const Dashboard: React.FC = () => {
         breakpoint: 480,
         options: {
           chart: { width: 200 },
-          legend: { position: 'bottom' as const },
         },
       },
     ],
@@ -897,10 +892,10 @@ const Dashboard: React.FC = () => {
     labels: kpiAreaChartLabels,
     colors: kpiAreaChartLabels.map((_, i) => kpiAreaChartColors[i % kpiAreaChartColors.length]),
     stroke: {
-      colors: ['#fff'],
-      width: 2,
+      colors: [theme.palette.mode === 'dark' ? '#fff' : 'rgba(0,0,0,0.08)'],
+      width: 1,
     },
-    fill: { opacity: 0.85 },
+    fill: { opacity: 1, type: 'solid' as const },
     plotOptions: {
       polarArea: {
         rings: {
@@ -1250,7 +1245,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <>
+    <Box sx={{ bgcolor: theme.palette.mode === 'light' ? '#f2f2f2' : undefined, minHeight: '100%', py: 2 }}>
       {/* Contenido principal en dos columnas */}
       <Box sx={{ 
         display: 'flex',
@@ -1350,20 +1345,21 @@ const Dashboard: React.FC = () => {
         mb: { xs: 2, sm: 3, md: 4 } 
       }}>
         {/* Monthly Budget */}
-        <Paper
-          elevation={0}
+        <Card
           onClick={canEditBudget ? handleBudgetCardClick : undefined}
           sx={{
-            borderRadius: 2,
+            borderRadius: 3,
             boxShadow: 'none',
-            bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
-            minHeight: { xs: 140, sm: 160, md: 185 },
             overflow: 'hidden',
+            bgcolor: dashboardCardBg,
+            border: 'none',
+            transition: 'all 0.3s ease',
+            minHeight: { xs: 140, sm: 160, md: 185 },
             cursor: canEditBudget ? 'pointer' : 'default',
+            '&:hover': { boxShadow: 'none' },
           }}
         >
-          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative' }}>
+          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative', bgcolor: dashboardCardBg }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between',
@@ -1444,21 +1440,22 @@ const Dashboard: React.FC = () => {
               </Box>
             </Box>
           </Box>
-        </Paper>
+        </Card>
 
         {/* Orders In Line */}
-        <Paper
-          elevation={0}
+        <Card
           sx={{
-            borderRadius: 2,
+            borderRadius: 3,
             boxShadow: 'none',
-            bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
-            minHeight: { xs: 140, sm: 160, md: 185 },
             overflow: 'hidden',
+            bgcolor: dashboardCardBg,
+            border: 'none',
+            transition: 'all 0.3s ease',
+            minHeight: { xs: 140, sm: 160, md: 185 },
+            '&:hover': { boxShadow: 'none' },
           }}
         >
-          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative' }}>
+          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative', bgcolor: dashboardCardBg }}>
             <Box sx={{ 
               display: 'flex', 
               flexDirection: 'column',
@@ -1499,22 +1496,22 @@ const Dashboard: React.FC = () => {
               </Box>
             </Box>
           </Box>
-        </Paper>
+        </Card>
 
         {/* New Clients */}
-        <Paper
-          elevation={0}
+        <Card
           sx={{
-            borderRadius: 2,
+            borderRadius: 3,
             boxShadow: 'none',
-            bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
-            minHeight: { xs: 140, sm: 160, md: 185 },
             overflow: 'hidden',
-            position: 'relative',
+            bgcolor: dashboardCardBg,
+            border: 'none',
+            transition: 'all 0.3s ease',
+            minHeight: { xs: 140, sm: 160, md: 185 },
+            '&:hover': { boxShadow: 'none' },
           }}
         >
-          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative' }}>
+          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative', bgcolor: dashboardCardBg }}>
             <Box sx={{ 
               display: 'flex', 
               flexDirection: 'column',
@@ -1555,22 +1552,22 @@ const Dashboard: React.FC = () => {
               </Box>
             </Box>
           </Box>
-        </Paper>
+        </Card>
 
         {/* Team KPI */}
-        <Paper
-          elevation={0}
+        <Card
           sx={{
-            borderRadius: 2,
+            borderRadius: 3,
             boxShadow: 'none',
-            bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
-            minHeight: { xs: 140, sm: 160, md: 185 },
             overflow: 'hidden',
-            position: 'relative',
+            bgcolor: dashboardCardBg,
+            border: 'none',
+            transition: 'all 0.3s ease',
+            minHeight: { xs: 140, sm: 160, md: 185 },
+            '&:hover': { boxShadow: 'none' },
           }}
         >
-          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative' }}>
+          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative', bgcolor: dashboardCardBg }}>
             <Box sx={{ 
               display: 'flex', 
               flexDirection: 'column',
@@ -1649,7 +1646,7 @@ const Dashboard: React.FC = () => {
               </Box>
             </Box>
           </Box>
-        </Paper>
+        </Card>
       </Box>
 
       {/* Sección: Distribución de Ventas y Ventas */}
@@ -1664,25 +1661,27 @@ const Dashboard: React.FC = () => {
         gap: { xs: 1.5, sm: 2, md: 3 },
         mb: { xs: 2, sm: 2.5, md: 3 } 
       }}>
-        {/* Sales Distribution - mismo componente y estilos que la card de perfil (Paper) */}
-        <Paper
-          elevation={0}
+        {/* Sales Distribution - mismo componente y estilos que Reportes */}
+        <Card
           sx={{
-            borderRadius: 2,
+            borderRadius: 3,
             boxShadow: 'none',
-            bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
-            minHeight: { xs: 400, sm: 480 },
-            position: 'relative',
             overflow: 'hidden',
+            bgcolor: dashboardCardBg,
+            border: 'none',
+            transition: 'all 0.3s ease',
+            minHeight: { xs: 400, sm: 480 },
+            display: 'flex',
+            flexDirection: 'column',
+            '&:hover': { boxShadow: 'none' },
           }}
         >
-          <Box sx={{ p: { xs: 2, md: 3 } }}>
+          <Box sx={{ p: { xs: 2, md: 3 }, bgcolor: dashboardCardBg, flex: 1, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              mb: 1,
+              mb: 4,
             }}>
               <Typography 
                 variant="h6" 
@@ -1714,44 +1713,57 @@ const Dashboard: React.FC = () => {
                 <ArrowOutward />
               </IconButton>
             </Box>
-            <Box sx={{ width: '100%', height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', pt: 9 }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  width: '100%',
-                  maxWidth: 360,
-                  '& .apexcharts-legend-marker': { stroke: 'none' },
-                }}
-              >
+            <Box
+              sx={{
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                '& [class*="apexcharts"]': { background: 'transparent !important' },
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: 360 }}>
                 <ReactApexChart
                   options={salesDistributionChartOptions}
                   series={salesDistributionChartSeries}
                   type="donut"
-                  height={350}
+                  height={300}
                   width={1000}
                 />
               </Box>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, justifyContent: 'center' }}>
+                {salesDistributionData.map((entry, index) => (
+                  <Box key={`${entry.name}-${entry.color}`} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      component="span"
+                      sx={{ width: 12, height: 12, borderRadius: '50%', flexShrink: 0 }}
+                      style={{ backgroundColor: entry.color }}
+                    />
+                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.85rem' }}>
+                      {entry.name}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
             </Box>
           </Box>
-        </Paper>
+        </Card>
 
         {/* Sales Chart */}
-        <Paper
-          elevation={0}
+        <Card
           sx={{
-            borderRadius: 2,
+            borderRadius: 3,
             boxShadow: 'none',
-            bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
+            overflow: 'hidden',
+            bgcolor: dashboardCardBg,
+            border: 'none',
+            transition: 'all 0.3s ease',
             alignSelf: 'start',
             minHeight: { xs: 505, sm: 460 },
-            position: 'relative',
-            overflow: 'hidden',
+            '&:hover': { boxShadow: 'none' },
           }}
         >
-          <Box sx={{ p: { xs: 2, md: 2.5 }, pt: { xs: 1.75, md: 2.25 } }}>
+          <Box sx={{ p: { xs: 2, md: 2.5 }, pt: { xs: 1.75, md: 2.25 }, bgcolor: dashboardCardBg }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -1800,7 +1812,7 @@ const Dashboard: React.FC = () => {
               )}
             </Box>
           </Box>
-        </Paper>
+        </Card>
       </Box>
 
       {/* Sección: Pipeline de Ventas */}
@@ -1831,18 +1843,18 @@ const Dashboard: React.FC = () => {
         mb: { xs: 2, sm: 2.5, md: 3 } 
       }}>
         {/* Ventas Semanales */}
-        <Paper
-          elevation={0}
+        <Card
           sx={{
-            borderRadius: 2,
+            borderRadius: 3,
             boxShadow: 'none',
-            bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
-            position: 'relative',
             overflow: 'hidden',
+            bgcolor: dashboardCardBg,
+            border: 'none',
+            transition: 'all 0.3s ease',
+            '&:hover': { boxShadow: 'none' },
           }}
         >
-          <Box sx={{ p: { xs: 2, md: 3 } }}>
+          <Box sx={{ p: { xs: 2, md: 3 }, bgcolor: dashboardCardBg }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -1889,21 +1901,21 @@ const Dashboard: React.FC = () => {
               />
             </Box>
           </Box>
-        </Paper>
+        </Card>
 
         {/* Desempeño por Usuario */}
-        <Paper
-          elevation={0}
+        <Card
           sx={{
-            borderRadius: 2,
+            borderRadius: 3,
             boxShadow: 'none',
-            bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
-            position: 'relative',
             overflow: 'hidden',
+            bgcolor: dashboardCardBg,
+            border: 'none',
+            transition: 'all 0.3s ease',
+            '&:hover': { boxShadow: 'none' },
           }}
         >
-          <Box sx={{ p: { xs: 2, md: 3 } }}>
+          <Box sx={{ p: { xs: 2, md: 3 }, bgcolor: dashboardCardBg }}>
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -1970,8 +1982,8 @@ const Dashboard: React.FC = () => {
                   />
                 </Box>
               )}
-            </Box>
-          </Paper>
+          </Box>
+        </Card>
 
       </Box>
 
@@ -2521,7 +2533,7 @@ const Dashboard: React.FC = () => {
           {successMessage}
         </Alert>
       </Snackbar>
-    </>
+    </Box>
   );
 };
 

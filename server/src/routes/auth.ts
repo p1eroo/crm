@@ -28,22 +28,23 @@ router.post(
       }
 
       const { usuario, email, password, firstName, lastName, role } = req.body;
+      const usuarioNormalized = (usuario || '').trim().toLowerCase();
 
-      // Construir condición de búsqueda: siempre buscar por usuario, y por email solo si existe
+      // Construir condición de búsqueda: usuario case-insensitive, email exacto
       const whereCondition: any = email && email.trim() 
         ? {
             [Op.or]: [
-              { usuario },
+              { usuario: { [Op.iLike]: usuarioNormalized } },
               { email: email.trim() }
             ]
           }
-        : { usuario };
+        : { usuario: { [Op.iLike]: usuarioNormalized } };
 
       const existingUser = await User.findOne({ 
         where: whereCondition
       });
       if (existingUser) {
-        if (existingUser.usuario === usuario) {
+        if (existingUser.usuario.toLowerCase() === usuarioNormalized) {
           return res.status(400).json({ error: 'El usuario ya existe' });
         }
         if (email && existingUser.email === email.trim()) {
@@ -60,7 +61,7 @@ router.post(
 
       const hashedPassword = await bcrypt.hash(password, 10);
       const userData: any = {
-        usuario,
+        usuario: usuarioNormalized,
         password: hashedPassword,
         firstName,
         lastName,
@@ -118,6 +119,7 @@ router.post(
       }
 
       const { usuario, password } = req.body;
+      const usuarioNormalized = (usuario || '').trim().toLowerCase();
 
       // Llamar a la API de Monterrico
       let monterricoData;
@@ -233,9 +235,9 @@ router.post(
       }
 
       // Solo si la autenticación con Monterrico fue exitosa, proceder con el usuario local
-      // Buscar o crear usuario local
+      // Buscar o crear usuario local (búsqueda case-insensitive)
       let user = await User.findOne({ 
-        where: { usuario },
+        where: { usuario: { [Op.iLike]: usuarioNormalized } },
         include: [{ model: Role, as: 'Role' }]
       });
       
@@ -249,13 +251,13 @@ router.post(
           return res.status(500).json({ error: 'No se pudo asignar un rol al usuario' });
         }
 
-        // Crear usuario local basado en datos de Monterrico
+        // Crear usuario local basado en datos de Monterrico (guardar usuario en minúsculas)
         const hashedPassword = await bcrypt.hash(password, 10);
         user = await User.create({
-          usuario,
-          email: monterricoData.email || `${usuario}@monterrico.app`,
+          usuario: usuarioNormalized,
+          email: monterricoData.email || `${usuarioNormalized}@monterrico.app`,
           password: hashedPassword,
-          firstName: monterricoData.nombre || monterricoData.firstName || usuario,
+          firstName: monterricoData.nombre || monterricoData.firstName || usuarioNormalized,
           lastName: monterricoData.apellido || monterricoData.lastName || '',
           roleId: defaultRole.id,
           isActive: true,
@@ -324,9 +326,10 @@ router.post(
       }
 
       const { usuario, password } = req.body;
+      const usuarioNormalized = (usuario || '').trim().toLowerCase();
 
       const user = await User.findOne({ 
-        where: { usuario },
+        where: { usuario: { [Op.iLike]: usuarioNormalized } },
         include: [{ model: Role, as: 'Role' }]
       });
       if (!user || !user.isActive) {

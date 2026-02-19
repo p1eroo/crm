@@ -40,14 +40,19 @@ function getWeekRangeByYearAndWeek(year, weekNumber) {
     return { fromDate: targetMonday, toDate: targetSunday };
 }
 // Empresas por etapa, agrupadas por asesor (ownerId). Solo usuarios con rol "user".
-// Query params opcionales: userId, leadSource, year, weekNumber (semana 1, 2, 3... del año), recoveredClient.
+// Query params opcionales: userId, leadSource, fromDate, toDate (ISO), year, weekNumber (semana 1, 2, 3... del año), recoveredClient.
+// Si fromDate y toDate están presentes, se usan; si no, se usa year/weekNumber.
 router.get('/companies-by-user', async (req, res) => {
     try {
         const userId = req.query.userId != null ? Number(req.query.userId) : null;
         const leadSourceParam = req.query.leadSource;
+        const fromDateParam = req.query.fromDate;
+        const toDateParam = req.query.toDate;
         const yearParam = req.query.year;
         const weekNumberParam = req.query.weekNumber;
         const recoveredClientParam = req.query.recoveredClient;
+        const stageParam = req.query.stage;
+        const stagesParam = req.query.stages;
         let leadSourceCondition = '';
         const replacements = {};
         if (leadSourceParam !== undefined && leadSourceParam !== null) {
@@ -65,13 +70,24 @@ router.get('/companies-by-user', async (req, res) => {
             replacements.userId = userId;
         }
         let periodCondition = '';
-        const year = yearParam != null && yearParam !== '' ? parseInt(String(yearParam), 10) : new Date().getFullYear();
-        const weekNumber = weekNumberParam != null && weekNumberParam !== '' ? Math.max(1, Math.min(53, parseInt(String(weekNumberParam), 10) || 1)) : -1;
-        if (weekNumber >= 1) {
-            const { fromDate, toDate } = getWeekRangeByYearAndWeek(year, weekNumber);
-            periodCondition = ' AND c."createdAt" >= :fromDate AND c."createdAt" <= :toDate';
-            replacements.fromDate = fromDate.toISOString();
-            replacements.toDate = toDate.toISOString();
+        if (fromDateParam && toDateParam) {
+            const fromDate = new Date(fromDateParam);
+            const toDate = new Date(toDateParam);
+            if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
+                periodCondition = ' AND c."createdAt" >= :fromDate AND c."createdAt" <= :toDate';
+                replacements.fromDate = fromDate.toISOString();
+                replacements.toDate = toDate.toISOString();
+            }
+        }
+        if (!periodCondition) {
+            const year = yearParam != null && yearParam !== '' ? parseInt(String(yearParam), 10) : new Date().getFullYear();
+            const weekNumber = weekNumberParam != null && weekNumberParam !== '' ? Math.max(1, Math.min(53, parseInt(String(weekNumberParam), 10) || 1)) : -1;
+            if (weekNumber >= 1) {
+                const { fromDate, toDate } = getWeekRangeByYearAndWeek(year, weekNumber);
+                periodCondition = ' AND c."createdAt" >= :fromDate AND c."createdAt" <= :toDate';
+                replacements.fromDate = fromDate.toISOString();
+                replacements.toDate = toDate.toISOString();
+            }
         }
         let recoveredClientCondition = '';
         if (recoveredClientParam === 'true') {
@@ -79,6 +95,25 @@ router.get('/companies-by-user', async (req, res) => {
         }
         else if (recoveredClientParam === 'false') {
             recoveredClientCondition = ' AND (c."isRecoveredClient" = false OR c."isRecoveredClient" IS NULL)';
+        }
+        let stageCondition = '';
+        const stagesArray = Array.isArray(stagesParam) ? stagesParam : (stagesParam ? [stagesParam] : []);
+        if (stagesArray.length > 0) {
+            const normalized = stagesArray
+                .map((s) => String(s).trim().toLowerCase())
+                .filter((s) => s && s !== '__none__');
+            if (normalized.length > 0) {
+                const placeholders = normalized.map((_, i) => `:stage${i}`).join(', ');
+                stageCondition = ` AND c."lifecycleStage" IN (${placeholders})`;
+                normalized.forEach((s, i) => { replacements[`stage${i}`] = s; });
+            }
+            else if (stagesArray.some((s) => String(s).trim() === '__none__')) {
+                stageCondition = ' AND 1 = 0';
+            }
+        }
+        else if (stageParam && typeof stageParam === 'string' && stageParam.trim()) {
+            stageCondition = ' AND c."lifecycleStage" = :stage';
+            replacements.stage = stageParam.trim().toLowerCase();
         }
         const results = await Company_1.Company.sequelize.query(`
       SELECT c."ownerId" as "userId", c."lifecycleStage" as stage, COUNT(c.id)::integer as count
@@ -90,6 +125,7 @@ router.get('/companies-by-user', async (req, res) => {
       ${leadSourceCondition}
       ${periodCondition}
       ${recoveredClientCondition}
+      ${stageCondition}
       GROUP BY c."ownerId", c."lifecycleStage"
       ORDER BY c."ownerId", c."lifecycleStage"
     `, { replacements: Object.keys(replacements).length ? replacements : undefined, type: sequelize_1.QueryTypes.SELECT });
@@ -107,7 +143,7 @@ router.get('/companies-by-user', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-// Listar empresas por etapa (mismos filtros que companies-by-user). Query: stage, userId, leadSource, year, weekNumber, page, limit.
+// Listar empresas por etapa (mismos filtros que companies-by-user). Query: stage, userId, leadSource, fromDate, toDate, year, weekNumber, page, limit.
 router.get('/companies-list', async (req, res) => {
     try {
         const stageParam = req.query.stage;
@@ -116,6 +152,8 @@ router.get('/companies-list', async (req, res) => {
         }
         const userId = req.query.userId != null ? Number(req.query.userId) : null;
         const leadSourceParam = req.query.leadSource;
+        const fromDateParam = req.query.fromDate;
+        const toDateParam = req.query.toDate;
         const yearParam = req.query.year;
         const weekNumberParam = req.query.weekNumber;
         const recoveredClientParam = req.query.recoveredClient;
@@ -143,13 +181,24 @@ router.get('/companies-list', async (req, res) => {
             replacements.userId = userId;
         }
         let periodCondition = '';
-        const yearList = yearParam != null && yearParam !== '' ? parseInt(String(yearParam), 10) : new Date().getFullYear();
-        const weekNumberList = weekNumberParam != null && weekNumberParam !== '' ? Math.max(1, Math.min(53, parseInt(String(weekNumberParam), 10) || 1)) : -1;
-        if (weekNumberList >= 1) {
-            const { fromDate, toDate } = getWeekRangeByYearAndWeek(yearList, weekNumberList);
-            periodCondition = ' AND c."createdAt" >= :fromDate AND c."createdAt" <= :toDate';
-            replacements.fromDate = fromDate.toISOString();
-            replacements.toDate = toDate.toISOString();
+        if (fromDateParam && toDateParam) {
+            const fromDate = new Date(fromDateParam);
+            const toDate = new Date(toDateParam);
+            if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
+                periodCondition = ' AND c."createdAt" >= :fromDate AND c."createdAt" <= :toDate';
+                replacements.fromDate = fromDate.toISOString();
+                replacements.toDate = toDate.toISOString();
+            }
+        }
+        if (!periodCondition) {
+            const yearList = yearParam != null && yearParam !== '' ? parseInt(String(yearParam), 10) : new Date().getFullYear();
+            const weekNumberList = weekNumberParam != null && weekNumberParam !== '' ? Math.max(1, Math.min(53, parseInt(String(weekNumberParam), 10) || 1)) : -1;
+            if (weekNumberList >= 1) {
+                const { fromDate, toDate } = getWeekRangeByYearAndWeek(yearList, weekNumberList);
+                periodCondition = ' AND c."createdAt" >= :fromDate AND c."createdAt" <= :toDate';
+                replacements.fromDate = fromDate.toISOString();
+                replacements.toDate = toDate.toISOString();
+            }
         }
         let recoveredClientCondition = '';
         if (recoveredClientParam === 'true') {
@@ -196,11 +245,13 @@ router.get('/companies-list', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-// Conteo de actividades por tipo. Query params opcionales: userId (asesor), period (day|week|month|year).
+// Conteo de actividades por tipo. Query params opcionales: userId (asesor), period (day|week|month|year), fromDate, toDate (ISO).
 router.get('/activities-by-type', async (req, res) => {
     try {
         const userId = req.query.userId != null ? Number(req.query.userId) : null;
         const periodParam = req.query.period;
+        const fromDateParam = req.query.fromDate;
+        const toDateParam = req.query.toDate;
         const replacements = {};
         let userIdCondition = '';
         if (userId != null && !Number.isNaN(userId)) {
@@ -208,7 +259,16 @@ router.get('/activities-by-type', async (req, res) => {
             replacements.userId = userId;
         }
         let periodCondition = '';
-        if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+        if (fromDateParam && toDateParam) {
+            const fromDate = new Date(fromDateParam);
+            const toDate = new Date(toDateParam);
+            if (!Number.isNaN(fromDate.getTime()) && !Number.isNaN(toDate.getTime())) {
+                periodCondition = ' AND a."createdAt" >= :fromDate AND a."createdAt" <= :toDate';
+                replacements.fromDate = fromDate.toISOString();
+                replacements.toDate = toDate.toISOString();
+            }
+        }
+        else if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
             const now = new Date();
             let fromDate;
             if (periodParam === 'day') {
@@ -243,13 +303,21 @@ router.get('/activities-by-type', async (req, res) => {
         const taskUserIdCondition = userId != null && !Number.isNaN(userId)
             ? ' AND t."assignedToId" = :taskUserId'
             : '';
-        const taskPeriodCondition = periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year'
-            ? ' AND t."createdAt" >= :taskFromDate'
-            : '';
+        let taskPeriodCondition = '';
         const taskReplacements = {};
         if (userId != null && !Number.isNaN(userId))
             taskReplacements.taskUserId = userId;
-        if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+        if (fromDateParam && toDateParam) {
+            const fromDate = new Date(fromDateParam);
+            const toDate = new Date(toDateParam);
+            if (!Number.isNaN(fromDate.getTime()) && !Number.isNaN(toDate.getTime())) {
+                taskPeriodCondition = ' AND t."createdAt" >= :taskFromDate AND t."createdAt" <= :taskToDate';
+                taskReplacements.taskFromDate = fromDate.toISOString();
+                taskReplacements.taskToDate = toDate.toISOString();
+            }
+        }
+        else if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+            taskPeriodCondition = ' AND t."createdAt" >= :taskFromDate';
             const now = new Date();
             let fromDate;
             if (periodParam === 'day')
@@ -288,6 +356,8 @@ router.get('/activities-entities-list', async (req, res) => {
         }
         const userId = req.query.userId != null ? Number(req.query.userId) : null;
         const periodParam = req.query.period;
+        const fromDateParam = req.query.fromDate;
+        const toDateParam = req.query.toDate;
         const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
         const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
         const offset = (page - 1) * limit;
@@ -298,7 +368,16 @@ router.get('/activities-entities-list', async (req, res) => {
             replacements.userId = userId;
         }
         let periodCondition = '';
-        if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+        if (fromDateParam && toDateParam) {
+            const fromDate = new Date(fromDateParam);
+            const toDate = new Date(toDateParam);
+            if (!Number.isNaN(fromDate.getTime()) && !Number.isNaN(toDate.getTime())) {
+                periodCondition = ' AND a."createdAt" >= :fromDate AND a."createdAt" <= :toDate';
+                replacements.fromDate = fromDate.toISOString();
+                replacements.toDate = toDate.toISOString();
+            }
+        }
+        else if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
             const now = new Date();
             let fromDate;
             if (periodParam === 'day')
@@ -315,11 +394,21 @@ router.get('/activities-entities-list', async (req, res) => {
         const rows = [];
         if (activityTypeParam === 'task') {
             const taskUserIdCondition = userId != null && !Number.isNaN(userId) ? ' AND t."assignedToId" = :taskUserId' : '';
-            const taskPeriodCondition = periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year' ? ' AND t."createdAt" >= :taskFromDate' : '';
+            let taskPeriodCondition = '';
             const taskRepl = {};
             if (userId != null && !Number.isNaN(userId))
                 taskRepl.taskUserId = userId;
-            if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+            if (fromDateParam && toDateParam) {
+                const fromDate = new Date(fromDateParam);
+                const toDate = new Date(toDateParam);
+                if (!Number.isNaN(fromDate.getTime()) && !Number.isNaN(toDate.getTime())) {
+                    taskPeriodCondition = ' AND t."createdAt" >= :taskFromDate AND t."createdAt" <= :taskToDate';
+                    taskRepl.taskFromDate = fromDate.toISOString();
+                    taskRepl.taskToDate = toDate.toISOString();
+                }
+            }
+            else if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+                taskPeriodCondition = ' AND t."createdAt" >= :taskFromDate';
                 const now = new Date();
                 let fromDate;
                 if (periodParam === 'day')
@@ -401,23 +490,68 @@ router.get('/activities-entities-list', async (req, res) => {
     }
 });
 // Negocios (deals) por etapa, agrupados por asesor (ownerId). Solo usuarios con rol "user".
+// Query params opcionales: userId, fromDate, toDate (ISO), stage. Si fromDate y toDate están presentes, filtra por createdAt.
 router.get('/deals-by-user', async (req, res) => {
     try {
+        const userId = req.query.userId != null ? Number(req.query.userId) : null;
+        const fromDateParam = req.query.fromDate;
+        const toDateParam = req.query.toDate;
+        const stageParam = req.query.stage;
+        const stagesParam = req.query.stages;
+        let periodCondition = '';
+        const replacements = {};
+        if (fromDateParam && toDateParam) {
+            const fromDate = new Date(fromDateParam);
+            const toDate = new Date(toDateParam);
+            if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
+                periodCondition = ' AND d."createdAt" >= :fromDate AND d."createdAt" <= :toDate';
+                replacements.fromDate = fromDate.toISOString();
+                replacements.toDate = toDate.toISOString();
+            }
+        }
+        let userIdCondition = '';
+        if (userId != null && !Number.isNaN(userId)) {
+            userIdCondition = ' AND d."ownerId" = :userId';
+            replacements.userId = userId;
+        }
+        let stageCondition = '';
+        const stagesArray = Array.isArray(stagesParam) ? stagesParam : (stagesParam ? [stagesParam] : []);
+        if (stagesArray.length > 0) {
+            const normalized = stagesArray
+                .map((s) => String(s).trim().toLowerCase())
+                .filter((s) => s && s !== '__none__');
+            if (normalized.length > 0) {
+                const placeholders = normalized.map((_, i) => `:stage${i}`).join(', ');
+                stageCondition = ` AND d.stage IN (${placeholders})`;
+                normalized.forEach((s, i) => { replacements[`stage${i}`] = s; });
+            }
+            else if (stagesArray.some((s) => String(s).trim() === '__none__')) {
+                stageCondition = ' AND 1 = 0';
+            }
+        }
+        else if (stageParam && typeof stageParam === 'string' && stageParam.trim()) {
+            stageCondition = ' AND d.stage = :stage';
+            replacements.stage = stageParam.trim().toLowerCase();
+        }
         const results = await Deal_1.Deal.sequelize.query(`
-      SELECT d."ownerId" as "userId", d.stage as stage, COUNT(d.id)::integer as count
+      SELECT d."ownerId" as "userId", d.stage as stage, COUNT(d.id)::integer as count,
+        COALESCE(SUM(CAST(d.amount AS numeric)), 0)::float as amount
       FROM deals d
       INNER JOIN users u ON u.id = d."ownerId"
       INNER JOIN roles r ON r.id = u."roleId"
       WHERE r.name = 'user'
+      ${userIdCondition}
+      ${periodCondition}
+      ${stageCondition}
       GROUP BY d."ownerId", d.stage
       ORDER BY d."ownerId", d.stage
-    `, { type: sequelize_1.QueryTypes.SELECT });
+    `, { replacements: Object.keys(replacements).length ? replacements : undefined, type: sequelize_1.QueryTypes.SELECT });
         const byUser = {};
         (results || []).forEach((row) => {
             const uid = row.userId;
             if (!byUser[uid])
                 byUser[uid] = [];
-            byUser[uid].push({ stage: row.stage || 'lead', count: row.count || 0 });
+            byUser[uid].push({ stage: row.stage || 'lead', count: row.count || 0, amount: row.amount ?? 0 });
         });
         res.json({ byUser });
     }

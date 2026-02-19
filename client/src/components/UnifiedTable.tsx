@@ -30,21 +30,14 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       <Box
         sx={{
-          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
           borderRadius: 3,
           overflow: 'hidden',
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
-            : '0 4px 20px rgba(0, 0, 0, 0.08)',
+          boxShadow: 'none',
           border: `1px solid ${theme.palette.divider}`,
           mb: 2,
           position: 'relative',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&:hover': {
-            boxShadow: theme.palette.mode === 'dark' 
-              ? '0 8px 30px rgba(0, 0, 0, 0.4)' 
-              : '0 8px 30px rgba(0, 0, 0, 0.12)',
-          },
         }}
       >
         {/* Fila superior con título y acciones */}
@@ -57,7 +50,7 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
               px: { xs: 1.5, md: 2 },
               py: { xs: 1.25, md: 1.5 },
               borderBottom: `2px solid ${theme.palette.divider}`,
-              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
+              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
             }}
           >
             <Typography variant="h5" sx={{ 
@@ -88,7 +81,7 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
         {pagination && (
           <Box
             sx={{
-              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
               borderRadius: '0 0 8px 8px',
               boxShadow: 'none',
               border: 'none',

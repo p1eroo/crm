@@ -27,7 +27,7 @@ import {
   Checkbox,
   Popover,
 } from '@mui/material';
-import { Add, FilterList, Close, ExpandMore, Remove, Bolt, ChevronLeft, ChevronRight, MoreVert, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered, Description } from '@mui/icons-material';
+import { Add, FilterList, Close, ExpandMore, Remove, Bolt, ChevronLeft, ChevronRight, MoreVert, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered, Description, Business } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { getStageColor as getStageColorUtil, normalizeStageFromExcel } from '../utils/stageColors';
@@ -454,28 +454,26 @@ const Companies: React.FC = () => {
     }
     setSavingActivity(true);
     try {
-      // Si es una reunión, guardar en /activities
-      if (taskData.type === 'meeting') {
-        await api.post('/activities', {
-          type: 'meeting',
-          subject: taskData.title,
-          description: taskData.description,
-          companyId: activityCompanyId,
-        });
-        setSuccessMessage('Reunión creada exitosamente');
-      } else {
-        // Si es una tarea (todo), guardar en /tasks
-        await api.post('/tasks', {
-          title: taskData.title,
-          description: taskData.description,
-          type: 'todo',
-          status: 'pending',
-          priority: taskData.priority || 'medium',
-          dueDate: taskData.dueDate || undefined,
-          companyId: activityCompanyId,
-        });
-        setSuccessMessage('Tarea creada exitosamente');
+      // Construir dueDate con zona horaria para evitar desfase (Companies solo tiene fecha, sin hora)
+      let dueDateToSend: string | undefined = undefined;
+      if (taskData.dueDate) {
+        const tzOffset = -new Date().getTimezoneOffset();
+        const tzSign = tzOffset >= 0 ? '+' : '-';
+        const tzHours = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2, '0');
+        const tzMins = String(Math.abs(tzOffset) % 60).padStart(2, '0');
+        dueDateToSend = `${taskData.dueDate}T00:00:00${tzSign}${tzHours}:${tzMins}`;
       }
+      // Guardar siempre como tarea en /tasks (incluyendo reuniones) para que aparezca en la lista de tareas
+      await api.post('/tasks', {
+        title: taskData.title,
+        description: taskData.description,
+        type: taskData.type || 'todo',
+        status: 'pending',
+        priority: taskData.priority || 'medium',
+        dueDate: dueDateToSend,
+        companyId: activityCompanyId,
+      });
+      setSuccessMessage(taskData.type === 'meeting' ? 'Reunión creada exitosamente' : 'Tarea creada exitosamente');
       setTaskOpen(false);
       setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
       setActivityCompanyId(null);
@@ -2662,25 +2660,28 @@ const Companies: React.FC = () => {
           }
           emptyState={
             paginatedCompanies.length === 0 ? (
-              <Box sx={{ ...pageStyles.emptyState, m: 3 }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 6 }}>
+              <Box sx={{ ...pageStyles.emptyState, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper, py: 8 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                   <Box
                     sx={{
                       width: 120,
                       height: 120,
                       borderRadius: '50%',
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.05)' 
+                      bgcolor: theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.05)'
                         : theme.palette.grey[100],
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      mb: 1,
-                      fontSize: '64px',
                       lineHeight: 1,
                     }}
                   >
-                    🏢
+                    <Business
+                      sx={{
+                        fontSize: 64,
+                        color: theme.palette.text.secondary,
+                      }}
+                    />
                   </Box>
                   <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
                     <Typography
@@ -2688,16 +2689,16 @@ const Companies: React.FC = () => {
                       sx={{
                         fontWeight: 700,
                         mb: 1,
-                        color: theme.palette.text.primary,
+                        color: theme.palette.text.secondary,
                         fontSize: { xs: '1.25rem', md: '1.5rem' },
                       }}
                     >
                       No hay empresas para mostrar
                     </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: theme.palette.text.primary,
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: theme.palette.text.secondary,
                         lineHeight: 1.6,
                         fontSize: { xs: '0.875rem', md: '0.9375rem' },
                       }}

@@ -345,7 +345,7 @@ const Tickets: React.FC = () => {
       {/* Cards de resumen */}
       <Card sx={{ 
         borderRadius: 6,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        boxShadow: 'none',
         bgcolor: theme.palette.background.paper,
         mb: 4,
       }}>
@@ -497,9 +497,9 @@ const Tickets: React.FC = () => {
       {/* Sección de tabla */}
       <Card sx={{ 
         borderRadius: 6,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        boxShadow: 'none',
         overflow: 'hidden',
-        bgcolor: theme.palette.background.paper,
+        bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
       }}>
         <Box sx={{ px: 3, pt: 3, pb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
@@ -894,9 +894,9 @@ const Tickets: React.FC = () => {
           {totalTickets > 0 && (
             <Box
               sx={{
-                bgcolor: theme.palette.background.paper,
+                bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
                 borderRadius: '0 0 6px 6px',
-                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                boxShadow: 'none',
                 borderTop: 'none',
                 px: { xs: 2, md: 3 },
                 py: { xs: 1, md: 1.5 },

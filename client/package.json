@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@canvasjs/react-charts": "^1.0.2",
+    "@coreui/react-pro": "^5.23.5",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@fontsource/inter": "^5.2.8",

@@ -17,11 +17,13 @@ import {
   Button,
   Avatar,
 } from '@mui/material';
-import { Person, ChevronLeft, ChevronRight, Close, Business } from '@mui/icons-material';
+import { Person, ChevronLeft, ChevronRight, Close, Business, KeyboardArrowDown } from '@mui/icons-material';
 import { Building2 } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import ReactApexChart from 'react-apexcharts';
 import type { ApexOptions } from 'apexcharts';
+import { CCalendar } from '@coreui/react-pro';
+import '@coreui/coreui-pro/dist/css/coreui.min.css';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { formatCurrencyPE } from '../utils/currencyUtils';
@@ -78,37 +80,21 @@ function getStageLabel(stage: string): string {
   return STAGE_LABELS[stage] || stage;
 }
 
-/** Número de semana ISO (1-53) del año: semana 1 = semana que contiene el 4 de enero (lun-dom). */
-function getISOWeekNumber(d: Date): number {
-  const date = new Date(d);
-  date.setHours(0, 0, 0, 0);
-  const day = date.getDay() || 7; // 1 = Lunes, 7 = Domingo
-  const thursday = new Date(date);
-  thursday.setDate(date.getDate() - day + 4);
-  const jan4 = new Date(thursday.getFullYear(), 0, 4);
-  const week1Monday = new Date(jan4);
-  week1Monday.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
-  const diff = date.getTime() - week1Monday.getTime();
-  return 1 + Math.floor(diff / (7 * 24 * 60 * 60 * 1000));
-}
-
-// Paleta vinculada al verde (color principal): verdes, teal, esmeralda, azules profesionales
+// Paleta clara para embudo y pastel (sin gradientes, colores planos y vibrantes)
 const PIE_STAGE_COLORS = [
-  'rgb(46, 125, 50)',   // Verde principal (#2E7D32)
-  'rgb(76, 175, 80)',   // Verde claro (#4CAF50)
-  'rgb(27, 94, 32)',    // Verde oscuro (#1B5E20)
-  'rgb(16, 185, 129)',  // Esmeralda (#10B981)
-  'rgb(13, 147, 148)',  // Teal (#0d9394)
-  'rgb(0, 137, 123)',   // Teal oscuro
-  'rgb(38, 166, 154)',  // Teal claro (#26A69A)
-  'rgb(25, 118, 210)',  // Azul profesional (#1976D2)
-  'rgb(2, 136, 209)',   // Azul claro (#0288D1)
-  'rgb(84, 110, 122)',  // Gris azulado (#546E7A)
-  'rgb(96, 125, 139)',  // Gris azulado claro (#607D8B)
-  'rgb(69, 90, 100)',   // Gris azulado oscuro (#455A64)
-  'rgb(255, 167, 38)',  // Ámbar/naranja (acento, #FFA726)
-  'rgb(120, 144, 156)', // Gris neutro (#78909C)
-  'rgb(0, 105, 92)',    // Teal muy oscuro
+  '#4F9B4D',   // Lead - verde medio
+  '#5CB85C',   // Contacto - verde claro
+  '#3C7B3B',   // Reunión Agendada - verde oscuro
+  '#43AF96',   // Reunión Efectiva - teal
+  '#3DBDB8',   // Propuesta Económica - teal claro
+  '#3498DB',   // Negociación - azul
+  '#5DADE2',   // Licitación - azul claro
+  '#2980B9',   // Licitación Etapa Final - azul oscuro
+  '#27AE60',   // Cierre Ganado - verde éxito
+  '#2ECC71',   // Firma Contrato - verde
+  '#1ABC9C',   // Activo - teal
+  '#E74C3C',   // Cierre Perdido - rojo
+  '#95A5A6',   // Inactivo - gris
 ];
 
 const ACTIVITY_TYPE_ORDER: Array<'call' | 'email' | 'meeting' | 'note' | 'task'> = [
@@ -146,10 +132,7 @@ const Reports: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [, setStats] = useState<DashboardStats | null>(null);
   const [, setCompaniesByUser] = useState<Record<number, Array<{ stage: string; count: number }>>>({});
-  const [dealsByUser, setDealsByUser] = useState<Record<number, Array<{ stage: string; count: number }>>>({});
-  const [hiddenStageIndices, setHiddenStageIndices] = useState<Set<number>>(new Set());
-  const [hiddenDealsStageIndices, setHiddenDealsStageIndices] = useState<Set<number>>(new Set());
-  const [dealsEtapaFilterAnchorEl, setDealsEtapaFilterAnchorEl] = useState<HTMLElement | null>(null);
+  const [dealsByUser, setDealsByUser] = useState<Record<number, Array<{ stage: string; count: number; amount: number }>>>({});
   const [companiesPopoverAnchor, setCompaniesPopoverAnchor] = useState<HTMLElement | null>(null);
   const [companiesAnchorPosition, setCompaniesAnchorPosition] = useState<{ left: number; top: number } | null>(null);
   const [companiesModalStage, setCompaniesModalStage] = useState<string | null>(null);
@@ -163,16 +146,16 @@ const Reports: React.FC = () => {
   const [companiesModalTotalPages, setCompaniesModalTotalPages] = useState(0);
   const companiesModalLimit = 20;
   const [reportsAdvisorFilter, setReportsAdvisorFilter] = useState<number | null>(null);
+  const [reportsDateRange, setReportsDateRange] = useState<{ from: Date; to: Date } | null>(null);
+  const [periodPopoverAnchor, setPeriodPopoverAnchor] = useState<HTMLElement | null>(null);
+  const [calendarStart, setCalendarStart] = useState<Date | null>(null);
+  const [calendarEnd, setCalendarEnd] = useState<Date | null>(null);
   const [chartOriginFilter, setChartOriginFilter] = useState<string | null>(null);
-  const currentYear = new Date().getFullYear();
-  const currentWeekNum = getISOWeekNumber(new Date());
-  const [chartYear] = useState<number>(currentYear);
-  const [chartWeekNumber, setChartWeekNumber] = useState<number>(currentWeekNum);
+  const [chartEtapaHiddenStages, setChartEtapaHiddenStages] = useState<Set<string>>(new Set());
+  const [chartEtapaFilterAnchorEl, setChartEtapaFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [chartRecoveredClientFilter, setChartRecoveredClientFilter] = useState<string>('');
-  const [etapaFilterAnchorEl, setEtapaFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [chartCompaniesByUser, setChartCompaniesByUser] = useState<Record<number, Array<{ stage: string; count: number }>>>({});
   const [activitiesByType, setActivitiesByType] = useState<Record<string, number>>({});
-  const [activitiesPeriodFilter, setActivitiesPeriodFilter] = useState<string>('');
   const [activitiesPopoverAnchor, setActivitiesPopoverAnchor] = useState<HTMLElement | null>(null);
   const [activitiesAnchorPosition, setActivitiesAnchorPosition] = useState<{ left: number; top: number } | null>(null);
   const [activitiesModalType, setActivitiesModalType] = useState<string | null>(null);
@@ -201,7 +184,6 @@ const Reports: React.FC = () => {
   useEffect(() => {
     fetchStats();
     fetchCompaniesByUser();
-    fetchDealsByUser();
     if (currentUser == null) return;
     if (currentUser.role === 'user') {
       setUsers([{ id: currentUser.id, usuario: (currentUser as any).usuario ?? '', email: currentUser.email ?? '', firstName: currentUser.firstName ?? '', lastName: currentUser.lastName ?? '', role: 'user' } as User]);
@@ -234,10 +216,20 @@ const Reports: React.FC = () => {
       if (chartOriginFilter !== null) {
         params.set('leadSource', chartOriginFilter === '' ? '__null__' : chartOriginFilter);
       }
-      params.set('year', String(chartYear));
-      params.set('weekNumber', String(chartWeekNumber));
+      if (reportsDateRange) {
+        params.set('fromDate', reportsDateRange.from.toISOString());
+        params.set('toDate', reportsDateRange.to.toISOString());
+      }
       if (chartRecoveredClientFilter === 'true' || chartRecoveredClientFilter === 'false') {
         params.set('recoveredClient', chartRecoveredClientFilter);
+      }
+      const visibleStages = chartEtapaHiddenStages.size > 0
+        ? COMPANY_STAGE_ORDER.filter((s) => !chartEtapaHiddenStages.has(s))
+        : [];
+      if (visibleStages.length > 0) {
+        visibleStages.forEach((s) => params.append('stages', s));
+      } else if (chartEtapaHiddenStages.size > 0) {
+        params.set('stages', '__none__');
       }
       const url = `/reports/companies-by-user${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await api.get<{ byUser: Record<number, Array<{ stage: string; count: number }>> }>(url);
@@ -246,7 +238,7 @@ const Reports: React.FC = () => {
       console.error('Error al cargar empresas para gráfico:', err);
       setChartCompaniesByUser({});
     }
-  }, [reportsAdvisorFilter, chartOriginFilter, chartYear, chartWeekNumber, chartRecoveredClientFilter]);
+  }, [reportsAdvisorFilter, chartOriginFilter, chartEtapaHiddenStages, chartRecoveredClientFilter, reportsDateRange]);
 
   useEffect(() => {
     fetchChartCompaniesByUser();
@@ -260,8 +252,10 @@ const Reports: React.FC = () => {
       params.set('stage', stage);
       if (reportsAdvisorFilter != null) params.set('userId', String(reportsAdvisorFilter));
       if (chartOriginFilter !== null) params.set('leadSource', chartOriginFilter === '' ? '__null__' : chartOriginFilter);
-      params.set('year', String(chartYear));
-      params.set('weekNumber', String(chartWeekNumber));
+      if (reportsDateRange) {
+        params.set('fromDate', reportsDateRange.from.toISOString());
+        params.set('toDate', reportsDateRange.to.toISOString());
+      }
       if (chartRecoveredClientFilter === 'true' || chartRecoveredClientFilter === 'false') params.set('recoveredClient', chartRecoveredClientFilter);
       params.set('page', String(page));
       params.set('limit', String(companiesModalLimit));
@@ -303,8 +297,9 @@ const Reports: React.FC = () => {
     try {
       const params = new URLSearchParams();
       if (reportsAdvisorFilter != null) params.set('userId', String(reportsAdvisorFilter));
-      if (activitiesPeriodFilter && ['day', 'week', 'month', 'year'].includes(activitiesPeriodFilter)) {
-        params.set('period', activitiesPeriodFilter);
+      if (reportsDateRange) {
+        params.set('fromDate', reportsDateRange.from.toISOString());
+        params.set('toDate', reportsDateRange.to.toISOString());
       }
       const url = `/reports/activities-by-type${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await api.get<{ byType: Record<string, number> }>(url);
@@ -313,7 +308,7 @@ const Reports: React.FC = () => {
       console.error('Error al cargar actividades por tipo:', err);
       setActivitiesByType({});
     }
-  }, [reportsAdvisorFilter, activitiesPeriodFilter]);
+  }, [reportsAdvisorFilter, reportsDateRange]);
 
   const fetchActivitiesEntitiesList = async (activityType: string, page: number) => {
     if (!activityType) return;
@@ -322,7 +317,10 @@ const Reports: React.FC = () => {
       const params = new URLSearchParams();
       params.set('activityType', activityType);
       if (reportsAdvisorFilter != null) params.set('userId', String(reportsAdvisorFilter));
-      if (activitiesPeriodFilter && ['day', 'week', 'month', 'year'].includes(activitiesPeriodFilter)) params.set('period', activitiesPeriodFilter);
+      if (reportsDateRange) {
+        params.set('fromDate', reportsDateRange.from.toISOString());
+        params.set('toDate', reportsDateRange.to.toISOString());
+      }
       params.set('page', String(page));
       params.set('limit', String(activitiesModalLimit));
       const response = await api.get<{ items: Array<{ entityType: 'company' | 'contact' | 'deal'; id: number; name: string }>; total: number; page: number; totalPages: number }>(`/reports/activities-entities-list?${params.toString()}`);
@@ -387,14 +385,34 @@ const Reports: React.FC = () => {
     fetchActivitiesByType();
   }, [fetchActivitiesByType]);
 
-  const fetchDealsByUser = async () => {
+  const fetchDealsByUser = useCallback(async () => {
     try {
-      const response = await api.get<{ byUser: Record<number, Array<{ stage: string; count: number }>> }>('/reports/deals-by-user');
+      const params = new URLSearchParams();
+      if (reportsAdvisorFilter != null) params.set('userId', String(reportsAdvisorFilter));
+      if (reportsDateRange) {
+        params.set('fromDate', reportsDateRange.from.toISOString());
+        params.set('toDate', reportsDateRange.to.toISOString());
+      }
+      const visibleStages = chartEtapaHiddenStages.size > 0
+        ? COMPANY_STAGE_ORDER.filter((s) => !chartEtapaHiddenStages.has(s))
+        : [];
+      if (visibleStages.length > 0) {
+        visibleStages.forEach((s) => params.append('stages', s));
+      } else if (chartEtapaHiddenStages.size > 0) {
+        params.set('stages', '__none__');
+      }
+      const url = `/reports/deals-by-user${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await api.get<{ byUser: Record<number, Array<{ stage: string; count: number; amount: number }>> }>(url);
       setDealsByUser(response.data?.byUser || {});
     } catch (err: any) {
       console.error('Error al cargar negocios por asesor:', err);
+      setDealsByUser({});
     }
-  };
+  }, [reportsAdvisorFilter, reportsDateRange, chartEtapaHiddenStages]);
+
+  useEffect(() => {
+    fetchDealsByUser();
+  }, [fetchDealsByUser]);
 
   const fetchStats = async () => {
     try {
@@ -458,31 +476,38 @@ const Reports: React.FC = () => {
     const lists = reportsAdvisorFilter != null
       ? [dealsByUser[reportsAdvisorFilter] || []]
       : Object.values(dealsByUser);
-    const byStage: Record<string, number> = {};
+    const byStage: Record<string, { count: number; amount: number }> = {};
     lists.forEach((list) => {
-      (list || []).forEach(({ stage, count }) => {
+      (list || []).forEach(({ stage, count, amount }) => {
         const key = (stage || 'lead').toString().trim().toLowerCase();
-        byStage[key] = (byStage[key] || 0) + count;
+        if (!byStage[key]) byStage[key] = { count: 0, amount: 0 };
+        byStage[key].count += count;
+        byStage[key].amount += amount ?? 0;
       });
     });
     const labels: string[] = [];
     const series: number[] = [];
+    const amounts: number[] = [];
     const stageKeys: string[] = [];
     COMPANY_STAGE_ORDER.forEach((stage) => {
-      const total = byStage[stage] ?? 0;
+      const data = byStage[stage] ?? { count: 0, amount: 0 };
       labels.push(getStageLabel(stage));
-      series.push(total);
+      series.push(data.count);
+      amounts.push(data.amount);
       stageKeys.push(stage);
     });
     Object.keys(byStage).forEach((stage) => {
       if (!COMPANY_STAGE_ORDER.includes(stage)) {
+        const data = byStage[stage];
         labels.push(getStageLabel(stage));
-        series.push(byStage[stage] ?? 0);
+        series.push(data.count);
+        amounts.push(data.amount);
         stageKeys.push(stage);
       }
     });
     const total = series.reduce((a, b) => a + b, 0);
-    return { labels, series, total, stageKeys };
+    const totalAmount = amounts.reduce((a, b) => a + b, 0);
+    return { labels, series, amounts, total, totalAmount, stageKeys };
   }, [dealsByUser, reportsAdvisorFilter]);
 
   const activitiesChartData = useMemo(() => {
@@ -535,7 +560,7 @@ const Reports: React.FC = () => {
         grid: {
           borderColor: theme.palette.divider,
           xaxis: { lines: { show: false } },
-          yaxis: { lines: { show: true } },
+          yaxis: { lines: { show: false } },
         },
         xaxis: {
           categories,
@@ -551,9 +576,8 @@ const Reports: React.FC = () => {
         },
         dataLabels: { enabled: true, formatter: (val: number) => (val ? String(val) : '') },
         legend: {
-          position: 'top' as const,
-          horizontalAlign: 'left' as const,
-          offsetX: 40,
+          position: 'bottom' as const,
+          horizontalAlign: 'center' as const,
           fontSize: '14px',
           itemMargin: { horizontal: 16 },
           markers: { shape: 'circle' as const, strokeWidth: 0, size: 8 },
@@ -579,11 +603,11 @@ const Reports: React.FC = () => {
     );
   }
 
-  const reportsCardBg = theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper;
+  const reportsCardBg = theme.palette.mode === 'light' ? '#fafafa' : '#1c252ea6';
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
-      {/* Título igual que en Negocios (Deals) */}
+    <Box sx={{ bgcolor: theme.palette.mode === 'light' ? '#f2f2f2' : undefined, minHeight: '100%', py: 2 }}>
+      {/* Título y filtros generales (asesor y periodo) alineados a la derecha */}
       <Box
         sx={{
           display: 'flex',
@@ -599,140 +623,359 @@ const Reports: React.FC = () => {
         <Typography
           variant="h5"
           sx={{
-            fontWeight: 600,
+            fontWeight: 900,
             fontSize: { xs: '1rem', md: '1.1375rem' },
             color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
           }}
         >
           Reportes
         </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <Select
+              value={reportsAdvisorFilter === null ? '' : String(reportsAdvisorFilter)}
+              onChange={(e) => !isRoleUser && setReportsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
+              displayEmpty
+              disabled={isRoleUser}
+              sx={{
+                borderRadius: 1.5,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                fontSize: '0.875rem',
+                border: 'none',
+                color: theme.palette.text.primary,
+                '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                '& .MuiSelect-select': { py: 1, fontStyle: 'normal' },
+              }}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    bgcolor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1.5,
+                    mt: 1,
+                  },
+                },
+              }}
+              renderValue={(v) => {
+                if (v === '' || v == null) return 'Todos los asesores';
+                const u = (isRoleUser && currentUser ? [currentUser] : users).find((x) => x.id === Number(v));
+                return u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.usuario || 'Asesor' : 'Todos los asesores';
+              }}
+            >
+              <MenuItem value="">Todos los asesores</MenuItem>
+              {(isRoleUser && currentUser ? [currentUser] : users).map((u) => (
+                <MenuItem key={u.id} value={String(u.id)}>
+                  {`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.usuario}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={(e) => setChartEtapaFilterAnchorEl(e.currentTarget)}
+            sx={{
+              borderRadius: 1.5,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+              fontSize: '0.875rem',
+              fontWeight: 400,
+              border: 'none',
+              color: theme.palette.text.primary,
+              minWidth: 160,
+              height: 40,
+              py: 0,
+              px: 1.5,
+              textTransform: 'none',
+              justifyContent: 'space-between',
+              '& .MuiButton-endIcon': { ml: 0.5 },
+              '&:hover': { border: 'none', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' },
+            }}
+            endIcon={<KeyboardArrowDown sx={{ color: theme.palette.action.disabled, fontSize: 20 }} />}
+          >
+            {chartEtapaHiddenStages.size === 0
+              ? 'Todas las etapas'
+              : chartEtapaHiddenStages.size === COMPANY_STAGE_ORDER.length
+                ? 'Ninguna'
+                : `${chartEtapaHiddenStages.size} oculta${chartEtapaHiddenStages.size === 1 ? '' : 's'}`}
+          </Button>
+          <Popover
+            open={Boolean(chartEtapaFilterAnchorEl)}
+            anchorEl={chartEtapaFilterAnchorEl}
+            onClose={() => setChartEtapaFilterAnchorEl(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            PaperProps={{
+              sx: {
+                bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 1.5,
+                mt: 1.5,
+                p: 1.5,
+                minWidth: 280,
+                maxWidth: 360,
+              },
+            }}
+          >
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 1 }}>
+              Clic en una etapa para ocultarla o mostrarla en el gráfico
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 0.75 }}>
+              {COMPANY_STAGE_ORDER.map((stageKey, i) => {
+                const color = PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length];
+                const isHidden = chartEtapaHiddenStages.has(stageKey);
+                return (
+                  <Box
+                    key={`chart-etapa-${stageKey}`}
+                    onClick={() => {
+                      setChartEtapaHiddenStages((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(stageKey)) next.delete(stageKey);
+                        else next.add(stageKey);
+                        return next;
+                      });
+                    }}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      cursor: 'pointer',
+                      borderRadius: 1,
+                      px: 1,
+                      py: 0.75,
+                      opacity: isHidden ? 0.5 : 1,
+                      '&:hover': {
+                        bgcolor: theme.palette.action.hover,
+                        opacity: isHidden ? 0.7 : 1,
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        bgcolor: color,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: theme.palette.text.primary,
+                        fontWeight: 600,
+                        textDecoration: isHidden ? 'line-through' : 'none',
+                      }}
+                    >
+                      {getStageLabel(stageKey)}
+                    </Typography>
+                  </Box>
+                );
+              })}
+            </Box>
+          </Popover>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={(e) => setPeriodPopoverAnchor(e.currentTarget)}
+            sx={{
+              borderRadius: 1.5,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+              fontSize: '0.875rem',
+              fontWeight: 400,
+              border: 'none',
+              color: theme.palette.text.primary,
+              minWidth: 160,
+              height: 40,
+              py: 0,
+              px: 1.5,
+              textTransform: 'none',
+              justifyContent: 'space-between',
+              '& .MuiButton-endIcon': { ml: 0.5 },
+              '&:hover': { border: 'none', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' },
+            }}
+            endIcon={<KeyboardArrowDown sx={{ color: theme.palette.action.disabled, fontSize: 20 }} />}
+          >
+            {reportsDateRange
+              ? `${reportsDateRange.from.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} - ${reportsDateRange.to.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+              : 'Todo el periodo'}
+          </Button>
+          <Popover
+            open={Boolean(periodPopoverAnchor)}
+            anchorEl={periodPopoverAnchor}
+            onClose={() => {
+              setPeriodPopoverAnchor(null);
+              setCalendarStart(null);
+              setCalendarEnd(null);
+            }}
+            TransitionProps={{
+              onEntered: () => {
+                if (reportsDateRange) {
+                  setCalendarStart(reportsDateRange.from);
+                  setCalendarEnd(reportsDateRange.to);
+                }
+              },
+            }}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            PaperProps={{
+              sx: {
+                p: 0,
+                overflow: 'visible',
+                mt: 1.5,
+                boxShadow: theme.palette.mode === 'dark'
+                  ? '0 8px 24px rgba(0,0,0,0.4)'
+                  : '0 8px 24px rgba(0,0,0,0.08)',
+                // Mismo color que las líneas divisorias internas (un solo borde, sin doble)
+                border: theme.palette.mode === 'dark'
+                  ? '2px solid rgba(255,255,255,0.35)'
+                  : `2px solid ${theme.palette.divider}`,
+                borderRadius: 1.5,
+                backgroundColor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+              },
+            }}
+          >
+            <Box
+              sx={{
+                p: 0,
+                bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                '& .calendar': {
+                  backgroundColor: 'transparent',
+                  '--cui-body-bg': 'transparent',
+                  '--cui-body-color': theme.palette.text.primary,
+                  '--cui-calendar-cell-selected-bg': taxiMonterricoColors.green,
+                  '--cui-calendar-cell-selected-color': '#fff',
+                  '--cui-calendar-cell-today-color': taxiMonterricoColors.green,
+                  '& table': { backgroundColor: 'transparent' },
+                  // Líneas: solo horizontal bajo el nav (sin línea vertical entre calendarios)
+                  ...(theme.palette.mode === 'dark'
+                    ? {
+                        '--cui-calendar-nav-border': '2px solid rgba(255,255,255,0.35)',
+                        '& .calendar-nav': {
+                          backgroundColor: 'transparent',
+                          borderBottom: '2px solid rgba(255,255,255,0.35)',
+                        },
+                        '&:not(:first-child)': {
+                          borderInlineStart: 'none !important',
+                        },
+                      }
+                    : {
+                        '--cui-calendar-nav-border': `2px solid ${theme.palette.divider}`,
+                        '& .calendar-nav': {
+                          backgroundColor: 'transparent',
+                          borderBottom: `2px solid ${theme.palette.divider}`,
+                        },
+                        '&:not(:first-child)': {
+                          borderInlineStart: 'none !important',
+                        },
+                      }),
+                  ...(theme.palette.mode === 'dark' && {
+                    color: theme.palette.text.primary,
+                    '--cui-calendar-nav-icon-color': 'rgba(255,255,255,0.9)',
+                    '--cui-calendar-nav-icon-hover-color': '#fff',
+                    '--cui-calendar-nav-date-color': theme.palette.text.primary,
+                    '--cui-calendar-cell-header-inner-color': 'rgba(255,255,255,0.85)',
+                    '--cui-calendar-cell-disabled-color': 'rgba(255,255,255,0.55)',
+                    '--cui-calendar-cell-hover-color': '#fff',
+                    '--cui-calendar-cell-hover-bg': 'rgba(255,255,255,0.12)',
+                  }),
+                },
+                '& .calendar tbody tr td:nth-child(6), & .calendar tbody tr td:nth-child(7)': {
+                  opacity: 0.5,
+                  color: theme.palette.text.disabled,
+                  pointerEvents: 'none',
+                  cursor: 'not-allowed',
+                },
+              }}
+            >
+              <CCalendar
+                  calendarDate={reportsDateRange?.from || calendarStart || new Date()}
+                  calendars={2}
+                  range
+                  locale="es-ES"
+                  firstDayOfWeek={1}
+                  minDate={new Date(2020, 0, 1)}
+                  maxDate={new Date()}
+                  startDate={reportsDateRange?.from || calendarStart || null}
+                  endDate={reportsDateRange?.to || calendarEnd || null}
+                  onStartDateChange={(date: Date | string | null) => {
+                    const d = date ? (typeof date === 'string' ? new Date(date) : date) : null;
+                    if (d && (d.getDay() === 0 || d.getDay() === 6)) return;
+                    setCalendarStart(d);
+                    if (d && calendarEnd && d <= calendarEnd) {
+                      setReportsDateRange({ from: d, to: calendarEnd });
+                      setPeriodPopoverAnchor(null);
+                    }
+                  }}
+                  onEndDateChange={(date: Date | string | null) => {
+                    const d = date ? (typeof date === 'string' ? new Date(date) : date) : null;
+                    if (d && (d.getDay() === 0 || d.getDay() === 6)) return;
+                    setCalendarEnd(d);
+                    if (d && calendarStart && calendarStart <= d) {
+                      setReportsDateRange({ from: calendarStart, to: d });
+                      setPeriodPopoverAnchor(null);
+                    }
+                  }}
+                  className="rounded"
+                />
+            </Box>
+          </Popover>
+        </Box>
       </Box>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 2, md: 1.25 }, mb: 2, alignItems: 'flex-start' }}>
       {/* Card: Conteo por etapa de empresas (gráfico Pie Chart.js) - mismo diseño que bloque Asesores */}
       <Card
         sx={{
           maxWidth: { xs: 660, md: 980 },
-          flex: { md: '1 1 56%' },
+          flex: { md: '1 1 52%' },
           minWidth: 0,
           borderRadius: 3,
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 4px 16px rgba(0,0,0,0.3)'
-            : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
+          boxShadow: 'none',
           overflow: 'hidden',
           bgcolor: reportsCardBg,
-          border: '1px solid',
-          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+          border: 'none',
           transition: 'all 0.3s ease',
           '&:hover': {
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 8px 24px rgba(0,0,0,0.4)'
-              : `0 8px 24px ${taxiMonterricoColors.greenLight}25`,
+            boxShadow: 'none',
           },
         }}
       >
         <Box
           sx={{
             px: { xs: 2, md: 3 },
-            pt: { xs: 2, md: 1.5 },
+            pt: { xs: 3, md: 2.5 },
             pb: { xs: 1.5, md: 2 },
             bgcolor: reportsCardBg,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 2,
           }}
         >
           <Typography
             variant="h5"
             sx={{
-              fontWeight: 600,
+              fontWeight: 800,
               fontSize: { xs: '1rem', md: '1.1rem' },
               color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
             }}
           >
-            Conteo por etapa (empresas)
+            Empresas
           </Typography>
-        </Box>
-        <Box
-          sx={{
-            px: { xs: 2, md: 3 },
-            pt: 1,
-            pb: 0,
-            bgcolor: reportsCardBg,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: { xs: 2, sm: 1.5 }, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, flex: { xs: '1 1 100%', md: '0 0 auto' }, minWidth: { md: 0 } }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                Asesor
-              </Typography>
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 }, maxWidth: { sm: 140 }, width: { md: 140 } }}>
-                <Select
-                  value={reportsAdvisorFilter === null ? '' : String(reportsAdvisorFilter)}
-                  onChange={(e) => !isRoleUser && setReportsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
-                  displayEmpty
-                  disabled={isRoleUser}
-                  sx={{
-                    borderRadius: 1.5,
-                    bgcolor: reportsCardBg,
-                    fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                    border: `1.5px solid ${theme.palette.divider}`,
-                    color: theme.palette.text.primary,
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    },
-                    '&.Mui-focused': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                    },
-                    '& .MuiSelect-select': { py: 1 },
-                    ...(isRoleUser && { opacity: 1, '& .MuiSelect-select': { cursor: 'default' } }),
-                  }}
-                  MenuProps={{
-                    ...(isRoleUser && { open: false }),
-                    PaperProps: {
-                      sx: {
-                        bgcolor: reportsCardBg,
-                        border: `1px solid ${theme.palette.divider}`,
-                        borderRadius: 1.5,
-                        mt: 1,
-                        '& .MuiMenuItem-root': { color: theme.palette.text.primary },
-                      },
-                    },
-                  }}
-                >
-                  {!isRoleUser && <MenuItem value=""><em>Todos</em></MenuItem>}
-                  {(isRoleUser && currentUser ? [currentUser] : users).map((u) => (
-                    <MenuItem key={u.id} value={String(u.id)}>
-                      {u.firstName} {u.lastName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, flex: { xs: '1 1 auto', md: '0 0 auto' }, minWidth: { md: 0 } }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                Origen
-              </Typography>
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 120 }, maxWidth: { sm: 120 }, width: { md: 120 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, sm: 1.5 }, flexWrap: 'wrap' }}>
+            <FormControl size="small" sx={{ minWidth: { xs: 100, sm: 120 }, width: { md: 120 } }}>
                 <Select
                   value={chartOriginFilter === null ? '' : chartOriginFilter}
                   onChange={(e) => setChartOriginFilter(e.target.value === '' ? null : e.target.value)}
                   displayEmpty
                   sx={{
                     borderRadius: 1.5,
-                    bgcolor: reportsCardBg,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                     fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                    border: `1.5px solid ${theme.palette.divider}`,
+                    border: 'none',
                     color: theme.palette.text.primary,
                     '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    },
-                    '&.Mui-focused': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                    },
-                    '& .MuiSelect-select': { py: 1 },
+                    '& .MuiSelect-select': { py: 1, fontStyle: 'normal' },
                   }}
                   MenuProps={{
                     PaperProps: {
@@ -746,9 +989,7 @@ const Reports: React.FC = () => {
                     },
                   }}
                 >
-                  <MenuItem value="">
-                    <em>Todos</em>
-                  </MenuItem>
+                  <MenuItem value="">Origen</MenuItem>
                   <MenuItem value="__null__">Sin origen</MenuItem>
                   <MenuItem value="referido">Referido</MenuItem>
                   <MenuItem value="base">Base</MenuItem>
@@ -757,189 +998,19 @@ const Reports: React.FC = () => {
                   <MenuItem value="masivo">Masivo</MenuItem>
                 </Select>
               </FormControl>
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, flex: { xs: '1 1 auto', md: '0 0 auto' }, minWidth: { md: 0 } }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                Período
-              </Typography>
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 }, maxWidth: { sm: 140 }, width: { md: 140 } }}>
-                <Select
-                  value={chartWeekNumber}
-                  onChange={(e) => setChartWeekNumber(Number(e.target.value))}
-                  sx={{
-                    borderRadius: 1.5,
-                    bgcolor: reportsCardBg,
-                    fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                    border: `1.5px solid ${theme.palette.divider}`,
-                    color: theme.palette.text.primary,
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    },
-                    '&.Mui-focused': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                    },
-                    '& .MuiSelect-select': { py: 1 },
-                  }}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: {
-                        bgcolor: reportsCardBg,
-                        border: `1px solid ${theme.palette.divider}`,
-                        borderRadius: 1.5,
-                        mt: 1,
-                        '& .MuiMenuItem-root': { color: theme.palette.text.primary },
-                      },
-                    },
-                  }}
-                >
-                  {Array.from({ length: currentWeekNum }, (_, i) => i + 1).map((w) => (
-                    <MenuItem key={w} value={w}>Semana {w}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, flex: { xs: '1 1 auto', md: '0 0 auto' }, minWidth: { md: 0 } }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                Etapa
-              </Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={(e) => setEtapaFilterAnchorEl(e.currentTarget)}
-                sx={{
-                  minWidth: { xs: '100%', sm: 140 },
-                  maxWidth: { sm: 140 },
-                  width: { md: 140 },
-                  justifyContent: 'space-between',
-                  borderRadius: 1.5,
-                  bgcolor: reportsCardBg,
-                  fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                  border: `1.5px solid ${theme.palette.divider}`,
-                  color: theme.palette.text.primary,
-                  textTransform: 'none',
-                  py: 1,
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    bgcolor: reportsCardBg,
-                  },
-                }}
-              >
-                {hiddenStageIndices.size === 0
-                  ? 'Todas visibles'
-                  : `${hiddenStageIndices.size} oculta${hiddenStageIndices.size === 1 ? '' : 's'}`}
-                <ChevronRight sx={{ transform: 'rotate(90deg)', fontSize: 20 }} />
-              </Button>
-              <Popover
-                open={Boolean(etapaFilterAnchorEl)}
-                anchorEl={etapaFilterAnchorEl}
-                onClose={() => setEtapaFilterAnchorEl(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                PaperProps={{
-                  sx: {
-                    bgcolor: reportsCardBg,
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: 1.5,
-                    mt: 1,
-                    p: 1.5,
-                    minWidth: 280,
-                    maxWidth: 360,
-                  },
-                }}
-              >
-                <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 1 }}>
-                  Clic en una etapa para ocultarla o mostrarla en el gráfico
-                </Typography>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: 0.75,
-                  }}
-                >
-                  {companyStagesChartData.labels.map((label, i) => {
-                    const color = PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length];
-                    const isHidden = hiddenStageIndices.has(i);
-                    return (
-                      <Box
-                        key={`etapa-filter-${i}-${label}`}
-                        onClick={() => {
-                          setHiddenStageIndices((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(i)) next.delete(i);
-                            else next.add(i);
-                            return next;
-                          });
-                        }}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1,
-                          cursor: 'pointer',
-                          borderRadius: 1,
-                          px: 1,
-                          py: 0.75,
-                          opacity: isHidden ? 0.5 : 1,
-                          '&:hover': {
-                            bgcolor: theme.palette.action.hover,
-                            opacity: isHidden ? 0.7 : 1,
-                          },
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            bgcolor: color,
-                            flexShrink: 0,
-                          }}
-                        />
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: theme.palette.text.primary,
-                            fontWeight: 600,
-                            textDecoration: isHidden ? 'line-through' : 'none',
-                          }}
-                        >
-                          {label}
-                        </Typography>
-                      </Box>
-                    );
-                  })}
-                </Box>
-              </Popover>
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, flex: { xs: '1 1 auto', md: '0 0 auto' }, minWidth: { md: 0 } }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                Cliente recuperado
-              </Typography>
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 }, maxWidth: { sm: 140 }, width: { md: 140 } }}>
+            <FormControl size="small" sx={{ minWidth: { xs: 100, sm: 140 }, width: { md: 140 } }}>
                 <Select
                   value={chartRecoveredClientFilter}
                   onChange={(e) => setChartRecoveredClientFilter(e.target.value)}
                   displayEmpty
                   sx={{
                     borderRadius: 1.5,
-                    bgcolor: reportsCardBg,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                     fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                    border: `1.5px solid ${theme.palette.divider}`,
+                    border: 'none',
                     color: theme.palette.text.primary,
                     '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    },
-                    '&.Mui-focused': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                    },
-                    '& .MuiSelect-select': { py: 1 },
+                    '& .MuiSelect-select': { py: 1, fontStyle: 'normal' },
                   }}
                   MenuProps={{
                     PaperProps: {
@@ -953,22 +1024,17 @@ const Reports: React.FC = () => {
                     },
                   }}
                 >
-                  <MenuItem value="">
-                    <em>Todos</em>
-                  </MenuItem>
+                  <MenuItem value="">C.R.</MenuItem>
                   <MenuItem value="true">Sí</MenuItem>
                   <MenuItem value="false">No</MenuItem>
                 </Select>
               </FormControl>
-            </Box>
           </Box>
         </Box>
         <Box sx={{ px: { xs: 2, md: 3 }, pt: 0, pb: { xs: 1.5, md: 2 }, bgcolor: reportsCardBg }}>
           {companyStagesChartData.series.some((v) => v > 0) ? (
             (() => {
-              const visibleIndices = companyStagesChartData.labels
-                .map((_, i) => i)
-                .filter((i) => !hiddenStageIndices.has(i));
+              const visibleIndices = companyStagesChartData.labels.map((_, i) => i);
               const chartLabels = visibleIndices.map((i) => companyStagesChartData.labels[i]);
               const chartSeries = visibleIndices.map((i) => companyStagesChartData.series[i]);
               const chartBg = visibleIndices.map((i) => PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length]);
@@ -987,9 +1053,7 @@ const Reports: React.FC = () => {
                 chart: {
                   type: 'bar',
                   height: funnelChartHeight,
-                  dropShadow: {
-                    enabled: true,
-                  },
+                  dropShadow: { enabled: false },
                   toolbar: { show: false },
                   fontFamily: 'inherit',
                   selection: { enabled: false },
@@ -1031,6 +1095,7 @@ const Reports: React.FC = () => {
                     },
                   },
                 },
+                fill: { type: 'solid', opacity: 1 },
                 states: {
                   active: {
                     filter: {
@@ -1048,11 +1113,9 @@ const Reports: React.FC = () => {
                   formatter: function (val: number, opt: any) {
                     return opt.w.globals.labels[opt.dataPointIndex] + ':  ' + val;
                   },
-                  dropShadow: {
-                    enabled: true,
-                  },
+                  dropShadow: { enabled: false },
                   style: {
-                    colors: [theme.palette.mode === 'dark' ? '#fff' : '#000'],
+                    colors: ['#fff'],
                     fontSize: '12px',
                     fontWeight: 600,
                   },
@@ -1133,29 +1196,24 @@ const Reports: React.FC = () => {
       {/* Card: Cantidad por tipo de actividad (gráfico de barras ApexCharts) */}
       <Card
         sx={{
-          flex: { md: '1 1 44%' },
+          flex: { md: '1 1 48%' },
           minWidth: 0,
-          maxWidth: { xs: 660, md: 820 },
+          maxWidth: { xs: 660, md: 900 },
           borderRadius: 3,
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 4px 16px rgba(0,0,0,0.3)'
-            : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
+          boxShadow: 'none',
           overflow: 'hidden',
           bgcolor: reportsCardBg,
-          border: '1px solid',
-          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+          border: 'none',
           transition: 'all 0.3s ease',
           '&:hover': {
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 8px 24px rgba(0,0,0,0.4)'
-              : `0 8px 24px ${taxiMonterricoColors.greenLight}25`,
+            boxShadow: 'none',
           },
         }}
       >
         <Box
           sx={{
             px: { xs: 2, md: 3 },
-            pt: { xs: 2, md: 1.5 },
+            pt: { xs: 3, md: 3.5 },
             pb: { xs: 1.5, md: 2 },
             bgcolor: reportsCardBg,
           }}
@@ -1163,117 +1221,13 @@ const Reports: React.FC = () => {
           <Typography
             variant="h5"
             sx={{
-              fontWeight: 600,
+              fontWeight: 800,
               fontSize: { xs: '1rem', md: '1.1rem' },
               color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
             }}
           >
-            Cantidad por tipo de actividad
+            Actividades
           </Typography>
-        </Box>
-        <Box
-          sx={{
-            px: { xs: 2, md: 3 },
-            pt: 1,
-            pb: 1,
-            bgcolor: reportsCardBg,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, sm: 1.5 }, flexWrap: 'wrap' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500, minWidth: 44 }}>
-                Asesor
-              </Typography>
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 160 }, maxWidth: { sm: 160 } }}>
-                <Select
-                  value={reportsAdvisorFilter === null ? '' : String(reportsAdvisorFilter)}
-                  onChange={(e) => !isRoleUser && setReportsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
-                  displayEmpty
-                  disabled={isRoleUser}
-                  sx={{
-                    borderRadius: 1.5,
-                    bgcolor: reportsCardBg,
-                    fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                    border: `1.5px solid ${theme.palette.divider}`,
-                    color: theme.palette.text.primary,
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    },
-                    '&.Mui-focused': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                    },
-                    '& .MuiSelect-select': { py: 1 },
-                    ...(isRoleUser && { opacity: 1, '& .MuiSelect-select': { cursor: 'default' } }),
-                  }}
-                  MenuProps={{
-                    ...(isRoleUser && { open: false }),
-                    PaperProps: {
-                      sx: {
-                        bgcolor: reportsCardBg,
-                        border: `1px solid ${theme.palette.divider}`,
-                        borderRadius: 1.5,
-                        mt: 1,
-                        '& .MuiMenuItem-root': { color: theme.palette.text.primary },
-                      },
-                    },
-                  }}
-                >
-                  {!isRoleUser && <MenuItem value=""><em>Todos</em></MenuItem>}
-                  {(isRoleUser && currentUser ? [currentUser] : users).map((u) => (
-                    <MenuItem key={u.id} value={String(u.id)}>
-                      {u.firstName} {u.lastName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 155 }, maxWidth: { sm: 155 } }}>
-                <Select
-                  value={activitiesPeriodFilter}
-                  onChange={(e) => setActivitiesPeriodFilter(e.target.value)}
-                  displayEmpty
-                  sx={{
-                    borderRadius: 1.5,
-                    bgcolor: reportsCardBg,
-                    fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                    border: `1.5px solid ${theme.palette.divider}`,
-                    color: theme.palette.text.primary,
-                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    },
-                    '&.Mui-focused': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                    },
-                    '& .MuiSelect-select': { py: 1 },
-                  }}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: {
-                        bgcolor: reportsCardBg,
-                        border: `1px solid ${theme.palette.divider}`,
-                        borderRadius: 1.5,
-                        mt: 1,
-                        '& .MuiMenuItem-root': { color: theme.palette.text.primary },
-                      },
-                    },
-                  }}
-                >
-                  <MenuItem value=""><em>Todos</em></MenuItem>
-                  <MenuItem value="day">Por día (24h)</MenuItem>
-                  <MenuItem value="week">Por semana (7 días)</MenuItem>
-                  <MenuItem value="month">Por mes (30 días)</MenuItem>
-                  <MenuItem value="year">Por año</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </Box>
         </Box>
         <Box sx={{ px: { xs: 2, md: 3 }, pt: 2, pb: { xs: 1.5, md: 2 }, bgcolor: reportsCardBg }}>
           {activitiesChartData.data.some((v) => v > 0) ? (
@@ -1289,6 +1243,7 @@ const Reports: React.FC = () => {
                 chart: {
                   type: 'bar',
                   height: 350,
+                  background: 'transparent',
                   toolbar: { show: false },
                   fontFamily: 'inherit',
                   selection: { enabled: false },
@@ -1302,6 +1257,7 @@ const Reports: React.FC = () => {
                   },
                 },
                 colors: ACTIVITY_BAR_COLORS,
+                fill: { type: 'solid', opacity: 1 },
                 states: {
                   active: { filter: { type: 'none' } },
                   hover: { filter: { type: 'none' } },
@@ -1321,10 +1277,12 @@ const Reports: React.FC = () => {
                 legend: { show: false },
                 xaxis: {
                   categories: activitiesChartData.categories,
+                  axisBorder: { show: false },
                   labels: {
                     style: {
                       colors: ACTIVITY_BAR_COLORS,
-                      fontSize: '12px',
+                      fontSize: '13px',
+                      fontWeight: 600,
                     },
                   },
                 },
@@ -1366,78 +1324,34 @@ const Reports: React.FC = () => {
           minWidth: 0,
           maxWidth: { md: 'none' },
           borderRadius: 3,
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 4px 16px rgba(0,0,0,0.3)'
-            : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
+          boxShadow: 'none',
           overflow: 'hidden',
           bgcolor: reportsCardBg,
-          border: '1px solid',
-          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+          border: 'none',
           transition: 'all 0.3s ease',
           '&:hover': {
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 8px 24px rgba(0,0,0,0.4)'
-              : `0 8px 24px ${taxiMonterricoColors.greenLight}25`,
+            boxShadow: 'none',
           },
         }}
       >
         <Box
           sx={{
             px: { xs: 2, md: 3 },
-            pt: { xs: 2, md: 1.5 },
-            pb: { xs: 1.5, md: 2 },
+            pt: { xs: 3, md: 3.5 },
+            pb: { xs: 1.5, md: 0 },
             bgcolor: reportsCardBg,
           }}
         >
           <Typography
             variant="h5"
             sx={{
-              fontWeight: 600,
+              fontWeight: 800,
               fontSize: { xs: '1rem', md: '1.1rem' },
               color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
             }}
           >
-            Movimiento por semana (empresas)
+            Avance Semanal - Empresas
           </Typography>
-        </Box>
-        <Box
-          sx={{
-            px: { xs: 2, md: 3 },
-            pt: 1,
-            pb: 1,
-            bgcolor: reportsCardBg,
-
-            
-          }}
-        >
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <Select
-                value={reportsAdvisorFilter === null ? '' : String(reportsAdvisorFilter)}
-                onChange={(e) => !isRoleUser && setReportsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
-                displayEmpty
-                disabled={isRoleUser}
-                sx={{
-                  borderRadius: 1.5,
-                  bgcolor: reportsCardBg,
-                  fontSize: '0.8125rem',
-                  border: `1px solid ${theme.palette.divider}`,
-                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                  ...(isRoleUser && { opacity: 1, '& .MuiSelect-select': { cursor: 'default' } }),
-                }}
-                MenuProps={{
-                  ...(isRoleUser && { open: false }),
-                }}
-              >
-                {!isRoleUser && <MenuItem value="">Todos los asesores</MenuItem>}
-                {(isRoleUser && currentUser ? [currentUser] : users).map((u) => (
-                  <MenuItem key={u.id} value={String(u.id)}>
-                    {u.firstName} {u.lastName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
         </Box>
         <Box sx={{ px: { xs: 2, md: 3 }, pt: 2, pb: { xs: 1.5, md: 2 }, bgcolor: reportsCardBg }}>
           {weeklyMovementRangeLoading ? (
@@ -1480,163 +1394,38 @@ const Reports: React.FC = () => {
         sx={{
           flex: { md: '1 1 44%' },
           minWidth: { md: 400 },
-          minHeight: { md: 520 },
+          minHeight: { md: 530 },
           maxWidth: { md: 'none' },
           display: 'flex',
           flexDirection: 'column',
           borderRadius: 3,
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 4px 16px rgba(0,0,0,0.3)'
-            : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
+          boxShadow: 'none',
           overflow: 'hidden',
           bgcolor: reportsCardBg,
-          border: '1px solid',
-          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+          border: 'none',
           transition: 'all 0.3s ease',
           '&:hover': {
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 8px 24px rgba(0,0,0,0.4)'
-              : `0 8px 24px ${taxiMonterricoColors.greenLight}25`,
+            boxShadow: 'none',
           },
         }}
       >
-        <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 1.5 }, pb: { xs: 1.5, md: 2 }, bgcolor: reportsCardBg }}>
+        <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 3, md: 3.5 }, pb: { xs: 1.5, md: 0 }, bgcolor: reportsCardBg }}>
           <Typography
             variant="h5"
             sx={{
-              fontWeight: 600,
+              fontWeight: 800,
               fontSize: { xs: '1rem', md: '1.1rem' },
               color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
             }}
           >
-            Conteo por etapa (negocios)
+            Negocios
           </Typography>
         </Box>
         <Box
           sx={{
             px: { xs: 2, md: 3 },
-            pt: 1.5,
-            pb: 1.5,
-            bgcolor: reportsCardBg,
-          }}
-        >
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
-            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>Asesor</Typography>
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <Select
-                value={reportsAdvisorFilter === null ? '' : String(reportsAdvisorFilter)}
-                onChange={(e) => !isRoleUser && setReportsAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
-                displayEmpty
-                disabled={isRoleUser}
-                sx={{
-                  borderRadius: 1.5,
-                  bgcolor: reportsCardBg,
-                  fontSize: '0.8125rem',
-                  border: `1px solid ${theme.palette.divider}`,
-                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                  ...(isRoleUser && { opacity: 1, '& .MuiSelect-select': { cursor: 'default' } }),
-                }}
-                MenuProps={{
-                  ...(isRoleUser && { open: false }),
-                }}
-              >
-                {!isRoleUser && <MenuItem value="">Todos los asesores</MenuItem>}
-                {(isRoleUser && currentUser ? [currentUser] : users).map((u) => (
-                  <MenuItem key={u.id} value={String(u.id)}>{u.firstName} {u.lastName}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Box>
-              <Button
-                size="small"
-                onClick={(e) => setDealsEtapaFilterAnchorEl(e.currentTarget)}
-                endIcon={<ChevronRight sx={{ transform: 'rotate(90deg)', fontSize: 20 }} />}
-                sx={{
-                  borderRadius: 1.5,
-                  border: `1.5px solid ${theme.palette.divider}`,
-                  color: theme.palette.text.primary,
-                  textTransform: 'none',
-                  fontSize: '0.8125rem',
-                  bgcolor: reportsCardBg,
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    bgcolor: reportsCardBg,
-                  },
-                }}
-              >
-                {hiddenDealsStageIndices.size === 0
-                  ? 'Todas visibles'
-                  : `${hiddenDealsStageIndices.size} oculta${hiddenDealsStageIndices.size === 1 ? '' : 's'}`}
-              </Button>
-              <Popover
-                open={Boolean(dealsEtapaFilterAnchorEl)}
-                anchorEl={dealsEtapaFilterAnchorEl}
-                onClose={() => setDealsEtapaFilterAnchorEl(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                PaperProps={{
-                  sx: {
-                    bgcolor: reportsCardBg,
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: 1.5,
-                    mt: 1,
-                    p: 1.5,
-                    minWidth: 280,
-                    maxWidth: 360,
-                  },
-                }}
-              >
-                <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 1 }}>
-                  Clic en una etapa para ocultarla o mostrarla en el gráfico
-                </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 0.75 }}>
-                  {dealsChartData.labels.map((label, i) => {
-                    const color = PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length];
-                    const isHidden = hiddenDealsStageIndices.has(i);
-                    return (
-                      <Box
-                        key={`deals-etapa-${i}-${label}`}
-                        onClick={() => {
-                          setHiddenDealsStageIndices((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(i)) next.delete(i);
-                            else next.add(i);
-                            return next;
-                          });
-                        }}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1,
-                          cursor: 'pointer',
-                          borderRadius: 1,
-                          px: 1,
-                          py: 0.75,
-                          opacity: isHidden ? 0.5 : 1,
-                          '&:hover': {
-                            bgcolor: theme.palette.action.hover,
-                            opacity: isHidden ? 0.7 : 1,
-                          },
-                        }}
-                      >
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
-                        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, textDecoration: isHidden ? 'line-through' : 'none' }}>
-                          {label}
-                        </Typography>
-                      </Box>
-                    );
-                  })}
-                </Box>
-              </Popover>
-            </Box>
-          </Box>
-        </Box>
-        <Box
-          sx={{
-            px: { xs: 2, md: 3 },
-            pt: 2,
-            pb: { xs: 1.5, md: 3 },
+            mt: 0,
+            pb: { xs: 1.5, md: 2 },
             bgcolor: reportsCardBg,
             flex: 1,
             display: 'flex',
@@ -1648,78 +1437,68 @@ const Reports: React.FC = () => {
         >
           {dealsChartData.series.some((v) => v > 0) ? (
             (() => {
-              const visibleDealsIndices = dealsChartData.labels
-                .map((_, i) => i)
-                .filter((i) => !hiddenDealsStageIndices.has(i));
+              const visibleDealsIndices = dealsChartData.labels.map((_, i) => i);
               const chartLabels = visibleDealsIndices.map((i) => dealsChartData.labels[i]);
               const chartSeries = visibleDealsIndices.map((i) => dealsChartData.series[i]);
-              const visibleTotal = chartSeries.reduce((a, b) => a + b, 0);
+              const chartAmounts = visibleDealsIndices.map((i) => dealsChartData.amounts[i] ?? 0);
               const chartColors = visibleDealsIndices.map((i) => PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length]);
               return (
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Box
-                sx={{
-                  flex: '0 0 auto',
-                  width: { xs: '100%', sm: 300 },
-                  maxWidth: 320,
-                  '& .apexcharts-datalabels-group': {
-                    '& .apexcharts-datalabel-label, & .apexcharts-datalabel-value': {
-                      fill: `${theme.palette.text.secondary} !important`,
-                      fontSize: '30px !important',
+            <Box sx={{ width: '100%', maxWidth: 330 }}>
+              <ReactApexChart
+                options={{
+                  chart: { type: 'pie', width: 400, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
+                  labels: chartLabels,
+                  colors: chartColors,
+                  fill: { type: 'solid', opacity: 1 },
+                  plotOptions: {
+                    pie: {
+                      expandOnClick: false,
                     },
                   },
-                }}
-              >
-                <ReactApexChart
-                  options={{
-                    chart: { type: 'donut', width: 300, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
-                    colors: chartColors,
-                    stroke: { width: 0 },
-                    dataLabels: { enabled: false },
-                    labels: chartLabels,
-                    theme: { mode: theme.palette.mode as 'light' | 'dark' },
-                    plotOptions: {
-                      pie: {
-                        donut: {
-                          size: '65%',
-                          labels: {
-                            show: true,
-                            name: { show: true, color: theme.palette.text.secondary },
-                            value: {
-                              show: true,
-                              fontSize: '30px',
-                              fontWeight: 400,
-                              color: theme.palette.text.secondary,
-                            },
-                            total: {
-                              show: true,
-                              showAlways: true,
-                              label: 'Total',
-                              formatter: () => String(visibleTotal),
-                              color: theme.palette.text.secondary,
-                              fontSize: '30px',
-                              fontWeight: 700,
-                            },
-                          },
-                        },
-                      },
+                  states: {
+                    hover: { filter: { type: 'none' } },
+                    active: { filter: { type: 'none' } },
+                  },
+                  stroke: {
+                    width: 3,
+                    colors: [theme.palette.mode === 'dark' ? theme.palette.background.paper : 'rgba(255,255,255,0.9)'],
+                  },
+                  dataLabels: {
+                    enabled: true,
+                    dropShadow: { enabled: false },
+                    formatter: (val: string | number | number[], opts?: { seriesIndex?: number }) => {
+                      const idx = opts?.seriesIndex ?? 0;
+                      const count = chartSeries[idx] ?? 0;
+                      const pct = dealsChartData.total > 0 ? ((count / dealsChartData.total) * 100).toFixed(1) : '0';
+                      return `${pct}%`;
                     },
-                    responsive: [{ breakpoint: 480, options: { chart: { width: 260, background: 'transparent' } } }],
-                    legend: { show: false },
-                    tooltip: { theme: theme.palette.mode },
-                  } as ApexOptions}
-                  series={chartSeries}
-                  type="donut"
-                  height={300}
-                />
-              </Box>
+                  },
+                  theme: { mode: theme.palette.mode as 'light' | 'dark' },
+                  legend: { show: false },
+                  tooltip: {
+                    theme: theme.palette.mode,
+                    custom: ({ seriesIndex, w }: { seriesIndex: number; w: { globals: { labels: string[] } } }) => {
+                      const label = w.globals.labels[seriesIndex] ?? '';
+                      const count = chartSeries[seriesIndex] ?? 0;
+                      const amount = chartAmounts[seriesIndex] ?? 0;
+                      return `<div style="padding: 8px 12px; background: ${theme.palette.mode === 'dark' ? '#1c252e' : '#fff'}; border: 1px solid ${theme.palette.divider}; border-radius: 8px;">
+                        <div style="font-weight: 600; margin-bottom: 4px;">${label}</div>
+                        <div>Cantidad: ${count}</div>
+                        <div>Monto: ${formatCurrencyPE(amount)}</div>
+                      </div>`;
+                    },
+                  },
+                  responsive: [{
+                    breakpoint: 480,
+                    options: {
+                      chart: { width: 450 },
+                    },
+                  }],
+                } as ApexOptions}
+                series={chartSeries}
+                type="pie"
+                height={450}
+              />
             </Box>
               );
             })()

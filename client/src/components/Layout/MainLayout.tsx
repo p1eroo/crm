@@ -6,7 +6,7 @@ import { useSidebar } from "../../context/SidebarContext";
 import { LoginWelcomeModal } from "../Notifications/LoginWelcomeModal";
 import { NotificationDetail } from "../Notifications/NotificationDetail";
 import { Notification } from "../../types/notification";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useNotificationPanel } from "../../context/NotificationContext";
 
@@ -21,9 +21,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isHorizontal = layoutMode === "horizontal";
   const drawerWidth = collapsed ? (isMobile ? 0 : 90) : 300;
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
-  const isReportsPage = location.pathname === "/reports";
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
@@ -137,8 +135,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             sx={{
               flex: 1,
               bgcolor: theme.palette.background.default,
-              pl: isReportsPage ? { xs: 2, sm: 2.5, md: 3 } : { xs: 2, sm: 3, md: 4, lg: 4, xl: 5 },
-              pr: isReportsPage ? { xs: 2, sm: 2.5, md: 3 } : { xs: 2, sm: 3, md: 4, lg: 4, xl: 5 },
+              pl: { xs: 2, sm: 3, md: 4, lg: 4, xl: 5 },
+              pr: { xs: 2, sm: 3, md: 4, lg: 4, xl: 5 },
               pt: isHorizontal ? { xs: 3, sm: 4 } : { xs: 1.5, sm: 2.5 },
               pb: 0,
               width: "100%",

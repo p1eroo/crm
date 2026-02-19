@@ -119,13 +119,14 @@ const Login: React.FC = () => {
     setLocalError('');
     setLoading(true);
 
-    if (rememberMe && username) {
-      localStorage.setItem(REMEMBER_KEY, username);
+    const usernameNorm = username.trim().toLowerCase();
+    if (rememberMe && usernameNorm) {
+      localStorage.setItem(REMEMBER_KEY, usernameNorm);
     } else {
       localStorage.removeItem(REMEMBER_KEY);
     }
 
-    const success = await login(username, password);
+    const success = await login(usernameNorm, password);
     if (mountedRef.current) {
       if (!success) setLocalError('Credenciales incorrectas o error de conexión');
       setLoading(false);

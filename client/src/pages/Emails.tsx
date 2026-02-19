@@ -29,16 +29,17 @@ import {
   ExpandLess,
   MarkEmailRead,
   MarkEmailUnread,
-  LinkOff,
+  Email as EmailIcon,
 } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
 import { Mail } from 'lucide-react';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 import api from '../config/api';
 import EmailComposer from '../components/EmailComposer';
 import RichTextEditor from '../components/RichTextEditor';
 
-interface Email {
+interface EmailMessage {
   id: string;
   draftId?: string;
   threadId: string;
@@ -58,14 +59,14 @@ interface FolderCount {
 const Emails: React.FC = () => {
   const theme = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
-  const [emails, setEmails] = useState<Email[]>([]);
+  const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [crmEmailCount, setCrmEmailCount] = useState(0);
   const [starredCount, setStarredCount] = useState(0);
   const [selectedFolder, setSelectedFolder] = useState<'inbox' | 'starred'>('inbox');
   const [composeOpen, setComposeOpen] = useState(false);
-  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
   const [emailDetail, setEmailDetail] = useState<any>(null);
   const [searchDebounce, setSearchDebounce] = useState<NodeJS.Timeout | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -79,7 +80,6 @@ const Emails: React.FC = () => {
   const [loadingThread, setLoadingThread] = useState(false);
   const [collapsedMessages, setCollapsedMessages] = useState<Set<string>>(new Set());
   const [connectingEmail, setConnectingEmail] = useState(false);
-  const [disconnectingEmail, setDisconnectingEmail] = useState(false);
   const emailsPerPage = 20;
 
   const fetchFolderCounts = useCallback(async () => {
@@ -206,7 +206,7 @@ const Emails: React.FC = () => {
     setSearchDebounce(timeout);
   };
 
-  const handleEmailClick = async (email: Email) => {
+  const handleEmailClick = async (email: EmailMessage) => {
     // Mostrar el diálogo de detalle
     setSelectedEmail(email);
     setIsReplying(false);
@@ -424,25 +424,7 @@ const Emails: React.FC = () => {
     }
   };
 
-  const handleEmailDisconnect = async () => {
-    if (!window.confirm("¿Desconectar tu cuenta de Google? Ya no podrás enviar ni recibir correos desde el CRM.")) return;
-    setDisconnectingEmail(true);
-    setError("");
-    try {
-      await api.delete("/google/disconnect");
-      setEmails([]);
-      setError("No hay cuenta de Google conectada");
-      setCrmEmailCount(0);
-      setStarredCount(0);
-    } catch (err: any) {
-      console.error("Error desconectando Google:", err);
-      setError(err.response?.data?.message || "Error al desconectar. Intenta nuevamente.");
-    } finally {
-      setDisconnectingEmail(false);
-    }
-  };
-
-  const handleToggleRead = async (email: Email, e: React.MouseEvent) => {
+  const handleToggleRead = async (email: EmailMessage, e: React.MouseEvent) => {
     e.stopPropagation(); // Evitar que se abra el email al hacer clic en el icono
     
     const isCurrentlyUnread = isUnread(email.labelIds);
@@ -455,7 +437,7 @@ const Emails: React.FC = () => {
           ? {
               ...e,
               labelIds: newReadState
-                ? e.labelIds.filter(id => id !== 'UNREAD')
+                ? e.labelIds.filter((id: string) => id !== 'UNREAD')
                 : [...e.labelIds, 'UNREAD'],
             }
           : e
@@ -485,7 +467,7 @@ const Emails: React.FC = () => {
             ? {
                 ...e,
                 labelIds: isCurrentlyUnread
-                  ? e.labelIds.filter(id => id !== 'UNREAD')
+                  ? e.labelIds.filter((id: string) => id !== 'UNREAD')
                   : [...e.labelIds, 'UNREAD'],
               }
             : e
@@ -609,8 +591,9 @@ const Emails: React.FC = () => {
   return (
     <Box sx={{ flex: 1, pb: 1, display: 'flex' }}>
       <Paper
+        elevation={0}
         sx={{
-          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent',
+          ...pageStyles.card,
           borderRadius: 2,
           px: 0,
           pt: 0,
@@ -639,47 +622,28 @@ const Emails: React.FC = () => {
           flexShrink: 0,
         }}
       >
-        {/* Botón Componer */}
+        {/* Botón Componer - único CTA destacado */}
         <Tooltip title="Crear nuevo correo" arrow>
           <Button
             variant="contained"
             onClick={() => setComposeOpen(true)}
             startIcon={<Send />}
             sx={{
-              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+              bgcolor: taxiMonterricoColors.green,
               color: 'white',
               textTransform: 'none',
-              px: 2.5,
-              py: 1.5,
+              px: 2,
+              py: 1.25,
               mt: 1,
               borderRadius: 2,
               width: '85%',
               alignSelf: 'center',
-              fontWeight: 700,
-              boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
-              transition: 'all 0.3s ease',
-              position: 'relative',
-              overflow: 'hidden',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: '-100%',
-                width: '100%',
-                height: '100%',
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-                transition: 'left 0.5s ease',
-              },
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              boxShadow: 'none',
               '&:hover': {
-                transform: 'translateY(-2px) scale(1.02)',
-                boxShadow: `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
-                '&::before': {
-                  left: '100%',
-                },
-              },
-              '&:active': {
-                transform: 'translateY(0) scale(1)',
+                bgcolor: taxiMonterricoColors.greenDark,
+                boxShadow: 'none',
               },
             }}
           >
@@ -687,205 +651,67 @@ const Emails: React.FC = () => {
           </Button>
         </Tooltip>
 
-        {/* Opciones de carpeta */}
-        <Box sx={{ mt: 2 }}>
-          {/* Inbox */}
-          <Box
-            onClick={() => {
-              setSelectedFolder('inbox');
-              setCurrentPage(1);
-            }}
+        {/* Opciones de carpeta - estilo simple como Sidebar principal */}
+        <Box sx={{ mt: 2, mx: 1 }}>
+          <ListItemButton
+            selected={selectedFolder === 'inbox'}
+            onClick={() => { setSelectedFolder('inbox'); setCurrentPage(1); }}
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              p: 1.5,
+              minHeight: 44,
               borderRadius: 2,
-              cursor: 'pointer',
-              mb: 1,
-              bgcolor: selectedFolder === 'inbox' 
-                ? `linear-gradient(135deg, ${taxiMonterricoColors.green}15 0%, ${taxiMonterricoColors.greenLight}10 100%)`
-                : 'transparent',
-              border: selectedFolder === 'inbox' 
-                ? `2px solid ${taxiMonterricoColors.green}`
-                : '1px solid transparent',
-              transition: 'all 0.3s ease',
+              mb: 0.5,
+              '&.Mui-selected': {
+                bgcolor: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924',
+                color: taxiMonterricoColors.green,
+                '&:hover': { bgcolor: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924' },
+              },
               '&:hover': {
-                bgcolor: selectedFolder === 'inbox'
-                  ? `linear-gradient(135deg, ${taxiMonterricoColors.green}20 0%, ${taxiMonterricoColors.greenLight}15 100%)`
-                  : theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.05)' 
-                    : `${taxiMonterricoColors.greenLight}10`,
-                borderColor: selectedFolder === 'inbox' 
-                  ? taxiMonterricoColors.green
-                  : taxiMonterricoColors.greenLight,
-                transform: 'translateX(4px)',
+                bgcolor: theme.palette.action.hover,
+              },
+              '&:not(.Mui-selected)': {
+                color: theme.palette.text.secondary,
               },
             }}
           >
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: selectedFolder === 'inbox' 
-                  ? taxiMonterricoColors.green
-                  : theme.palette.text.secondary,
-                fontWeight: selectedFolder === 'inbox' ? 700 : 500,
-                transition: 'all 0.3s ease',
-              }}
-            >
+            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem', flex: 1 }}>
               Inbox
             </Typography>
             {crmEmailCount > 0 && (
-              <Box
-                sx={{
-                  bgcolor: selectedFolder === 'inbox'
-                    ? taxiMonterricoColors.green
-                    : theme.palette.mode === 'dark' 
-                      ? 'rgba(144, 202, 249, 0.16)' 
-                      : 'rgba(144, 202, 249, 0.12)',
-                  color: selectedFolder === 'inbox'
-                    ? 'white'
-                    : theme.palette.mode === 'dark'
-                      ? 'rgb(144, 202, 249)'
-                      : 'rgb(25, 118, 210)',
-                  borderRadius: '12px',
-                  minWidth: 24,
-                  height: 24,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  px: 1,
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  boxShadow: selectedFolder === 'inbox' 
-                    ? `0 2px 8px ${taxiMonterricoColors.greenLight}40`
-                    : 'none',
-                  transition: 'all 0.3s ease',
-                }}
-              >
+              <Typography component="span" variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 600 }}>
                 {crmEmailCount}
-              </Box>
+              </Typography>
             )}
-          </Box>
-
-          {/* Favoritos */}
-          <Box
-            onClick={() => {
-              setSelectedFolder('starred');
-              setCurrentPage(1);
-            }}
+          </ListItemButton>
+          <ListItemButton
+            selected={selectedFolder === 'starred'}
+            onClick={() => { setSelectedFolder('starred'); setCurrentPage(1); }}
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              p: 1.5,
+              minHeight: 44,
               borderRadius: 2,
-              cursor: 'pointer',
-              mb: 1,
-              bgcolor: selectedFolder === 'starred' 
-                ? `linear-gradient(135deg, ${taxiMonterricoColors.orange}15 0%, ${taxiMonterricoColors.orangeLight}10 100%)`
-                : 'transparent',
-              border: selectedFolder === 'starred' 
-                ? `2px solid ${taxiMonterricoColors.orange}`
-                : '1px solid transparent',
-              transition: 'all 0.3s ease',
+              mb: 0.5,
+              '&.Mui-selected': {
+                bgcolor: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924',
+                color: taxiMonterricoColors.green,
+                '&:hover': { bgcolor: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924' },
+              },
               '&:hover': {
-                bgcolor: selectedFolder === 'starred'
-                  ? `linear-gradient(135deg, ${taxiMonterricoColors.orange}20 0%, ${taxiMonterricoColors.orangeLight}15 100%)`
-                  : theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.05)' 
-                    : `${taxiMonterricoColors.orange}10`,
-                borderColor: selectedFolder === 'starred' 
-                  ? taxiMonterricoColors.orange
-                  : taxiMonterricoColors.orangeLight,
-                transform: 'translateX(4px)',
+                bgcolor: theme.palette.action.hover,
+              },
+              '&:not(.Mui-selected)': {
+                color: theme.palette.text.secondary,
               },
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Star 
-                sx={{ 
-                  fontSize: 18,
-                  color: selectedFolder === 'starred' 
-                    ? taxiMonterricoColors.orange
-                    : theme.palette.text.secondary,
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'scale(1.2) rotate(15deg)',
-                  },
-                }} 
-              />
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: selectedFolder === 'starred' 
-                    ? taxiMonterricoColors.orange
-                    : theme.palette.text.secondary,
-                  fontWeight: selectedFolder === 'starred' ? 700 : 500,
-                  transition: 'all 0.3s ease',
-                }}
-              >
-                Favoritos
-              </Typography>
-            </Box>
+            <Star sx={{ fontSize: 18, mr: 1, color: selectedFolder === 'starred' ? taxiMonterricoColors.green : theme.palette.text.secondary }} />
+            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem', flex: 1 }}>
+              Favoritos
+            </Typography>
             {starredCount > 0 && (
-              <Box
-                sx={{
-                  bgcolor: selectedFolder === 'starred'
-                    ? taxiMonterricoColors.orange
-                    : theme.palette.mode === 'dark' 
-                      ? 'rgba(144, 202, 249, 0.16)' 
-                      : 'rgba(144, 202, 249, 0.12)',
-                  color: selectedFolder === 'starred'
-                    ? 'white'
-                    : theme.palette.mode === 'dark'
-                      ? 'rgb(144, 202, 249)'
-                      : 'rgb(25, 118, 210)',
-                  borderRadius: '12px',
-                  minWidth: 24,
-                  height: 24,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  px: 1,
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  boxShadow: selectedFolder === 'starred' 
-                    ? `0 2px 8px ${taxiMonterricoColors.orange}40`
-                    : 'none',
-                  transition: 'all 0.3s ease',
-                }}
-              >
+              <Typography component="span" variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 600 }}>
                 {starredCount}
-              </Box>
+              </Typography>
             )}
-          </Box>
-
-          {/* Desconectar cuenta */}
-          <Box sx={{ mt: 'auto', pt: 2 }}>
-            <Tooltip title="Desconectar cuenta de Google" arrow>
-              <Button
-                variant="text"
-                size="small"
-                onClick={handleEmailDisconnect}
-                disabled={disconnectingEmail}
-                startIcon={<LinkOff sx={{ fontSize: 18 }} />}
-                sx={{
-                  color: theme.palette.text.secondary,
-                  textTransform: 'none',
-                  fontSize: '0.8125rem',
-                  width: '100%',
-                  justifyContent: 'flex-start',
-                  '&:hover': {
-                    color: theme.palette.error.main,
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.08)' : 'rgba(244, 67, 54, 0.04)',
-                  },
-                }}
-              >
-                {disconnectingEmail ? 'Desconectando...' : 'Desconectar correo'}
-              </Button>
-            </Tooltip>
-          </Box>
+          </ListItemButton>
         </Box>
       </Box>
 
@@ -918,69 +744,43 @@ const Emails: React.FC = () => {
             placeholder="Buscar correo"
             value={searchTerm}
             onChange={handleSearch}
-            size="medium"
+            size="small"
             fullWidth
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search sx={{ 
-                    color: theme.palette.text.secondary,
-                    fontSize: 38,
-                    transition: 'color 0.3s ease',
-                  }} />
+                  <Search sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
                 </InputAdornment>
               ),
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                fontSize: '1.4rem',
-                borderRadius: 2,
-                borderWidth: 2,
-                borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
-                bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'white',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  borderColor: `${taxiMonterricoColors.greenLight} !important`,
-                  boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
-                  '& .MuiInputAdornment-root .MuiSvgIcon-root': {
-                    color: taxiMonterricoColors.greenLight,
-                  },
-                },
-                '& input::placeholder': {
-                  fontSize: '1.4rem',
-                  opacity: 0.7,
-                },
-                '&.Mui-focused': {
-                  borderColor: `${taxiMonterricoColors.green} !important`,
-                  boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
-                  '& .MuiInputAdornment-root .MuiSvgIcon-root': {
-                    color: taxiMonterricoColors.green,
-                  },
-                },
+                fontSize: '0.875rem',
+                borderRadius: 1.5,
+                bgcolor: theme.palette.background.paper,
                 '& fieldset': {
-                  border: 'none',
+                  borderColor: theme.palette.divider,
+                },
+                '&:hover fieldset': {
+                  borderColor: theme.palette.text.secondary,
+                },
+                '&.Mui-focused fieldset': {
+                  borderWidth: 1,
+                  borderColor: theme.palette.primary.main,
                 },
               },
             }}
           />
           <Tooltip title="Actualizar correos" arrow>
-            <IconButton 
-              onClick={handleRefresh} 
+            <IconButton
+              size="small"
+              onClick={handleRefresh}
               disabled={loading}
               sx={{
-                border: '1px solid',
-                borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-                transition: 'all 0.3s ease',
                 '&:hover': {
-                  bgcolor: taxiMonterricoColors.greenLight,
-                  color: 'white',
-                  borderColor: taxiMonterricoColors.greenLight,
-                  transform: 'rotate(180deg)',
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
+                  bgcolor: theme.palette.action.hover,
                 },
-                '&:disabled': {
-                  opacity: 0.5,
-                },
+                '&:disabled': { opacity: 0.5 },
               }}
             >
               <Refresh />
@@ -1006,72 +806,58 @@ const Emails: React.FC = () => {
               <CircularProgress />
             </Box>
           ) : emails.length === 0 ? (
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flex: 1,
-                gap: 2,
-                py: 6,
-              }}
-            >
-              <Box
-                sx={{
-                  width: 120,
-                  height: 120,
-                  borderRadius: '50%',
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.05)' 
-                    : theme.palette.grey[100],
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  mb: 1,
-                  fontSize: '64px',
-                  lineHeight: 1,
-                }}
-              >
-                📧
-              </Box>
-              <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
-                <Typography
-                  variant="h6"
+            <Box sx={{ ...pageStyles.emptyState, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper, py: 8, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <Box
                   sx={{
-                    fontWeight: 700,
-                    mb: 1,
-                    color: theme.palette.text.primary,
-                    fontSize: { xs: '1.25rem', md: '1.5rem' },
+                    width: 120,
+                    height: 120,
+                    borderRadius: '50%',
+                    bgcolor: theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.05)'
+                      : theme.palette.grey[100],
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1,
                   }}
                 >
-                  No hay correos para mostrar
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: theme.palette.text.primary,
-                    lineHeight: 1.6,
-                    fontSize: { xs: '0.875rem', md: '0.9375rem' },
-                  }}
-                >
-                  No hay correos en esta carpeta. Usa el botón "Redactar" para crear un nuevo correo.
-                </Typography>
+                  <EmailIcon sx={{ fontSize: 64, color: theme.palette.text.secondary }} />
+                </Box>
+                <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 700,
+                      mb: 1,
+                      color: theme.palette.text.secondary,
+                      fontSize: { xs: '1.25rem', md: '1.5rem' },
+                    }}
+                  >
+                    No hay correos para mostrar
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      lineHeight: 1.6,
+                      fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                    }}
+                  >
+                    No hay correos en esta carpeta. Usa el botón "Redactar" para crear un nuevo correo.
+                  </Typography>
+                </Box>
               </Box>
             </Box>
           ) : (
             <List sx={{ 
-              p: 1, 
+              p: 0, 
               overflow: 'auto', 
               flex: 1, 
               minHeight: 0,
-              '& .MuiListItem-root': {
-                px: 0,
-              },
+              '& .MuiListItem-root': { px: 0 },
             }}>
               {emails.map((email) => {
-                // Si el email fue enviado (tiene label SENT), mostrar el destinatario
-                // Si fue recibido, mostrar el remitente
                 const isSent = email.labelIds?.includes('SENT');
                 const displayEmail = isSent ? email.to : email.from;
                 const displayName = displayEmail.split(/[<>]/)[0].trim() || displayEmail;
@@ -1082,24 +868,18 @@ const Emails: React.FC = () => {
                     disablePadding
                     sx={{
                       borderBottom: `1px solid ${theme.palette.divider}`,
-                      '&:last-child': {
-                        borderBottom: 'none',
-                      },
-                      bgcolor: isUnread(email.labelIds) ? theme.palette.action.hover : 'transparent',
-                      '&:hover': {
-                        bgcolor: theme.palette.action.hover,
-                      },
+                      '&:last-child': { borderBottom: 'none' },
+                      bgcolor: 'transparent',
+                      '&:hover': { bgcolor: theme.palette.action.hover },
                       cursor: 'pointer',
                     }}
                     onClick={() => handleEmailClick(email)}
                   >
                     <ListItemButton
                       sx={{
-                        py: 1.5,
+                        py: 1.25,
                         px: 2,
-                        '&:hover': {
-                          bgcolor: theme.palette.action.hover,
-                        },
+                        '&:hover': { bgcolor: 'transparent' },
                       }}
                     >
                       <Box sx={{ 
@@ -1174,37 +954,9 @@ const Emails: React.FC = () => {
                           }}
                         >
                           {isUnread(email.labelIds) ? (
-                            <MarkEmailUnread 
-                              sx={{ 
-                                fontSize: 20,
-                                color: theme.palette.text.secondary,
-                              }} 
-                            />
+                            <MarkEmailUnread sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
                           ) : (
-                            <MarkEmailRead 
-                              sx={{ 
-                                fontSize: 20,
-                                color: theme.palette.mode === 'dark' 
-                                  ? 'rgba(144, 202, 249, 0.6)' 
-                                  : 'rgba(25, 118, 210, 0.6)',
-                              }} 
-                            />
-                          )}
-                          {/* Punto indicador para correos leídos */}
-                          {!isUnread(email.labelIds) && (
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                top: 4,
-                                right: 4,
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                bgcolor: theme.palette.mode === 'dark' 
-                                  ? 'rgb(144, 202, 249)' 
-                                  : 'rgb(25, 118, 210)',
-                              }}
-                            />
+                            <MarkEmailRead sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
                           )}
                         </IconButton>
                         
