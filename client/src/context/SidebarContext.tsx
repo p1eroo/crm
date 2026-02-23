@@ -15,8 +15,11 @@ interface SidebarContextType {
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
+const isMobileViewport = () =>
+  typeof window !== 'undefined' && window.matchMedia('(max-width: 600px)').matches;
+
 export const SidebarProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(() => !isMobileViewport());
   const [collapsed, setCollapsed] = useState(false);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => {
     const saved = localStorage.getItem('layoutMode') as LayoutMode;

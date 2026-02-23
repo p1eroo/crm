@@ -25,8 +25,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const toggleTheme = () => {
     setMode((prevMode) => {
       if (prevMode === 'light') return 'dark';
-      if (prevMode === 'dark') return 'system';
-      return 'light';
+      return 'light'; // dark o system → light (un solo clic para ir a modo claro)
     });
   };
 

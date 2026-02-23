@@ -14,7 +14,6 @@ import {
   InputAdornment,
   Menu,
   MenuItem,
-  Avatar,
   IconButton,
   useTheme,
   TableSortLabel,
@@ -137,19 +136,22 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
       </Typography>
 
       {/* Cuadro de búsqueda y botón agregar */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2, justifyContent: 'space-between' }}>
         <TextField
           size="small"
           placeholder="Buscar contactos"
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
-          sx={{
-            width: '250px',
-            transition: 'all 0.3s ease',
-            '& .MuiOutlinedInput-root': {
-              height: '32px',
-              fontSize: '0.875rem',
-              '&:hover': {
+            sx={{
+              width: '320px',
+              transition: 'all 0.3s ease',
+              '& .MuiOutlinedInput-root': {
+                height: '40px',
+                fontSize: '0.875rem',
+                borderRadius: 2,
+                backgroundColor: theme.palette.background.default,
+                '& fieldset': { borderRadius: 2 },
+                '&:hover': {
                 '& fieldset': {
                   borderColor: taxiMonterricoColors.green,
                 },
@@ -171,19 +173,25 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
           }}
         />
         {hasAddMenu ? (
-          <>
+          <Box sx={{ marginLeft: 'auto' }}>
             <Button
               size="small"
               variant="outlined"
               endIcon={<ExpandMore />}
               onClick={(e) => setMenuAnchor(e.currentTarget)}
               sx={{
-                borderColor: taxiMonterricoColors.green,
-                color: taxiMonterricoColors.green,
+                minHeight: 40,
+                borderRadius: 2,
+                border: 'none',
+                boxShadow: 'none',
+                color: '#13944C',
+                fontSize: '0.9375rem',
                 '&:hover': {
-                  borderColor: taxiMonterricoColors.green,
-                  backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                  color: '#13944C',
+                  backgroundColor: 'transparent',
                 },
+                '& .MuiButton-endIcon svg': { color: '#13944C' },
+                '&:hover .MuiButton-endIcon svg': { color: '#13944C' },
               }}
             >
               Agregar
@@ -266,37 +274,45 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                 <Typography variant="body2">Crear nuevo contacto</Typography>
               </MenuItem>
             </Menu>
-          </>
+          </Box>
         ) : (
           onAddNew && (
+            <Box sx={{ marginLeft: 'auto' }}>
             <Button
               size="small"
               variant="outlined"
               onClick={onAddNew}
               sx={{
-                borderColor: taxiMonterricoColors.green,
-                color: taxiMonterricoColors.green,
+                minHeight: 40,
+                borderRadius: 2,
+                border: 'none',
+                boxShadow: 'none',
+                color: '#13944C',
+                fontSize: '0.9375rem',
                 '&:hover': {
-                  borderColor: taxiMonterricoColors.green,
-                  backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                  color: '#13944C',
+                  backgroundColor: 'transparent',
                 },
               }}
             >
               Agregar
             </Button>
+            </Box>
           )
         )}
       </Box>
 
       {/* Tabla de contactos */}
       {contacts.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, py: 4 }}>
+          <Person sx={{ fontSize: 40, color: theme.palette.text.secondary }} />
           <Typography variant="body2" color="text.secondary">
             No hay contactos relacionados
           </Typography>
         </Box>
       ) : filteredContacts.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, py: 4 }}>
+          <Person sx={{ fontSize: 40, color: theme.palette.text.secondary }} />
           <Typography variant="body2" color="text.secondary">
             No se encontraron contactos
           </Typography>
@@ -316,6 +332,7 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
               size="small"
               sx={{
                 '& .MuiTableCell-root': {
+                  fontSize: '0.75rem',
                   borderBottom: '1px solid',
                   borderColor:
                     theme.palette.mode === 'dark'
@@ -425,23 +442,10 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                         gap: 1,
                       }}
                     >
-                      <Avatar
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          bgcolor: taxiMonterricoColors.green,
-                          fontSize: '0.75rem',
-                          color: 'white',
-                        }}
-                      >
-                        {getContactInitials
-                          ? getContactInitials(contact.firstName, contact.lastName)
-                          : `${contact.firstName?.[0] || ''}${contact.lastName?.[0] || ''}`}
-                      </Avatar>
                       <Typography
                         onClick={() => navigate(`/contacts/${contact.id}`)}
                         sx={{
-                          color: taxiMonterricoColors.green,
+                          color: '#13944C',
                           fontWeight: 500,
                           cursor: 'pointer',
                           textDecoration: 'none',
@@ -464,7 +468,7 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                     >
                       <Typography
                         sx={{
-                          color: taxiMonterricoColors.green,
+                          color: '#13944C',
                         }}
                       >
                         {contact.email || '--'}
@@ -483,7 +487,7 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                             <OpenInNew
                               fontSize="small"
                               sx={{
-                                color: taxiMonterricoColors.green,
+                                color: '#13944C',
                               }}
                             />
                           </IconButton>
@@ -499,7 +503,7 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                             <ContentCopy
                               fontSize="small"
                               sx={{
-                                color: taxiMonterricoColors.green,
+                                color: '#13944C',
                               }}
                             />
                           </IconButton>

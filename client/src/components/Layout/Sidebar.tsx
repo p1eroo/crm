@@ -11,8 +11,9 @@ import {
   useMediaQuery,
   Menu,
   MenuItem,
+  IconButton,
 } from '@mui/material';
-import { ChartPie, ContactRound, Building2, CircleDollarSign, ClipboardList, CalendarDays, Mail, FileChartColumn, UsersRound, FileClock, ShieldUser, ChevronDown, ChevronRight } from 'lucide-react';
+import { ChartPie, ContactRound, Building2, CircleDollarSign, ClipboardList, CalendarDays, Mail, FileChartColumn, UsersRound, FileClock, ShieldUser, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { taxiMonterricoColors } from '../../theme/colors';
@@ -24,7 +25,7 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
   const theme = useTheme();
-  const { open, collapsed, setCollapsed } = useSidebar();
+  const { open, collapsed, setCollapsed, toggleSidebar } = useSidebar();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const expandedByHoverRef = React.useRef(false);
   const [correoExpanded, setCorreoExpanded] = React.useState(() => location.pathname.startsWith('/emails'));
@@ -50,7 +51,7 @@ const Sidebar: React.FC = () => {
 
   const drawerWidth = collapsed 
     ? (isMobile ? 0 : 90) 
-    : 300;
+    : (isMobile ? 290 : 300);
 
 const correoSubItems = [
   { text: 'Buzón', path: '/emails' },
@@ -77,42 +78,67 @@ const adminMenuItems = [
 ];
 
 
-  if (!open) {
+  if (!isMobile && !open) {
     return null;
   }
 
+  const isVisible = open;
+  const slideTransform = isMobile && !isVisible ? 'translateX(-100%)' : 'translateX(0)';
+
   return (
-    <Drawer
-      variant="permanent"
-      onMouseEnter={handleSidebarMouseEnter}
-      onMouseLeave={handleSidebarMouseLeave}
-      sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        position: 'fixed',
-        height: '100vh',
-        zIndex: 1200,
-        top: 0,
-        transition: 'width 200ms ease-in-out',
-        '& .MuiDrawer-paper': {
+    <>
+      {/* Backdrop en móvil: al hacer clic fuera se cierra el sidebar */}
+      {isMobile && (
+        <Box
+          onClick={toggleSidebar}
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: drawerWidth,
+            right: 0,
+            bottom: 0,
+            bgcolor: 'rgba(0,0,0,0.5)',
+            zIndex: 1399,
+            opacity: isVisible ? 1 : 0,
+            pointerEvents: isVisible ? 'auto' : 'none',
+            transition: 'opacity 0.25s ease',
+          }}
+        />
+      )}
+      <Drawer
+        variant="permanent"
+        onMouseEnter={handleSidebarMouseEnter}
+        onMouseLeave={handleSidebarMouseLeave}
+        sx={{
           width: drawerWidth,
-          boxSizing: 'border-box',
-          overflowX: 'hidden',
-          overflowY: 'visible',
-          border: 'none', // Eliminar todos los bordes primero
-          borderRight: theme.palette.mode === 'light'
-            ? '0.5px solid rgba(0, 0, 0, 0.06)'
-            : '0.5px solid rgba(255, 255, 255, 0.06)',
-          display: 'flex',
-          flexDirection: 'column',
-          py: 1,
+          flexShrink: 0,
           position: 'fixed',
           height: '100vh',
+          zIndex: isMobile ? 1400 : 1200,
           top: 0,
-          transition: 'width 200ms ease-in-out',
-        },
-      }}
-    >
+          left: 0,
+          transform: slideTransform,
+          transition: isMobile ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'width 200ms ease-in-out',
+          '& .MuiDrawer-paper': {
+            width: drawerWidth,
+            boxSizing: 'border-box',
+            overflowX: 'hidden',
+            overflowY: 'visible',
+            border: 'none',
+            borderRight: isMobile ? 'none' : (theme.palette.mode === 'light'
+              ? '0.5px solid rgba(0, 0, 0, 0.06)'
+              : '0.5px solid rgba(255, 255, 255, 0.06)'),
+            display: 'flex',
+            flexDirection: 'column',
+            py: 1,
+            position: 'fixed',
+            height: '100vh',
+            top: 0,
+            left: 0,
+            transition: isMobile ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'width 200ms ease-in-out',
+          },
+        }}
+      >
       {/* Logo en la parte superior del Sidebar */}
       <Box sx={{ 
         width: '100%',
@@ -126,7 +152,24 @@ const adminMenuItems = [
         alignItems: 'center',
         borderBottom: 'none',
         mb: collapsed ? 3 : -3,
+        position: 'relative',
       }}>
+        {isMobile && !collapsed && (
+          <IconButton
+            onClick={toggleSidebar}
+            size="small"
+            sx={{
+              position: 'absolute',
+              top: -8,
+              right: 8,
+              color: theme.palette.text.secondary,
+              '&:hover': { color: theme.palette.text.primary },
+            }}
+            aria-label="Cerrar menú"
+          >
+            <X size={20} />
+          </IconButton>
+        )}
         {collapsed ? (
           <img
             src={logoMobile}
@@ -594,6 +637,7 @@ const adminMenuItems = [
       <Box sx={{ flex: 1 }} />
       
     </Drawer>
+    </>
   );
 };
 

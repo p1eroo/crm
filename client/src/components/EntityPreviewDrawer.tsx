@@ -33,7 +33,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserTie, faHandshake, faSackDollar } from '@fortawesome/free-solid-svg-icons';
 import { Building2 } from 'lucide-react';
 import api from '../config/api';
-import { taxiMonterricoColors } from '../theme/colors';
 import { formatCurrencyPE } from '../utils/currencyUtils';
 
 /** Para tareas: descripción sin el bloque "--- Completada ---" (solo se muestra en el modal Ver tarea completada). */
@@ -515,13 +514,13 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
               sx={{
                 width: 48,
                 height: 48,
-                bgcolor: entity.logo ? 'transparent' : taxiMonterricoColors.green,
+                bgcolor: entity.logo ? 'transparent' : theme.palette.background.default,
                 fontSize: '1.25rem',
                 flexShrink: 0,
               }}
               src={entity.logo || undefined}
             >
-              {!entity.logo && <Building2 size={24} color="white" />}
+              {!entity.logo && <Building2 size={24} color="#13944C" />}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography
@@ -692,7 +691,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
             {entity.lifecycleStage && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                 <Flag sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: theme.palette.text.secondary }}>
                   Etapa:
                 </Typography>
                 <Typography
@@ -720,7 +719,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
               sx={{
                 width: 48,
                 height: 48,
-                bgcolor: taxiMonterricoColors.green,
+                bgcolor: '#13944C',
                 fontSize: '1.25rem',
                 flexShrink: 0,
               }}
@@ -1844,7 +1843,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                                   sx={{
                                     width: 28,
                                     height: 28,
-                                    bgcolor: taxiMonterricoColors.green,
+                                    bgcolor: '#13944C',
                                     fontSize: '0.875rem',
                                     flexShrink: 0,
                                   }}

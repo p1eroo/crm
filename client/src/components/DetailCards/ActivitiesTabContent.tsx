@@ -167,6 +167,7 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
                 variant="body2"
                 sx={{
                   fontWeight: isActive ? 600 : 500,
+                  fontSize: "0.75rem",
                   color: isActive
                     ? theme.palette.text.primary
                     : theme.palette.text.secondary,
@@ -176,8 +177,8 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
               </Typography>
               <Box
                 sx={{
-                  minWidth: 24,
-                  height: 22,
+                  minWidth: 22,
+                  height: 20,
                   px: 1,
                   borderRadius: "12px",
                   display: "flex",
@@ -193,6 +194,7 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
                   variant="caption"
                   sx={{
                     fontWeight: 600,
+                    fontSize: "0.6875rem",
                     color: isActive
                       ? taxiMonterricoColors.green
                       : theme.palette.text.secondary,

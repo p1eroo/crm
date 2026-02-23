@@ -26,29 +26,21 @@ import EmailComposer from "../components/EmailComposer";
 import { taxiMonterricoColors, hexToRgba } from "../theme/colors";
 import { pageStyles } from "../theme/styles";
 import {
-  RecentActivitiesCard,
-  LinkedCompaniesCard,
-  LinkedDealsCard,
-  LinkedContactsCard,
   FullCompaniesTableCard,
   FullDealsTableCard,
   FullContactsTableCard,
   FullActivitiesTableCard,
   ActivityDetailDialog,
   ActivitiesTabContent,
-  GeneralDescriptionTab,
 } from "../components/DetailCards";
 import { NoteModal, CallModal, TaskModal, MeetingModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
-import type { GeneralInfoCard } from "../components/DetailCards";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { FormDrawer } from "../components/FormDrawer";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { far } from "@fortawesome/free-regular-svg-icons";
 import { fas, faEnvelope } from "@fortawesome/free-solid-svg-icons";
 import { faUserTie } from "@fortawesome/free-solid-svg-icons";
-import { faUser as faUserRegular } from "@fortawesome/free-regular-svg-icons";
 import { useAuth } from "../context/AuthContext";
 import { useTaskCompleteFlow } from "../hooks/useTaskCompleteFlow";
 
@@ -80,6 +72,7 @@ interface ContactDetailData {
   tags?: string[];
   notes?: string;
   createdAt?: string;
+  updatedAt?: string;
   Company?: {
     id: number;
     name: string;
@@ -1245,6 +1238,31 @@ const ContactDetail: React.FC = () => {
           : '--',
         show: !!contact?.Owner,
       },
+      {
+        label: 'Fecha de creación',
+        value: contact?.createdAt
+          ? `${new Date(contact.createdAt).toLocaleDateString('es-ES', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })} ${new Date(contact.createdAt).toLocaleTimeString('es-ES', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}`
+          : '--',
+        show: true,
+      },
+      {
+        label: 'Última actividad',
+        value: contact?.updatedAt
+          ? new Date(contact.updatedAt).toLocaleDateString('es-ES', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })
+          : '--',
+        show: true,
+      },
     ];
   
     // Preparar botones de actividades
@@ -1276,76 +1294,7 @@ const ContactDetail: React.FC = () => {
       },
     ];
   
-    // Preparar cards de información general
-    const generalInfoCards: GeneralInfoCard[] = [
-      {
-        label: 'Fecha de creación',
-        value: contact?.createdAt
-          ? `${new Date(contact.createdAt).toLocaleDateString("es-ES", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })} ${new Date(contact.createdAt).toLocaleTimeString("es-ES", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}`
-          : "No disponible",
-        icon: faCalendar,
-        iconBgColor: "#0d939429",
-        iconColor: "#0d9394",
-      },
-      {
-        label: 'Etapa del ciclo de vida',
-        value: contact?.lifecycleStage
-          ? getStageLabel(contact.lifecycleStage)
-          : "No disponible",
-        icon: ['fas', 'arrows-rotate'],
-        iconBgColor: "#e4f6d6",
-        iconColor: "#56ca00",
-        showArrow: true,
-      },
-      {
-        label: 'Última actividad',
-        value: activities.length > 0 && activities[0].createdAt
-          ? new Date(activities[0].createdAt).toLocaleDateString("es-ES", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })
-          : "No hay actividades",
-        icon: faClock,
-        iconBgColor: "#fff3d6",
-        iconColor: "#ffb400",
-      },
-      {
-        label: 'Propietario del registro',
-        value: contact?.Owner
-          ? contact.Owner.firstName || contact.Owner.lastName
-            ? `${contact.Owner.firstName || ""} ${contact.Owner.lastName || ""}`.trim()
-            : contact.Owner.email || "Sin nombre"
-          : "No asignado",
-        icon: faUserRegular,
-        iconBgColor: "#daf2ff",
-        iconColor: "#16b1ff",
-      },
-    ];
-
-    // Preparar contenido del Tab 0 (Descripción General)
-    const tab0Content = (
-      <GeneralDescriptionTab
-        generalInfoCards={generalInfoCards}
-        linkedCards={[
-          { component: <RecentActivitiesCard activities={activities} /> },
-          { component: <LinkedContactsCard contacts={associatedContacts || []} /> },
-          { component: <LinkedCompaniesCard companies={associatedCompanies || []} /> },
-          { component: <LinkedDealsCard deals={associatedDeals} /> },
-          // { component: <LinkedTicketsCard tickets={associatedTickets} /> },
-        ]}
-        linkedCardsGridColumns={{ xs: '1fr' }}
-      />
-    );
-  
-    // Preparar contenido del Tab 1 (Información Avanzada)
+    // Preparar contenido del Tab 0 (Información Avanzada)
     const tab1Content = (
       <>
         <FullActivitiesTableCard
@@ -1484,9 +1433,8 @@ const ContactDetail: React.FC = () => {
           onEditDetails={handleOpenEditDialog}
           activityLogs={activityLogs}
           loadingLogs={loadingLogs}
-          tab0Content={tab0Content}
-          tab1Content={tab1Content}
-          tab2Content={tab2Content}
+          tab0Content={tab1Content}
+          tab1Content={tab2Content}
           loading={loading}
           editDialog={
             <FormDrawer
@@ -2005,15 +1953,19 @@ const ContactDetail: React.FC = () => {
         }}
       />
 
-      {/* Modal de crear tarea */}
+      {/* Modal de crear/editar tarea */}
       <TaskModal
-        open={taskOpen}
-        onClose={() => setTaskOpen(false)}
+        open={taskOpen || (!!expandedActivity && !!(expandedActivity as any)?.isTask)}
+        onClose={() => {
+          setTaskOpen(false);
+          setExpandedActivity(null);
+        }}
         entityType="contact"
         entityId={id || ""}
         entityName={contact ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "Sin nombre" : "Sin nombre"}
         user={user}
-        onSave={(newTask) => {
+        activity={(expandedActivity as any)?.isTask ? expandedActivity : undefined}
+        onSave={(newTask: any) => {
           const taskAsActivity = {
             id: newTask.id,
             type: "task",
@@ -2028,17 +1980,19 @@ const ContactDetail: React.FC = () => {
             priority: newTask.priority,
             contactId: newTask.contactId,
           };
-          // Agregar la actividad inmediatamente al estado
           setActivities((prevActivities) => {
             const exists = prevActivities.some((a: any) => a.id === newTask.id);
-            if (exists) return prevActivities;
+            if (exists) {
+              return prevActivities.map((a: any) => (a.id === newTask.id ? { ...a, ...taskAsActivity } : a));
+            }
             return [taskAsActivity, ...prevActivities].sort((a: any, b: any) => {
               const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
               const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
               return dateB - dateA;
             });
           });
-          fetchAssociatedRecords(); // Actualizar actividades
+          setExpandedActivity(null);
+          fetchAssociatedRecords();
         }}
       />
 
@@ -2222,10 +2176,10 @@ const ContactDetail: React.FC = () => {
         </DialogActions>
       </Dialog> */}
 
-      {/* Dialog para ver detalles de actividad expandida */}
+      {/* Dialog para ver detalles de actividad expandida (solo no-tareas) */}
       <ActivityDetailDialog
-        activity={expandedActivity}
-        open={!!expandedActivity}
+        activity={expandedActivity && !(expandedActivity as any)?.isTask ? expandedActivity : null}
+        open={!!expandedActivity && !(expandedActivity as any)?.isTask}
         onClose={() => setExpandedActivity(null)}
         getActivityTypeLabel={getActivityTypeLabel}
       />

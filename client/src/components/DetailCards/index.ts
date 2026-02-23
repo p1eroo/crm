@@ -13,8 +13,5 @@ export { default as FullTicketsTableCard } from './FullTicketsTableCard';
 export { default as FullActivitiesTableCard } from './FullActivitiesTableCard';
 export { default as ActivityDetailDialog } from './ActivityDetailDialog';
 export { default as ActivitiesTabContent } from './ActivitiesTabContent';
-export { default as GeneralInfoCards } from './GeneralInfoCards';
-export type { GeneralInfoCard } from './GeneralInfoCards';
-export { default as GeneralDescriptionTab } from './GeneralDescriptionTab';
 
 export {};

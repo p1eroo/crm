@@ -14,7 +14,6 @@ import {
 import { taxiMonterricoColors } from "../../theme/colors";
 import {
   History,
-  Dashboard,
   Info,
   Timeline,
   Note,
@@ -95,10 +94,9 @@ interface DetailPageLayoutProps {
   activityLogs?: ActivityLog[];
   loadingLogs?: boolean;
 
-  // Contenido de tabs
-  tab0Content: ReactNode;
-  tab1Content: ReactNode;
-  tab2Content: ReactNode;
+  // Contenido de tabs (Información Avanzada y Actividades)
+  tab0Content: ReactNode; // Información Avanzada
+  tab1Content: ReactNode; // Actividades
 
   // Loading
   loading?: boolean;
@@ -124,11 +122,10 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
   loadingLogs = false,
   tab0Content,
   tab1Content,
-  tab2Content,
   loading = false,
 }) => {
   const theme = useTheme();
-  const [tabValue, setTabValue] = useState(0);
+  const [tabValue, setTabValue] = useState(0); // 0 = Información Avanzada, 1 = Actividades
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [leftColumnOpen, setLeftColumnOpen] = useState(true);
 
@@ -281,7 +278,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
           {/* Columna Izquierda: Información del registro */}
           <Box
             sx={{
-              width: { xs: "100%", md: leftColumnOpen ? 400 : 0 },
+              width: { xs: "100%", md: leftColumnOpen ? 400 : 0, lg: leftColumnOpen ? 440 : 0 },
               flexShrink: 0,
               display: { xs: "block", md: leftColumnOpen ? "block" : "none" },
               overflow: "hidden",
@@ -315,12 +312,8 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                   position: "absolute",
                   top: 12,
                   right: 12,
-                  color: taxiMonterricoColors.green,
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    bgcolor: `${taxiMonterricoColors.greenLight}15`,
-                    transform: "scale(1.1)",
-                  },
+                  color: "#E5AC03",
+                  "&:hover": { backgroundColor: "transparent" },
                 }}
               >
                 <History sx={{ fontSize: 27 }} />
@@ -340,13 +333,12 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                   sx={{
                     width: 120,
                     height: 120,
-                    background: avatarSrc ? "transparent" : `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+                    backgroundColor: avatarSrc ? "transparent" : "#13944C",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: 3,
-                    boxShadow: "none",
-                    transition: "opacity 0.2s",
+                    "& svg": { color: "white !important" },
                   }}
                 >
                   {!avatarSrc && avatarIcon}
@@ -431,13 +423,11 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                         sx={{
                           width: 48,
                           height: 48,
-                          background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+                          backgroundColor: "#13944C",
                           color: "white",
-                          boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
-                          transition: "all 0.3s ease",
                           "&:hover": {
-                            background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
-                            boxShadow: `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
+                            backgroundColor: "#13944C",
+                            opacity: 0.9,
                           },
                         }}
                       >
@@ -459,6 +449,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                           sx={{
                             color: theme.palette.text.secondary,
                             fontSize: "0.75rem",
+                            fontWeight: 600,
                             textAlign: "center",
                           }}
                         >
@@ -479,6 +470,17 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                   mt: 1,
                 }}
               >
+                <Divider
+                  sx={{
+                    width: "calc(100% + 40px)",
+                    mx: -2.5,
+                    borderColor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255, 255, 255, 0.08)"
+                        : "rgba(0, 0, 0, 0.08)",
+                  }}
+                />
+
                 <Typography
                   variant="subtitle1"
                   sx={{
@@ -489,16 +491,6 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                 >
                   Detalles
                 </Typography>
-
-                <Divider
-                  sx={{
-                    width: "100%",
-                    borderColor:
-                      theme.palette.mode === "dark"
-                        ? "rgba(255, 255, 255, 0.08)"
-                        : "rgba(0, 0, 0, 0.08)",
-                  }}
-                />
 
                 <Box
                   sx={{
@@ -542,22 +534,28 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
 
               {onEditDetails && (
                 <Box sx={{ display: "flex", gap: 1, width: "100%", mt: 2 }}>
-                  <Button
+                  <Box
+                    component="button"
+                    type="button"
                     onClick={onEditDetails}
-                    variant="contained"
-                    fullWidth
                     sx={{
-                      py: 1.25,
+                      width: "100%",
+                      py: 1.5,
+                      px: 2,
+                      minHeight: 44,
                       borderRadius: 2,
-                      textTransform: "none",
                       fontSize: "0.9375rem",
                       fontWeight: 700,
-                      background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+                      background: "linear-gradient(135deg, #1b9b52 0%, #13944C 50%, #0f7039 100%)",
                       color: "white",
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
-                      transition: "all 0.3s ease",
+                      border: "none",
+                      boxShadow: "none",
+                      outline: "none",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
                       position: "relative",
                       overflow: "hidden",
+                      transition: "box-shadow 0.3s ease",
                       "&::before": {
                         content: '""',
                         position: "absolute",
@@ -566,21 +564,22 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                         width: "100%",
                         height: "100%",
                         background:
-                          "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+                          "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent)",
                         transition: "left 0.5s ease",
+                        pointerEvents: "none",
                       },
                       "&:hover": {
-                        background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
-                        transform: "translateY(-2px)",
-                        boxShadow: `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
+                        boxShadow: "none",
                         "&::before": {
                           left: "100%",
                         },
                       },
+                      "&:focus": { outline: "none" },
+                      "&:focus-visible": { outline: "none" },
                     }}
                   >
                     {editButtonText}
-                  </Button>
+                  </Box>
                 </Box>
               )}
             </Paper>
@@ -621,7 +620,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
               </IconButton>
               <Button
                 onClick={() => setTabValue(0)}
-                startIcon={<Dashboard />}
+                startIcon={<Info />}
                 sx={{
                   textTransform: "none",
                   fontSize: "0.875rem",
@@ -630,10 +629,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                   px: 2.5,
                   py: 1.25,
                   minHeight: 44,
-                  background:
-                    tabValue === 0
-                      ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`
-                      : "transparent",
+                  backgroundColor: tabValue === 0 ? "#13944C" : "transparent",
                   color:
                     tabValue === 0 ? "white" : theme.palette.text.secondary,
                   border: tabValue === 0 ? "none" : "1px solid",
@@ -641,60 +637,12 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                     theme.palette.mode === "dark"
                       ? "rgba(255,255,255,0.1)"
                       : "rgba(0,0,0,0.1)",
-                  boxShadow:
-                    tabValue === 0
-                      ? `0 4px 12px ${taxiMonterricoColors.greenLight}40`
-                      : "none",
                   "&:hover": {
-                    background:
-                      tabValue === 0
-                        ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
-                        : `${taxiMonterricoColors.greenLight}15`,
+                    backgroundColor:
+                      tabValue === 0 ? "#13944C" : `${taxiMonterricoColors.greenLight}15`,
+                    opacity: tabValue === 0 ? 0.9 : 1,
                     borderColor:
                       tabValue === 0
-                        ? "transparent"
-                        : taxiMonterricoColors.greenLight,
-                  },
-                  "& .MuiButton-startIcon": {
-                    marginRight: 1,
-                  },
-                }}
-              >
-                Descripción General
-              </Button>
-              <Button
-                onClick={() => setTabValue(1)}
-                startIcon={<Info />}
-                sx={{
-                  textTransform: "none",
-                  fontSize: "0.875rem",
-                  fontWeight: tabValue === 1 ? 700 : 500,
-                  borderRadius: 2,
-                  px: 2.5,
-                  py: 1.25,
-                  minHeight: 44,
-                  background:
-                    tabValue === 1
-                      ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`
-                      : "transparent",
-                  color:
-                    tabValue === 1 ? "white" : theme.palette.text.secondary,
-                  border: tabValue === 1 ? "none" : "1px solid",
-                  borderColor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.1)"
-                      : "rgba(0,0,0,0.1)",
-                  boxShadow:
-                    tabValue === 1
-                      ? `0 4px 12px ${taxiMonterricoColors.greenLight}40`
-                      : "none",
-                  "&:hover": {
-                    background:
-                      tabValue === 1
-                        ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
-                        : `${taxiMonterricoColors.greenLight}15`,
-                    borderColor:
-                      tabValue === 1
                         ? "transparent"
                         : taxiMonterricoColors.greenLight,
                   },
@@ -706,38 +654,30 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                 Información Avanzada
               </Button>
               <Button
-                onClick={() => setTabValue(2)}
+                onClick={() => setTabValue(1)}
                 startIcon={<Timeline />}
                 sx={{
                   textTransform: "none",
                   fontSize: "0.875rem",
-                  fontWeight: tabValue === 2 ? 700 : 500,
+                  fontWeight: tabValue === 1 ? 700 : 500,
                   borderRadius: 2,
                   px: 2.5,
                   py: 1.25,
                   minHeight: 44,
-                  background:
-                    tabValue === 2
-                      ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`
-                      : "transparent",
+                  backgroundColor: tabValue === 1 ? "#13944C" : "transparent",
                   color:
-                    tabValue === 2 ? "white" : theme.palette.text.secondary,
-                  border: tabValue === 2 ? "none" : "1px solid",
+                    tabValue === 1 ? "white" : theme.palette.text.secondary,
+                  border: tabValue === 1 ? "none" : "1px solid",
                   borderColor:
                     theme.palette.mode === "dark"
                       ? "rgba(255,255,255,0.1)"
                       : "rgba(0,0,0,0.1)",
-                  boxShadow:
-                    tabValue === 2
-                      ? `0 4px 12px ${taxiMonterricoColors.greenLight}40`
-                      : "none",
                   "&:hover": {
-                    background:
-                      tabValue === 2
-                        ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
-                        : `${taxiMonterricoColors.greenLight}15`,
+                    backgroundColor:
+                      tabValue === 1 ? "#13944C" : `${taxiMonterricoColors.greenLight}15`,
+                    opacity: tabValue === 1 ? 0.9 : 1,
                     borderColor:
-                      tabValue === 2
+                      tabValue === 1
                         ? "transparent"
                         : taxiMonterricoColors.greenLight,
                   },
@@ -753,7 +693,6 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
             {/* Contenido del tab seleccionado */}
             {tabValue === 0 && tab0Content}
             {tabValue === 1 && tab1Content}
-            {tabValue === 2 && tab2Content}
           </Box>
         </Box>
       </Box>

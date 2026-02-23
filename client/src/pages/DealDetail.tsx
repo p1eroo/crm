@@ -17,32 +17,24 @@ import { pageStyles } from "../theme/styles";
 import { formatCurrencyPECompact as formatCurrency } from "../utils/currencyUtils";
 import api from "../config/api";
 import {
-  RecentActivitiesCard,
-  LinkedContactsCard,
-  LinkedCompaniesCard,
-  LinkedDealsCard,
   FullContactsTableCard,
   FullCompaniesTableCard,
   FullDealsTableCard,
   FullActivitiesTableCard,
   ActivityDetailDialog,
   ActivitiesTabContent,
-  GeneralDescriptionTab,
 } from "../components/DetailCards";
 import { NoteModal, CallModal, TaskModal, MeetingModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
-import type { GeneralInfoCard } from "../components/DetailCards";
 import { useAuth } from "../context/AuthContext";
 import { useTaskCompleteFlow } from "../hooks/useTaskCompleteFlow";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { FormDrawer } from "../components/FormDrawer";
 import { DealFormContent, getInitialDealFormData, stageOptions, type DealFormData } from "../components/DealFormContent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { far } from "@fortawesome/free-regular-svg-icons";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { faHandshake } from "@fortawesome/free-solid-svg-icons";
-import { faUser as faUserRegular } from "@fortawesome/free-regular-svg-icons";
 
 library.add(far);
 library.add(fas);
@@ -943,81 +935,7 @@ const DealDetail: React.FC = () => {
           },
         ];
   
-    // Preparar cards de información general
-    const generalInfoCards: GeneralInfoCard[] = [
-      {
-        label: 'Fecha de creación',
-        value: deal?.createdAt
-          ? `${new Date(deal.createdAt).toLocaleDateString('es-ES', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })} ${new Date(deal.createdAt).toLocaleTimeString('es-ES', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}`
-          : 'No disponible',
-        icon: faCalendar,
-        iconBgColor: theme.palette.mode === 'dark' 
-          ? `${taxiMonterricoColors.green}29` 
-          : `${taxiMonterricoColors.green}15`,
-        iconColor: taxiMonterricoColors.green,
-      },
-      {
-        label: 'Etapa del negocio',
-        value: deal?.stage ? getStageLabel(deal.stage) : 'No disponible',
-        icon: ['fas', 'arrows-rotate'],
-        iconBgColor: theme.palette.mode === 'dark' 
-          ? `${taxiMonterricoColors.green}26` 
-          : `${taxiMonterricoColors.green}15`,
-        iconColor: taxiMonterricoColors.greenLight,
-        showArrow: true,
-      },
-      {
-        label: 'Última actividad',
-        value: activities.length > 0 && activities[0].createdAt
-          ? new Date(activities[0].createdAt).toLocaleDateString('es-ES', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })
-          : 'No hay actividades',
-        icon: faClock,
-        iconBgColor: theme.palette.mode === 'dark' 
-          ? `${taxiMonterricoColors.orange}26` 
-          : `${taxiMonterricoColors.orange}15`,
-        iconColor: taxiMonterricoColors.orange,
-      },
-      {
-        label: 'Propietario del negocio',
-        value: deal?.Owner
-          ? deal.Owner.firstName || deal.Owner.lastName
-            ? `${deal.Owner.firstName || ''} ${deal.Owner.lastName || ''}`.trim()
-            : deal.Owner.email || 'Sin nombre'
-          : 'No asignado',
-        icon: faUserRegular,
-        iconBgColor: theme.palette.mode === 'dark' 
-          ? `${theme.palette.primary.main}26` 
-          : `${theme.palette.primary.main}15`,
-        iconColor: theme.palette.primary.main,
-      },
-    ];
-
-    // Preparar contenido del Tab 0 (Descripción General)
-    const tab0Content = (
-      <GeneralDescriptionTab
-        generalInfoCards={generalInfoCards}
-        linkedCards={[
-          { component: <RecentActivitiesCard activities={activities} /> },
-          { component: <LinkedContactsCard contacts={dealContacts || []} /> },
-          { component: <LinkedCompaniesCard companies={dealCompanies || []} /> },
-          { component: <LinkedDealsCard deals={dealDeals || []} /> },
-        ]}
-        linkedCardsGridColumns={{ xs: '1fr' }}
-      />
-    );
-  
-    // Preparar contenido del Tab 1 (Información Avanzada)
+    // Preparar contenido del Tab 0 (Información Avanzada)
     const tab1Content = (
       <>
         {/* Card de Descripción - Solo visible cuando hay descripción */}
@@ -1189,9 +1107,8 @@ const DealDetail: React.FC = () => {
           editButtonText="Editar Negocio"
           activityLogs={activityLogs}
           loadingLogs={loadingLogs}
-          tab0Content={tab0Content}
-          tab1Content={tab1Content}
-          tab2Content={tab2Content}
+          tab0Content={tab1Content}
+          tab1Content={tab2Content}
           loading={loading}
           editDialog={
             <FormDrawer
@@ -1474,15 +1391,19 @@ const DealDetail: React.FC = () => {
         }}
       />
 
-      {/* Modal de crear tarea */}
+      {/* Modal de crear/editar tarea */}
       <TaskModal
-        open={taskOpen}
-        onClose={() => setTaskOpen(false)}
+        open={taskOpen || (!!expandedActivity && !!(expandedActivity as any)?.isTask)}
+        onClose={() => {
+          setTaskOpen(false);
+          setExpandedActivity(null);
+        }}
         entityType="deal"
         entityId={id || ""}
         entityName={deal?.name || "Sin nombre"}
         user={user}
-        onSave={(newTask) => {
+        activity={(expandedActivity as any)?.isTask ? expandedActivity : undefined}
+        onSave={(newTask: any) => {
           const taskAsActivity = {
             id: newTask.id,
             type: "task",
@@ -1497,17 +1418,19 @@ const DealDetail: React.FC = () => {
             priority: newTask.priority,
             dealId: newTask.dealId,
           };
-          // Agregar la actividad inmediatamente al estado
           setActivities((prevActivities) => {
             const exists = prevActivities.some((a: any) => a.id === newTask.id);
-            if (exists) return prevActivities;
+            if (exists) {
+              return prevActivities.map((a: any) => (a.id === newTask.id ? { ...a, ...taskAsActivity } : a));
+            }
             return [taskAsActivity, ...prevActivities].sort((a: any, b: any) => {
               const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
               const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
               return dateB - dateA;
             });
           });
-          fetchActivities(); // Actualizar actividades
+          setExpandedActivity(null);
+          fetchActivities();
         }}
       />
 
@@ -1545,10 +1468,10 @@ const DealDetail: React.FC = () => {
         }}
       />
 
-      {/* Dialog para ver detalles de actividad expandida */}
+      {/* Dialog para ver detalles de actividad expandida (solo no-tareas) */}
       <ActivityDetailDialog
-        activity={expandedActivity}
-        open={!!expandedActivity}
+        activity={expandedActivity && !(expandedActivity as any)?.isTask ? expandedActivity : null}
+        open={!!expandedActivity && !(expandedActivity as any)?.isTask}
         onClose={() => setExpandedActivity(null)}
         getActivityTypeLabel={getActivityTypeLabel}
       />

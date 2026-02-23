@@ -19,7 +19,6 @@ import {
   Email,
   Close,
 } from "@mui/icons-material";
-import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { far } from "@fortawesome/free-regular-svg-icons";
 import { fas, faEnvelope } from "@fortawesome/free-solid-svg-icons";
@@ -29,20 +28,14 @@ import EmailComposer from "../components/EmailComposer";
 import { taxiMonterricoColors, hexToRgba } from "../theme/colors";
 import { pageStyles } from "../theme/styles";
 import {
-  RecentActivitiesCard,
-  LinkedContactsCard,
-  LinkedCompaniesCard,
-  LinkedDealsCard,
   FullContactsTableCard,
   FullCompaniesTableCard,
   FullDealsTableCard,
   FullActivitiesTableCard,
   ActivityDetailDialog,
   ActivitiesTabContent,
-  GeneralDescriptionTab,
 } from "../components/DetailCards";
 import { NoteModal, CallModal, TaskModal, MeetingModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
-import type { GeneralInfoCard } from "../components/DetailCards";
 import { FormDrawer } from "../components/FormDrawer";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { useAuth } from "../context/AuthContext";
@@ -79,6 +72,7 @@ interface CompanyDetailData {
   notes?: string;
   logo?: string | null;
   createdAt?: string;
+  updatedAt?: string;
   Owner?: {
     id: number;
     firstName: string;
@@ -1306,6 +1300,31 @@ const detailFields = [
       : '--',
     show: !!company?.Owner,
   },
+  {
+    label: 'Fecha de creación',
+    value: company?.createdAt
+      ? `${new Date(company.createdAt).toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })} ${new Date(company.createdAt).toLocaleTimeString('es-ES', {
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`
+      : '--',
+    show: true,
+  },
+  {
+    label: 'Última actividad',
+    value: company?.updatedAt
+      ? new Date(company.updatedAt).toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })
+      : '--',
+    show: true,
+  },
 ];
 
 // Preparar botones de actividades
@@ -1337,78 +1356,7 @@ const activityButtons = [
   },
 ];
 
-// Preparar cards de información general
-const generalInfoCards: GeneralInfoCard[] = [
-  {
-    label: 'Fecha de creación',
-    value: company?.createdAt
-      ? `${new Date(company.createdAt).toLocaleDateString("es-ES", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        })} ${new Date(company.createdAt).toLocaleTimeString("es-ES", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`
-      : "No disponible",
-    icon: faCalendar,
-    iconBgColor: "#0d939429",
-    iconColor: "#0d9394",
-  },
-  {
-    label: 'Etapa del ciclo de vida',
-    value: company?.lifecycleStage
-      ? getStageLabel(company.lifecycleStage)
-      : "No disponible",
-    icon: ['fas', 'arrows-rotate'],
-    iconBgColor: "#e4f6d6",
-    iconColor: "#56ca00",
-    showArrow: true,
-  },
-  {
-    label: 'Última actividad',
-    value: activities.length > 0 && activities[0].createdAt
-      ? new Date(activities[0].createdAt).toLocaleDateString("es-ES", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        })
-      : "No hay actividades",
-    icon: faClock,
-    iconBgColor: "#fff3d6",
-    iconColor: "#ffb400",
-  },
-  {
-    label: 'Propietario del registro',
-    value: company?.Owner
-      ? company.Owner.firstName || company.Owner.lastName
-        ? `${company.Owner.firstName || ""} ${
-            company.Owner.lastName || ""
-          }`.trim()
-        : "Sin nombre"
-      : "No asignado",
-    icon: ['far', 'user'],
-    iconBgColor: "#daf2ff",
-    iconColor: "#16b1ff",
-  },
-];
-
-// Preparar contenido del Tab 0 (Descripción General)
-const tab0Content = (
-  <GeneralDescriptionTab
-    generalInfoCards={generalInfoCards}
-    linkedCards={[
-      { component: <RecentActivitiesCard activities={activities} /> },
-      { component: <LinkedContactsCard contacts={associatedContacts || []} /> },
-      { component: <LinkedCompaniesCard companies={associatedCompanies || []} /> },
-      { component: <LinkedDealsCard deals={associatedDeals || []} /> },
-      // { component: <LinkedTicketsCard tickets={associatedTickets || []} /> },
-    ]}
-    linkedCardsGridColumns={{ xs: '1fr' }}
-  />
-);
-
-// Preparar contenido del Tab 1 (Información Avanzada)
+// Preparar contenido del Tab 0 (Información Avanzada)
 const tab1Content = (
   <Box>
     <FullActivitiesTableCard
@@ -1572,9 +1520,8 @@ const tab2Content = (
       onEditDetails={handleOpenEditDialog}
       activityLogs={activityLogs}
       loadingLogs={loadingLogs}
-      tab0Content={tab0Content}
-      tab1Content={tab1Content}
-      tab2Content={tab2Content}
+      tab0Content={tab1Content}
+      tab1Content={tab2Content}
       loading={loading}
       editDialog={
         <FormDrawer
@@ -1856,16 +1803,20 @@ const tab2Content = (
         }}
       />
 
-      {/* Modal de crear tarea */}
+      {/* Modal de crear/editar tarea: crear (taskOpen) o editar (expandedActivity es tarea) */}
       <TaskModal
-        open={taskOpen}
-        onClose={() => setTaskOpen(false)}
+        open={taskOpen || (!!expandedActivity && !!(expandedActivity as any)?.isTask)}
+        onClose={() => {
+          setTaskOpen(false);
+          setExpandedActivity(null);
+        }}
         entityType="company"
         entityId={id || ""}
         entityName={company?.name || "Sin nombre"}
         user={user}
         initialCompanyContacts={associatedContacts}
-        onSave={(newTask) => {
+        activity={(expandedActivity as any)?.isTask ? expandedActivity : undefined}
+        onSave={(newTask: any) => {
           const taskAsActivity = {
             id: newTask.id,
             type: "task",
@@ -1880,17 +1831,19 @@ const tab2Content = (
             priority: newTask.priority,
             companyId: newTask.companyId,
           };
-          // Agregar la actividad inmediatamente al estado
           setActivities((prevActivities) => {
             const exists = prevActivities.some((a: any) => a.id === newTask.id);
-            if (exists) return prevActivities;
+            if (exists) {
+              return prevActivities.map((a: any) => (a.id === newTask.id ? { ...a, ...taskAsActivity } : a));
+            }
             return [taskAsActivity, ...prevActivities].sort((a: any, b: any) => {
               const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
               const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
               return dateB - dateA;
             });
           });
-          fetchAssociatedRecords(); // Actualizar actividades
+          setExpandedActivity(null);
+          fetchAssociatedRecords();
         }}
       />
 
@@ -2076,10 +2029,10 @@ const tab2Content = (
 
       {/* Dialog de Edición de Empresa - Movido a DetailPageLayout como prop editDialog */}
 
-      {/* Dialog para ver detalles de actividad expandida */}
+      {/* Dialog para ver detalles de actividad expandida (solo no-tareas; las tareas usan TaskModal) */}
       <ActivityDetailDialog
-        activity={expandedActivity}
-        open={!!expandedActivity}
+        activity={expandedActivity && !(expandedActivity as any)?.isTask ? expandedActivity : null}
+        open={!!expandedActivity && !(expandedActivity as any)?.isTask}
         onClose={() => setExpandedActivity(null)}
         getActivityTypeLabel={getActivityTypeLabel}
       />

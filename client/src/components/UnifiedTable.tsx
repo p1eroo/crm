@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 
 // Valor por defecto para itemsPerPage en todas las tablas
 export const DEFAULT_ITEMS_PER_PAGE = 10;
@@ -25,19 +25,22 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
   emptyState,
 }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   return (
-    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', width: '100%', maxWidth: '100%' }}>
       <Box
         sx={{
           bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
           borderRadius: 3,
-          overflow: 'hidden',
           boxShadow: 'none',
           border: `1px solid ${theme.palette.divider}`,
           mb: 2,
           position: 'relative',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
+          width: '100%',
+          maxWidth: '100%',
         }}
       >
         {/* Fila superior con título y acciones */}
@@ -68,14 +71,49 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
           </Box>
         )}
 
-        {/* Header de la tabla */}
-        {header}
-
-        {/* Filas de datos */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {rows}
-          {emptyState}
-        </Box>
+        {/* Móvil: contenedor con scroll horizontal DENTRO de la tabla */}
+        {isMobile ? (
+          <Box
+            sx={{
+              width: '100%',
+              maxWidth: '100%',
+              minWidth: 0,
+              overflowX: 'auto',
+              overflowY: 'visible',
+              borderBottom: `1px solid ${theme.palette.divider}`,
+              WebkitOverflowScrolling: 'touch',
+              // Forzar scrollbar visible en móvil (algunos navegadores la ocultan)
+              '&::-webkit-scrollbar': { height: 8 },
+              '&::-webkit-scrollbar-track': { 
+                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                borderRadius: 4,
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+                borderRadius: 4,
+                '&:hover': {
+                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                },
+              },
+            }}
+          >
+            <Box component="div" sx={{ minWidth: 800, width: 800, borderRight: `1px solid ${theme.palette.divider}` }}>
+              {header}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {rows}
+                {emptyState}
+              </Box>
+            </Box>
+          </Box>
+        ) : (
+          <Box sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>
+            {header}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {rows}
+              {emptyState}
+            </Box>
+          </Box>
+        )}
 
         {/* Paginación */}
         {pagination && (

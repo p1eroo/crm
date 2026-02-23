@@ -105,19 +105,22 @@ const FullTicketsTableCard: React.FC<FullTicketsTableCardProps> = ({
       </Typography>
 
       {/* Cuadro de búsqueda y botón agregar */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2, justifyContent: 'space-between' }}>
         <TextField
           size="small"
           placeholder="Buscar tickets"
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
-          sx={{
-            width: '250px',
-            transition: 'all 0.3s ease',
-            '& .MuiOutlinedInput-root': {
-              height: '32px',
-              fontSize: '0.875rem',
-              '&:hover': {
+            sx={{
+              width: '320px',
+              transition: 'all 0.3s ease',
+              '& .MuiOutlinedInput-root': {
+                height: '40px',
+                fontSize: '0.875rem',
+                borderRadius: 2,
+                backgroundColor: theme.palette.background.default,
+                '& fieldset': { borderRadius: 2 },
+                '&:hover': {
                 '& fieldset': {
                   borderColor: taxiMonterricoColors.green,
                 },
@@ -139,33 +142,41 @@ const FullTicketsTableCard: React.FC<FullTicketsTableCardProps> = ({
           }}
         />
         {onAdd && (
+          <Box sx={{ marginLeft: 'auto' }}>
           <Button
             size="small"
             variant="outlined"
             onClick={onAdd}
             sx={{
-              borderColor: taxiMonterricoColors.green,
-              color: taxiMonterricoColors.green,
+              minHeight: 40,
+              borderRadius: 2,
+              border: 'none',
+              boxShadow: 'none',
+              color: '#13944C',
+              fontSize: '0.9375rem',
               '&:hover': {
-                borderColor: taxiMonterricoColors.green,
-                backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                color: '#13944C',
+                backgroundColor: 'transparent',
               },
             }}
           >
             Agregar
           </Button>
+          </Box>
         )}
       </Box>
 
       {/* Tabla de tickets */}
       {tickets.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, py: 4 }}>
+          <Support sx={{ fontSize: 40, color: theme.palette.text.secondary }} />
           <Typography variant="body2" color="text.secondary">
             No hay tickets relacionados
           </Typography>
         </Box>
       ) : filteredTickets.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, py: 4 }}>
+          <Support sx={{ fontSize: 40, color: theme.palette.text.secondary }} />
           <Typography variant="body2" color="text.secondary">
             No se encontraron tickets
           </Typography>
@@ -183,7 +194,14 @@ const FullTicketsTableCard: React.FC<FullTicketsTableCardProps> = ({
               overflow: 'hidden',
             }}
           >
-            <Table size="small">
+            <Table
+              size="small"
+              sx={{
+                '& .MuiTableCell-root': {
+                  fontSize: '0.75rem',
+                },
+              }}
+            >
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 600 }}>Asunto</TableCell>

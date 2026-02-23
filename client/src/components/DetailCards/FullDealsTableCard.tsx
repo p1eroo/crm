@@ -173,19 +173,22 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
       </Typography>
 
       {/* Cuadro de búsqueda y botón agregar */}
-      <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 2 }}>
+      <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 2, justifyContent: "space-between" }}>
         <TextField
           size="small"
           placeholder="Buscar negocios"
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
-          sx={{
-            width: "250px",
-            transition: "all 0.3s ease",
-            "& .MuiOutlinedInput-root": {
-              height: "32px",
-              fontSize: "0.875rem",
-              "&:hover": {
+            sx={{
+              width: "320px",
+              transition: "all 0.3s ease",
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+                fontSize: "0.875rem",
+                borderRadius: 2,
+                backgroundColor: theme.palette.background.default,
+                "& fieldset": { borderRadius: 2 },
+                "&:hover": {
                 "& fieldset": {
                   borderColor: taxiMonterricoColors.green,
                 },
@@ -207,19 +210,25 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
           }}
         />
         {hasAddMenu ? (
-          <>
+          <Box sx={{ marginLeft: "auto" }}>
             <Button
               size="small"
               variant="outlined"
               endIcon={<ExpandMore />}
               onClick={(e) => setMenuAnchor(e.currentTarget)}
               sx={{
-                borderColor: taxiMonterricoColors.green,
-                color: taxiMonterricoColors.green,
+                minHeight: 40,
+                borderRadius: 2,
+                border: "none",
+                boxShadow: "none",
+                color: "#13944C",
+                fontSize: "0.9375rem",
                 "&:hover": {
-                  borderColor: taxiMonterricoColors.green,
-                  backgroundColor: "rgba(46, 125, 50, 0.08)",
+                  color: "#13944C",
+                  backgroundColor: "transparent",
                 },
+                "& .MuiButton-endIcon svg": { color: "#13944C" },
+                "&:hover .MuiButton-endIcon svg": { color: "#13944C" },
               }}
             >
               Agregar
@@ -302,38 +311,48 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                 <Typography variant="body2">Crear nuevo negocio</Typography>
               </MenuItem>
             </Menu>
-          </>
+          </Box>
         ) : (
           onAdd && (
+            <Box sx={{ marginLeft: "auto" }}>
             <Button
               size="small"
               variant="outlined"
               endIcon={<ExpandMore />}
               onClick={onAdd}
               sx={{
-                borderColor: taxiMonterricoColors.green,
-                color: taxiMonterricoColors.green,
+                minHeight: 40,
+                borderRadius: 2,
+                border: "none",
+                boxShadow: "none",
+                color: "#13944C",
+                fontSize: "0.9375rem",
                 "&:hover": {
-                  borderColor: taxiMonterricoColors.green,
-                  backgroundColor: "rgba(46, 125, 50, 0.08)",
+                  color: "#13944C",
+                  backgroundColor: "transparent",
                 },
+                "& .MuiButton-endIcon svg": { color: "#13944C" },
+                "&:hover .MuiButton-endIcon svg": { color: "#13944C" },
               }}
             >
               Agregar
             </Button>
+            </Box>
           )
         )}
       </Box>
 
       {/* Tabla de negocios */}
       {deals.length === 0 ? (
-        <Box sx={{ textAlign: "center", py: 4 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, py: 4 }}>
+          <AttachMoney sx={{ fontSize: 40, color: theme.palette.text.secondary }} />
           <Typography variant="body2" color="text.secondary">
             No hay negocios relacionados
           </Typography>
         </Box>
       ) : filteredDeals.length === 0 ? (
-        <Box sx={{ textAlign: "center", py: 4 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, py: 4 }}>
+          <AttachMoney sx={{ fontSize: 40, color: theme.palette.text.secondary }} />
           <Typography variant="body2" color="text.secondary">
             No se encontraron negocios
           </Typography>
@@ -353,6 +372,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
               size="small"
               sx={{
                 "& .MuiTableCell-root": {
+                  fontSize: "0.75rem",
                   borderBottom: "1px solid",
                   borderColor:
                     theme.palette.mode === "dark"

@@ -14,7 +14,6 @@ import {
   InputAdornment,
   Menu,
   MenuItem,
-  Avatar,
   IconButton,
   Link,
   useTheme,
@@ -25,8 +24,6 @@ import {
   ExpandMore,
   Business,
   Add,
-  OpenInNew,
-  ContentCopy,
   ChevronLeft,
   ChevronRight,
 } from '@mui/icons-material';
@@ -174,19 +171,22 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
       </Typography>
 
       {/* Cuadro de búsqueda y botón agregar */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2, justifyContent: 'space-between' }}>
         <TextField
           size="small"
           placeholder={companyLabels.searchCompanies}
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
-          sx={{
-            width: '250px',
-            transition: 'all 0.3s ease',
-            '& .MuiOutlinedInput-root': {
-              height: '32px',
-              fontSize: '0.875rem',
-              '&:hover': {
+            sx={{
+              width: '320px',
+              transition: 'all 0.3s ease',
+              '& .MuiOutlinedInput-root': {
+                height: '40px',
+                fontSize: '0.875rem',
+                borderRadius: 2,
+                backgroundColor: theme.palette.background.default,
+                '& fieldset': { borderRadius: 2 },
+                '&:hover': {
                 '& fieldset': {
                   borderColor: taxiMonterricoColors.green,
                 },
@@ -208,19 +208,25 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
           }}
         />
         {hasAddMenu ? (
-          <>
+          <Box sx={{ marginLeft: 'auto' }}>
             <Button
               size="small"
               variant="outlined"
               endIcon={<ExpandMore />}
               onClick={(e) => setMenuAnchor(e.currentTarget)}
               sx={{
-                borderColor: taxiMonterricoColors.green,
-                color: taxiMonterricoColors.green,
+                minHeight: 40,
+                borderRadius: 2,
+                border: 'none',
+                boxShadow: 'none',
+                color: '#13944C',
+                fontSize: '0.9375rem',
                 '&:hover': {
-                  borderColor: taxiMonterricoColors.green,
-                  backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                  color: '#13944C',
+                  backgroundColor: 'transparent',
                 },
+                '& .MuiButton-endIcon svg': { color: '#13944C' },
+                '&:hover .MuiButton-endIcon svg': { color: '#13944C' },
               }}
             >
               Agregar
@@ -303,37 +309,45 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                 <Typography variant="body2">{companyLabels.createNewCompany}</Typography>
               </MenuItem>
             </Menu>
-          </>
+          </Box>
         ) : (
           onAddNew && (
+            <Box sx={{ marginLeft: 'auto' }}>
             <Button
               size="small"
               variant="outlined"
               onClick={onAddNew}
               sx={{
-                borderColor: taxiMonterricoColors.green,
-                color: taxiMonterricoColors.green,
+                minHeight: 40,
+                borderRadius: 2,
+                border: 'none',
+                boxShadow: 'none',
+                color: '#13944C',
+                fontSize: '0.9375rem',
                 '&:hover': {
-                  borderColor: taxiMonterricoColors.green,
-                  backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                  color: '#13944C',
+                  backgroundColor: 'transparent',
                 },
               }}
             >
               Agregar
             </Button>
+            </Box>
           )
         )}
       </Box>
 
       {/* Tabla de empresas */}
       {companies.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, py: 4 }}>
+          <Business sx={{ fontSize: 40, color: theme.palette.text.secondary }} />
           <Typography variant="body2" color="text.secondary">
             No hay empresas relacionadas
           </Typography>
         </Box>
       ) : sortedCompanies.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, py: 4 }}>
+          <Business sx={{ fontSize: 40, color: theme.palette.text.secondary }} />
           <Typography variant="body2" color="text.secondary">
             No se encontraron empresas
           </Typography>
@@ -353,6 +367,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
               size="small"
               sx={{
                 '& .MuiTableCell-root': {
+                  fontSize: '0.75rem',
                   borderBottom: '1px solid',
                   borderColor:
                     theme.palette.mode === 'dark'
@@ -459,23 +474,6 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                         gap: 1,
                       }}
                     >
-                      <Avatar
-                        src={empresaLogo}
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          bgcolor: empresaLogo
-                            ? 'transparent'
-                            : taxiMonterricoColors.green,
-                          fontSize: '0.875rem',
-                          color: empresaLogo ? 'inherit' : 'white',
-                        }}
-                      >
-                        {!empresaLogo &&
-                          (getCompanyInitials
-                            ? getCompanyInitials(company.name || '')
-                            : `${company.name?.[0] || ''}${company.name?.[1] || ''}`)}
-                      </Avatar>
                       <Typography
                         onClick={() => navigate(`/companies/${company.id}`)}
                         variant="body2"
@@ -503,70 +501,29 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                       }}
                     >
                       {company.domain && company.domain !== '--' ? (
-                        <>
-                          <Link
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (company.domain && company.domain !== '--') {
-                                const domainUrl = company.domain.startsWith('http')
-                                  ? company.domain
-                                  : `https://${company.domain}`;
-                                window.open(domainUrl, '_blank');
-                              }
-                            }}
-                            sx={{
-                              color:
-                                theme.palette.mode === 'dark'
-                                  ? '#64B5F6'
-                                  : '#1976d2',
-                              cursor: 'pointer',
-                              '&:hover': {
-                                textDecoration: 'underline',
-                              },
-                            }}
-                          >
-                            {company.domain}
-                          </Link>
-                          {onCopyToClipboard && (
-                            <>
-                              <IconButton
-                                size="small"
-                                sx={{ p: 0.5 }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.open(
-                                    `http://${company.domain}`,
-                                    '_blank'
-                                  );
-                                }}
-                                title="Abrir dominio"
-                              >
-                                <OpenInNew
-                                  fontSize="small"
-                                  sx={{
-                                    color: taxiMonterricoColors.green,
-                                  }}
-                                />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                sx={{ p: 0.5 }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onCopyToClipboard(company.domain || '');
-                                }}
-                                title="Copiar dominio"
-                              >
-                                <ContentCopy
-                                  fontSize="small"
-                                  sx={{
-                                    color: taxiMonterricoColors.green,
-                                  }}
-                                />
-                              </IconButton>
-                            </>
-                          )}
-                        </>
+                        <Link
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (company.domain && company.domain !== '--') {
+                              const domainUrl = company.domain.startsWith('http')
+                                ? company.domain
+                                : `https://${company.domain}`;
+                              window.open(domainUrl, '_blank');
+                            }
+                          }}
+                          sx={{
+                            color: taxiMonterricoColors.green,
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            textDecoration: 'none',
+                            '&:hover': {
+                              textDecoration: 'underline',
+                            },
+                          }}
+                        >
+                          {company.domain}
+                        </Link>
                       ) : (
                         <Typography
                           variant="body2"

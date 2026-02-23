@@ -22,6 +22,7 @@ import {
   Comment,
   ChevronLeft,
   ChevronRight,
+  Assignment,
 } from '@mui/icons-material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { library } from '@fortawesome/fontawesome-svg-core';
@@ -290,11 +291,19 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
             sx={{
-              width: '250px',
+              width: '320px',
               transition: 'all 0.3s ease',
               '& .MuiOutlinedInput-root': {
-                height: '32px',
+                height: '40px',
                 fontSize: '0.875rem',
+                borderRadius: 2,
+                backgroundColor: theme.palette.background.default,
+                boxShadow: 'none',
+                '& fieldset': {
+                  borderRadius: 2,
+                  borderColor: theme.palette.divider,
+                  borderWidth: 1,
+                },
                 '&:hover': {
                   '& fieldset': {
                     borderColor: taxiMonterricoColors.green,
@@ -323,11 +332,40 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
               endIcon={<ExpandMore />}
               onClick={(e) => setCreateActivityMenuAnchor(e.currentTarget)}
               sx={{
-                borderColor: taxiMonterricoColors.green,
-                color: taxiMonterricoColors.green,
+                minHeight: 40,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor:
+                  theme.palette.mode === 'light'
+                    ? theme.palette.divider
+                    : '#4f5761',
+                boxShadow: 'none',
+                color:
+                  theme.palette.mode === 'light'
+                    ? theme.palette.text.secondary
+                    : '#a1a6b0',
                 '&:hover': {
-                  borderColor: taxiMonterricoColors.green,
-                  backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                  borderColor:
+                    theme.palette.mode === 'light'
+                      ? theme.palette.divider
+                      : '#5f6773',
+                  color:
+                    theme.palette.mode === 'light'
+                      ? theme.palette.text.secondary
+                      : '#b8bdc7',
+                  backgroundColor: 'transparent',
+                },
+                '& .MuiButton-endIcon svg': {
+                  color:
+                    theme.palette.mode === 'light'
+                      ? theme.palette.text.secondary
+                      : '#a1a6b0',
+                },
+                '&:hover .MuiButton-endIcon svg': {
+                  color:
+                    theme.palette.mode === 'light'
+                      ? theme.palette.text.secondary
+                      : '#b8bdc7',
                 },
               }}
             >
@@ -341,17 +379,24 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
           <Chip
             label={selectedTimeRange}
             size="small"
-            deleteIcon={<KeyboardArrowDown fontSize="small" />}
+            deleteIcon={<KeyboardArrowDown fontSize="small" sx={{ color: '#13944C' }} />}
             onDelete={(e) => {
               e.stopPropagation();
               setTimeRangeMenuAnchor(e.currentTarget);
             }}
             onClick={(e) => setTimeRangeMenuAnchor(e.currentTarget)}
             sx={{
+              minHeight: 32,
               cursor: 'pointer',
-              color: taxiMonterricoColors.green,
+              color: '#13944C',
+              border: 'none',
+              bgcolor: theme.palette.background.default,
+              '& .MuiChip-deleteIcon': {
+                color: '#13944C',
+              },
               '&:hover': {
-                backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                backgroundColor: theme.palette.background.default,
+                opacity: 0.9,
               },
             }}
           />
@@ -360,7 +405,7 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
               <Chip
                 label={`(${selectedActivityTypes.length}) Actividad`}
                 size="small"
-                deleteIcon={<Close fontSize="small" />}
+                deleteIcon={<Close fontSize="small" sx={{ color: '#13944C' }} />}
                 onDelete={(e) => {
                   e.stopPropagation();
                   setSelectedActivityTypes([]);
@@ -372,11 +417,17 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
                   }
                 }}
                 sx={{
+                  minHeight: 32,
                   cursor: 'pointer',
-                  bgcolor: 'rgba(46, 125, 50, 0.1)',
-                  color: taxiMonterricoColors.green,
+                  bgcolor: theme.palette.background.default,
+                  color: '#13944C',
+                  border: 'none',
+                  '& .MuiChip-deleteIcon': {
+                    color: '#13944C',
+                  },
                   '&:hover': {
-                    backgroundColor: 'rgba(46, 125, 50, 0.15)',
+                    backgroundColor: theme.palette.background.default,
+                    opacity: 0.9,
                   },
                 }}
               />
@@ -384,7 +435,7 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
               <Chip
                 label="Actividad"
                 size="small"
-                deleteIcon={<KeyboardArrowDown fontSize="small" />}
+                deleteIcon={<KeyboardArrowDown fontSize="small" sx={{ color: '#13944C' }} />}
                 onDelete={(e) => {
                   e.stopPropagation();
                   if (activityFilterChipRef.current) {
@@ -398,10 +449,17 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
                   }
                 }}
                 sx={{
+                  minHeight: 32,
                   cursor: 'pointer',
-                  color: taxiMonterricoColors.green,
+                  color: '#13944C',
+                  border: 'none',
+                  bgcolor: theme.palette.background.default,
+                  '& .MuiChip-deleteIcon': {
+                    color: '#13944C',
+                  },
                   '&:hover': {
-                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                    backgroundColor: theme.palette.background.default,
+                    opacity: 0.9,
                   },
                 }}
               />
@@ -803,7 +861,8 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
 
       {/* Lista de actividades */}
       {filteredActivities.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, py: 4 }}>
+          <Assignment sx={{ fontSize: 40, color: theme.palette.text.secondary }} />
           <Typography variant="body2" color="text.secondary">
             {searchValue
               ? 'No se encontraron actividades'

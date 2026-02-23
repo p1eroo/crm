@@ -136,7 +136,7 @@ const Login: React.FC = () => {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
+        minHeight: { xs: 'auto', md: '100vh' },
         display: 'flex',
         overflow: 'hidden',
         position: 'relative',
@@ -304,11 +304,12 @@ const Login: React.FC = () => {
       <Box
         sx={{
           flex: { xs: 1, md: '0 0 900px' },
-          minHeight: '100vh',
+          minHeight: { xs: 'auto', md: '100vh' },
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
+          justifyContent: { xs: 'flex-start', sm: 'center' },
           padding: { xs: 3, sm: 6 },
+          paddingTop: { xs: 15, sm: 6 },
           backgroundColor: isDark ? crmColors.formBgDark : crmColors.formBgLight,
           position: 'relative',
           zIndex: 2,
@@ -388,7 +389,7 @@ const Login: React.FC = () => {
             mx: 'auto',
             width: '100%',
             p: { xs: 3, sm: 4.5 },
-            borderRadius: { xs: 0, sm: '24px' },
+            borderRadius: { xs: '16px', sm: '24px' },
             backgroundColor: isDark ? '#11182799' : crmColors.formCardLight,
             boxShadow: isDark
               ? '0 4px 6px rgba(0,0,0,0.2), 0 12px 32px rgba(0,0,0,0.15)'

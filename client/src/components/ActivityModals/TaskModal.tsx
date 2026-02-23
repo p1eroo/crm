@@ -16,6 +16,7 @@ import {
   FormControlLabel,
   useTheme,
   Autocomplete,
+  CircularProgress,
 } from "@mui/material";
 import {
   Close,
@@ -60,9 +61,14 @@ interface TaskModalProps {
   taskType?: "todo" | "meeting"; // valor inicial al abrir
   /** Contactos de la empresa ya cargados (evita petición duplicada cuando se abre desde CompanyDetail) */
   initialCompanyContacts?: { id: number; firstName?: string; lastName?: string }[];
+  /** Actividad/tarea existente para editar: usa la misma vista que crear, con botón "Editar" */
+  activity?: any;
 }
 
 type TaskTypeValue = "call" | "email" | "meeting" | "note" | "todo" | "other";
+
+const isTaskActivity = (a: any) =>
+  !!(a?.isTask) || ["task", "todo", "other", "meeting"].includes((a?.type || "").toLowerCase());
 
 const TaskModal: React.FC<TaskModalProps> = ({
   open,
@@ -74,8 +80,12 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onSave,
   taskType = "todo",
   initialCompanyContacts: initialCompanyContactsProp,
+  activity: activityProp,
 }) => {
+  const isEditMode = !!(activityProp && isTaskActivity(activityProp));
   const theme = useTheme();
+  const [isEditingForm, setIsEditingForm] = useState(false);
+  const readOnly = isEditMode && !isEditingForm;
   const [taskData, setTaskData] = useState<{
     title: string;
     description: string;
@@ -107,6 +117,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const [contactSearchInput, setContactSearchInput] = useState("");
   const [contactAutocompleteOpen, setContactAutocompleteOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadingTask, setLoadingTask] = useState(false);
   const companyClearedByUserRef = useRef(false);
   const descriptionEditorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,7 +146,54 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
   const prevOpenRef = useRef(false);
 
-  // Resetear estados cuando se abre/cierra el modal; pre-llenar empresa/contacto según contexto
+  // Cargar tarea existente cuando estamos en modo edición
+  useEffect(() => {
+    if (!open || !isEditMode || !activityProp?.id) return;
+    setLoadingTask(true);
+    api
+      .get(`/tasks/${activityProp.id}`)
+      .then((res) => {
+        const t = res.data;
+        const dueDate = t.dueDate ? new Date(t.dueDate).toISOString().split("T")[0] : "";
+        const startDate = t.startDate ? new Date(t.startDate).toISOString().split("T")[0] : "";
+        let estimatedTime = "";
+        if (t.dueDate) {
+          const d = new Date(t.dueDate);
+          estimatedTime = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        }
+        setTaskData({
+          title: t.title || "",
+          description: t.description || "",
+          priority: t.priority || "medium",
+          dueDate,
+          startDate,
+          type: (t.type || "todo") as TaskTypeValue,
+          status: t.status || "pending",
+          estimatedTime,
+          companyId: t.companyId ? String(t.companyId) : "",
+          contactId: t.contactId ? String(t.contactId) : "",
+        });
+        if (t.Company) {
+          setCompanies((prev) => {
+            const exists = prev.some((c) => c.id === t.Company.id);
+            if (exists) return prev;
+            return [...prev, { id: t.Company.id, name: t.Company.name || "" }];
+          });
+        }
+        if (t.Contact) {
+          const c = t.Contact;
+          setContacts((prev) => {
+            const exists = prev.some((x) => x.id === c.id);
+            if (exists) return prev;
+            return [...prev, { id: c.id, firstName: c.firstName || c.first_name || "", lastName: c.lastName || c.last_name || "" }];
+          });
+        }
+      })
+      .catch((err) => console.error("Error fetching task:", err))
+      .finally(() => setLoadingTask(false));
+  }, [open, isEditMode, activityProp?.id]);
+
+  // Resetear estados cuando se abre/cierra el modal; pre-llenar empresa/contacto según contexto (solo en modo crear)
   useEffect(() => {
     if (!open) {
       prevOpenRef.current = false;
@@ -165,7 +223,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
       setCompanyContactsLoading(false);
       setContactAutocompleteOpen(false);
       companyClearedByUserRef.current = false;
-    } else {
+    } else if (!isEditMode) {
       const justOpened = !prevOpenRef.current;
       prevOpenRef.current = true;
       setTaskData((prev) => {
@@ -200,8 +258,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
         }
         return next;
       });
+    } else {
+      prevOpenRef.current = true;
+      setIsEditingForm(false);
     }
-  }, [open, taskType, entityType, entityId, entityName]);
+  }, [open, taskType, entityType, entityId, entityName, isEditMode]);
 
   // Cargar empresas siempre; contactos solo cuando NO hay empresa seleccionada (para búsqueda general)
   const effectiveCompanyIdForFetch =
@@ -640,6 +701,24 @@ const TaskModal: React.FC<TaskModalProps> = ({
     handleDateSelect(year, month, day);
   };
 
+  const toTaskAsActivity = (t: any) => ({
+    id: t.id,
+    type: "task",
+    taskSubType: t.type || "todo",
+    subject: t.title,
+    title: t.title,
+    description: t.description,
+    dueDate: t.dueDate,
+    createdAt: t.createdAt,
+    User: t.CreatedBy || t.AssignedTo,
+    isTask: true,
+    status: t.status,
+    priority: t.priority,
+    companyId: t.companyId,
+    contactId: t.contactId,
+    dealId: t.dealId,
+  });
+
   const handleSaveTask = useCallback(async () => {
     if (!taskData.title.trim()) {
       return;
@@ -668,7 +747,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         : undefined;
       const dealIdToSend = entityType === "deal" ? Number(entityId) : undefined;
 
-      const response = await api.post("/tasks", {
+      const payload = {
         title: taskData.title,
         description: taskData.description,
         type: taskData.type || "todo",
@@ -679,34 +758,24 @@ const TaskModal: React.FC<TaskModalProps> = ({
         ...(companyIdToSend != null && !isNaN(companyIdToSend) ? { companyId: companyIdToSend } : {}),
         ...(contactIdToSend != null && !isNaN(contactIdToSend) ? { contactId: contactIdToSend } : {}),
         ...(dealIdToSend != null && !isNaN(dealIdToSend) ? { dealId: dealIdToSend } : {}),
-      });
-      const newTask = response.data;
-      // Convertir a formato compatible con onSave para la UI de actividades (CompanyDetail, ContactDetail, DealDetail)
-      const taskAsActivity = {
-        id: newTask.id,
-        type: "task",
-        taskSubType: newTask.type || "todo",
-        subject: newTask.title,
-        title: newTask.title,
-        description: newTask.description,
-        dueDate: newTask.dueDate,
-        createdAt: newTask.createdAt,
-        User: newTask.CreatedBy || newTask.AssignedTo,
-        isTask: true,
-        status: newTask.status,
-        priority: newTask.priority,
-        companyId: newTask.companyId,
-        contactId: newTask.contactId,
-        dealId: newTask.dealId,
       };
-      onSave(taskAsActivity);
+
+      if (isEditMode && activityProp?.id) {
+        const response = await api.put(`/tasks/${activityProp.id}`, payload);
+        const updatedTask = response.data;
+        onSave(toTaskAsActivity(updatedTask));
+      } else {
+        const response = await api.post("/tasks", payload);
+        const newTask = response.data;
+        onSave(toTaskAsActivity(newTask));
+      }
       onClose();
     } catch (error) {
       console.error("Error saving task:", error);
     } finally {
       setSaving(false);
     }
-  }, [taskData, entityType, entityId, onSave, onClose]);
+  }, [taskData, entityType, entityId, onSave, onClose, isEditMode, activityProp?.id]);
 
   // Atajos de teclado
   useEffect(() => {
@@ -857,6 +926,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
           </IconButton>
         </Box>
 
+        {loadingTask ? (
+          <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", py: 6 }}>
+            <CircularProgress size={32} sx={{ color: taxiMonterricoColors.green }} />
+          </Box>
+        ) : (
         <Box
           sx={{
             flexGrow: 1,
@@ -890,6 +964,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
               }
               fullWidth
               placeholder="Título"
+              InputProps={{ readOnly: readOnly }}
               sx={{
                 "& input": {
                   color: `${theme.palette.text.primary} !important`,
@@ -949,6 +1024,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   });
                   setCompanySearchInput("");
                 }}
+                disabled={readOnly}
                 onInputChange={(_, newInputValue, reason) => {
                   if (reason === "reset") setCompanySearchInput("");
                   else if (reason === "input") {
@@ -1005,6 +1081,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   setTaskData({ ...taskData, contactId: newValue ? newValue.id.toString() : "" });
                   setContactSearchInput("");
                 }}
+                disabled={readOnly}
                 onInputChange={(_, newInputValue, reason) => {
                   if (reason === "reset") setContactSearchInput("");
                   else if (reason === "input") {
@@ -1090,6 +1167,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 value={taskData.type}
                 onChange={(e) => setTaskData({ ...taskData, type: e.target.value as TaskTypeValue })}
                 fullWidth
+                disabled={readOnly}
                 SelectProps={{
                   MenuProps: {
                     disablePortal: false,
@@ -1148,6 +1226,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 value={taskData.status}
                 onChange={(e) => setTaskData({ ...taskData, status: e.target.value })}
                 fullWidth
+                disabled={readOnly}
                 SelectProps={{
                   MenuProps: {
                     disablePortal: false,
@@ -1203,6 +1282,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 value={taskData.priority}
                 onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
                 fullWidth
+                disabled={readOnly}
                 SelectProps={{
                   MenuProps: {
                     disablePortal: false,
@@ -1267,6 +1347,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   InputLabelProps={{ shrink: true }}
                   inputProps={{ title: "" }}
                   InputProps={{
+                    readOnly: readOnly,
                     sx: {
                       borderRadius: 2,
                       transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -1299,6 +1380,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     ),
                   }}
                 />
+                {!readOnly && (
                 <Box
                   component="span"
                   role="presentation"
@@ -1323,6 +1405,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   }}
                   sx={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, cursor: "pointer", zIndex: 1 }}
                 />
+                )}
               </Box>
             </Box>
             <Box sx={{ flex: 1 }}>
@@ -1337,6 +1420,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   fullWidth
                   inputProps={{ title: "" }}
                   InputProps={{
+                    readOnly: readOnly,
                     sx: {
                       borderRadius: 2,
                       transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -1369,6 +1453,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     ),
                   }}
                 />
+                {!readOnly && (
                 <Box
                   component="span"
                   role="presentation"
@@ -1393,6 +1478,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   }}
                   sx={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, cursor: "pointer", zIndex: 1 }}
                 />
+                )}
               </Box>
             </Box>
             <Box sx={{ flex: 1 }}>
@@ -1401,14 +1487,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
               </Typography>
               <TextField
                 value={taskData.dueDate ? formatDateDisplay(taskData.dueDate) : ""}
-                onClick={handleOpenDatePicker}
+                onClick={readOnly ? undefined : handleOpenDatePicker}
                 fullWidth
                 InputProps={{
                   readOnly: true,
                   endAdornment: (
                     <IconButton
                       size="small"
-                      onClick={handleOpenDatePicker}
+                      onClick={readOnly ? undefined : handleOpenDatePicker}
                       sx={{
                         color: theme.palette.text.secondary,
                         mr: 0.5,
@@ -1420,7 +1506,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   ),
                 }}
                 sx={{
-                  cursor: "pointer",
+                  cursor: readOnly ? "default" : "pointer",
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
                     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -1428,7 +1514,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     "&:hover fieldset": { borderColor: theme.palette.divider },
                     "&.Mui-focused fieldset": { borderColor: theme.palette.divider, borderWidth: "2px" },
                   },
-                  "& .MuiInputBase-input": { py: 1, cursor: "pointer" },
+                  "& .MuiInputBase-input": { py: 1, cursor: readOnly ? "default" : "pointer" },
                 }}
               />
             </Box>
@@ -1438,7 +1524,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
           <Box sx={{ position: "relative", flex: 1, minHeight: 0, maxHeight: "100%", display: "flex", flexDirection: "column", overflow: "hidden", pb: 0 }}>
             <Box
               ref={descriptionEditorRef}
-              contentEditable
+              contentEditable={!readOnly}
               suppressContentEditableWarning
               onInput={(e) => {
                 const html = (e.target as HTMLElement).innerHTML;
@@ -1454,12 +1540,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 pt: 1.5,
                 pb: 1.5,
                 px: 1.5,
-                borderRadius: "8px 8px 0 0",
+                borderRadius: readOnly ? "8px" : "8px 8px 0 0",
                 border: `2px solid ${theme.palette.divider}`,
-                borderBottom: "none",
+                borderBottom: readOnly ? `2px solid ${theme.palette.divider}` : "none",
                 outline: "none",
                 lineHeight: 1.5,
                 color: theme.palette.text.primary,
+                cursor: readOnly ? "default" : "text",
                 transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                 "&:focus": {
                   borderColor: theme.palette.divider,
@@ -1484,7 +1571,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 },
               }}
             />
-            {/* Toolbar */}
+            {/* Toolbar - oculto en modo solo lectura */}
+            {!readOnly && (
             <Box
               sx={{
                 flexShrink: 0,
@@ -1835,7 +1923,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 </IconButton>
               </Box>
             </Box>
-          </Box>
+            )}
 
           {/* Input oculto para adjuntar archivos */}
           <input
@@ -1921,14 +2009,16 @@ const TaskModal: React.FC<TaskModalProps> = ({
             Cancelar
           </Button>
           <Button
-            onClick={handleSaveTask}
+            onClick={readOnly ? () => setIsEditingForm(true) : handleSaveTask}
             variant="contained"
-            disabled={saving || !taskData.title.trim()}
+            disabled={!readOnly && (saving || loadingTask || !taskData.title.trim())}
             sx={pageStyles.saveButton}
           >
-            {saving ? "Guardando..." : "Guardar"}
+            {saving ? (isEditMode ? "Editando..." : "Guardando...") : (readOnly ? "Editar" : "Guardar")}
           </Button>
         </DialogActions>
+      </Box>
+        )}
       </Box>
       {/* Overlay de fondo cuando la ventana está abierta */}
       <Box

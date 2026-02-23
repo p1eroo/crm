@@ -6,12 +6,15 @@ import {
   CircularProgress,
   Button,
   IconButton,
+  Tooltip,
+  Popover,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
   useTheme,
+  useMediaQuery,
   Snackbar,
   Alert,
 } from '@mui/material';
@@ -144,7 +147,8 @@ const CustomSalesDistributionTooltip = ({ active, payload }: any) => {
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const theme = useTheme();
-  const dashboardCardBg = theme.palette.mode === 'light' ? '#fafafa' : '#1c252ea6';
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const dashboardCardBg = theme.palette.mode === 'light' ? '#fafafa' : '#1c252e';
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const currentYear = new Date().getFullYear();
@@ -157,9 +161,12 @@ const Dashboard: React.FC = () => {
   const [dailyPayments, setDailyPayments] = useState<any[]>([]);
   const [editingBudgetMonth, setEditingBudgetMonth] = useState<number | null>(null); // Mes que se está editando (null = mes actual)
   const [maximizedSalesDistribution, setMaximizedSalesDistribution] = useState(false);
+  const [selectedSalesSegmentIndex, setSelectedSalesSegmentIndex] = useState<number | null>(null);
   const [maximizedKPIArea, setMaximizedKPIArea] = useState(false);
   const [maximizedWeeklySales, setMaximizedWeeklySales] = useState(false);
   const [maximizedSales, setMaximizedSales] = useState(false);
+  const [salesChartTooltip, setSalesChartTooltip] = useState<{ label: string; value: number } | null>(null);
+  const [salesChartTooltipAnchor, setSalesChartTooltipAnchor] = useState<{ top: number; left: number } | null>(null);
   // Valor para PrimeReact Calendar (mes/año): null = Todo el año
   const periodDate = selectedMonth !== null
     ? new Date(parseInt(selectedYear), parseInt(selectedMonth), 1)
@@ -824,10 +831,21 @@ const Dashboard: React.FC = () => {
 
   // Opciones para el gráfico donut (Distribución de Ventas) — espaciado entre segmentos
   const strokeGapColor = theme.palette.background.paper;
+  const salesDistributionTotal = salesDistributionData.reduce((s, d) => s + d.value, 0);
   const salesDistributionChartOptions = {
     chart: {
       type: 'donut' as const,
       background: 'transparent',
+      ...(isMobile && {
+        events: {
+          dataPointSelection: (_event: unknown, _chartContext: unknown, opts: { dataPointIndex: number }) => {
+            const idx = opts.dataPointIndex;
+            requestAnimationFrame(() => {
+              setSelectedSalesSegmentIndex((prev) => (prev === idx ? null : idx));
+            });
+          },
+        },
+      }),
     },
     stroke: {
       show: true,
@@ -845,8 +863,10 @@ const Dashboard: React.FC = () => {
         donut: {
           size: '65%',
           labels: {
-            show: true,
-            total: { show: true },
+            show: !isMobile,
+            ...(!isMobile && {
+              total: { show: true },
+            }),
           },
         },
       },
@@ -856,9 +876,23 @@ const Dashboard: React.FC = () => {
     },
     responsive: [
       {
+        breakpoint: 600,
+        options: {
+          dataLabels: { enabled: false },
+          plotOptions: {
+            pie: {
+              donut: {
+                size: '70%',
+                labels: { show: false },
+              },
+            },
+          },
+        },
+      },
+      {
         breakpoint: 480,
         options: {
-          chart: { width: 200 },
+          chart: { width: 280 },
         },
       },
     ],
@@ -911,10 +945,24 @@ const Dashboard: React.FC = () => {
     theme: { mode: theme.palette.mode as 'light' | 'dark' },
     responsive: [
       {
+        breakpoint: 600,
+        options: {
+          chart: { height: 360, width: '100%' },
+          legend: {
+            position: 'bottom' as const,
+            offsetY: -15,
+            itemMargin: { horizontal: 8, vertical: 4 },
+          },
+        },
+      },
+      {
         breakpoint: 480,
         options: {
-          chart: { width: 200 },
-          legend: { position: 'bottom' as const },
+          chart: { width: 260, height: 340 },
+          legend: {
+            position: 'bottom' as const,
+            offsetY: -20,
+          },
         },
       },
     ],
@@ -1005,6 +1053,21 @@ const Dashboard: React.FC = () => {
       },
     },
     theme: { mode: theme.palette.mode as 'light' | 'dark' },
+    responsive: [
+      {
+        breakpoint: 600,
+        options: {
+          grid: {
+            padding: { left: -15, right: -5, top: -10, bottom: 0 },
+          },
+          plotOptions: {
+            bar: {
+              barHeight: '78%',
+            },
+          },
+        },
+      },
+    ],
   };
 
   // Calcular valores para las tarjetas KPI
@@ -1082,9 +1145,27 @@ const Dashboard: React.FC = () => {
   const salesChartApexOptions = {
     chart: {
       type: 'bar' as const,
-      height: 460,
+      height: 400,
       background: 'transparent',
       toolbar: { show: false },
+      events: {
+        dataPointSelection: (
+          event: { clientX: number; clientY: number },
+          _chartContext: unknown,
+          opts: { dataPointIndex: number }
+        ) => {
+          const idx = opts.dataPointIndex;
+          const label = salesChartApexCategories[idx] ?? '';
+          const val = safeSalesChartData[idx]?.value ?? 0;
+          requestAnimationFrame(() => {
+            setSalesChartTooltip({ label, value: val });
+            setSalesChartTooltipAnchor({
+              top: event.clientY - 8,
+              left: event.clientX,
+            });
+          });
+        },
+      },
     },
     fill: { opacity: 1, type: 'solid' as const },
     plotOptions: {
@@ -1139,6 +1220,15 @@ const Dashboard: React.FC = () => {
     colors: [theme.palette.mode === 'dark' ? '#E5AC03' : '#FFD54F'],
     theme: { mode: theme.palette.mode as 'light' | 'dark' },
     stroke: { show: false, width: 0 },
+    responsive: [
+      {
+        breakpoint: 600,
+        options: {
+          chart: { background: dashboardCardBg },
+          dataLabels: { enabled: false },
+        },
+      },
+    ],
     ...(selectedMonth !== null &&
       selectedMonthBudget > 0 && {
         annotations: {
@@ -1259,11 +1349,12 @@ const Dashboard: React.FC = () => {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        mb: { xs: 1.5, sm: 2, md: 2.5 },
-        flexDirection: { xs: 'column', sm: 'row' },
-        gap: { xs: 2, sm: 0 },
+        mb: { xs: 3, sm: 2, md: 2.5 },
+        mt: { xs: -3, sm: 3, md: -2 },
+        flexDirection: 'row',
+        gap: { xs: 1, sm: 0 },
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: { xs: 2, sm: 3, md: -2 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: { xs: 2, sm: 3, md: -2 }, flexShrink: 0, minWidth: 0 }}>
           <Typography 
             variant="h4" 
             sx={{ 
@@ -1271,6 +1362,9 @@ const Dashboard: React.FC = () => {
               color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary, 
               fontSize: { xs: '1.35rem', sm: '1.6rem', md: '2.00rem' },
               letterSpacing: '0.02em',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
             Hola, {user?.firstName ? user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1).toLowerCase() : 'Usuario'}
@@ -1279,13 +1373,13 @@ const Dashboard: React.FC = () => {
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: 1.5,
-          flexDirection: { xs: 'column', sm: 'row' },
-          width: { xs: '100%', sm: 'auto' },
+          gap: { xs: 1, sm: 1.5 },
+          flexDirection: 'row',
+          flexShrink: 0,
           mt: { xs: 2, sm: 3, md: 0 },
         }}>
           {/* Selector de periodo con PrimeReact Calendar (month picker) */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: { xs: 100, sm: 'auto' }, minWidth: { xs: 95, sm: 140 } }}>
             <Calendar
               value={periodDate}
               onChange={(e) => {
@@ -1307,20 +1401,43 @@ const Dashboard: React.FC = () => {
               placeholder="Todo el año"
               locale="es"
               inputClassName="p-inputtext-sm"
-              style={{ width: '100%', minWidth: 140 }}
+              style={{ width: '100%', minWidth: '100%' }}
             />
           </Box>
+          {/* Solo icono en móvil - misma altura que el selector de fecha */}
+          <Tooltip title="Exportar">
+            <IconButton
+              size="small"
+              onClick={handleDownloadDashboard}
+              sx={{
+                display: { xs: 'inline-flex', sm: 'none' },
+                width: { xs: 36, sm: 'auto' },
+                height: { xs: 36, sm: 'auto' },
+                borderRadius: 1.5,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.12)' : 'rgba(0, 150, 136, 0.08)',
+                color: theme.palette.mode === 'dark' ? '#4DB6AC' : '#00897B',
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
+                  color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
+                },
+              }}
+            >
+              <FontAwesomeIcon icon={faFileExport} style={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+          {/* Icono + texto en desktop */}
           <Button
             size="small"
             startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
             onClick={handleDownloadDashboard}
             sx={{
+              display: { xs: 'none', sm: 'inline-flex' },
               border: 'none',
               borderRadius: 1.5,
               bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.12)' : 'rgba(0, 150, 136, 0.08)',
               color: theme.palette.mode === 'dark' ? '#4DB6AC' : '#00897B',
-              px: { xs: 1.25, sm: 1.5 },
-              py: { xs: 0.75, sm: 0.875 },
+              px: { sm: 1.5 },
+              py: { sm: 0.875 },
               textTransform: 'none',
               fontWeight: 600,
               '&:hover': {
@@ -1339,7 +1456,7 @@ const Dashboard: React.FC = () => {
       <Box sx={{ 
         display: 'grid', 
         gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)', xl: 'repeat(4, 1fr)' }, 
-        gap: { xs: 1, sm: 1.5, md: 3 },
+        gap: { xs: 2.5, sm: 1.5, md: 3 },
         mt: { xs: 2, sm: 3, md: 4 },
         mb: { xs: 2, sm: 3, md: 4 } 
       }}>
@@ -1353,7 +1470,7 @@ const Dashboard: React.FC = () => {
             bgcolor: dashboardCardBg,
             border: 'none',
             transition: 'all 0.3s ease',
-            minHeight: { xs: 140, sm: 160, md: 185 },
+            minHeight: { xs: 'auto', sm: 160, md: 185 },
             cursor: canEditBudget ? 'pointer' : 'default',
             '&:hover': { boxShadow: 'none' },
           }}
@@ -1365,22 +1482,30 @@ const Dashboard: React.FC = () => {
               alignItems: 'flex-start',
               gap: 2,
             }}>
-              {/* Contenido izquierdo (icono y texto) */}
+              {/* Icono + texto: en móvil icono izq / texto der, en desktop columna (icono arriba, texto abajo) */}
               <Box sx={{ 
                 display: 'flex', 
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                gap: 5,
+                flexDirection: { xs: 'row', sm: 'column' },
+                justifyContent: { xs: 'space-between', sm: 'flex-start' },
+                alignItems: { xs: 'center', sm: 'flex-start' },
+                gap: { xs: 2, sm: 5 },
                 flex: 1,
               }}>
-                <FontAwesomeIcon 
-                  icon={faCoins} 
-                  style={{
-                    color: theme.palette.mode === 'dark' ? theme.palette.primary.main : "#1aae7a",
-                    fontSize: 36,
-                  }} 
-                />
-                <Box sx={{ textAlign: 'left' }}>
+                <Box sx={{ flexShrink: 0 }}>
+                  <FontAwesomeIcon 
+                    icon={faCoins} 
+                    style={{
+                      color: theme.palette.mode === 'dark' ? theme.palette.primary.main : "#1aae7a",
+                      fontSize: 36,
+                    }} 
+                  />
+                </Box>
+                <Box sx={{ 
+                  textAlign: { xs: 'right', sm: 'left' },
+                  alignItems: { xs: 'flex-end', sm: 'flex-start' },
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
@@ -1407,13 +1532,14 @@ const Dashboard: React.FC = () => {
                 </Box>
               </Box>
 
-              {/* Gráfico a la derecha */}
+              {/* Gráfico a la derecha - solo en desktop */}
               <Box sx={{ 
-                width: { xs: 100, sm: 120, md: 140 },
-                height: { xs: 60, sm: 70, md: 80 },
+                display: { xs: 'none', sm: 'block' },
+                width: { sm: 120, md: 140 },
+                height: { sm: 70, md: 80 },
                 position: 'absolute',
-                right: { xs: 16, sm: 20, md: 24 },
-                top: { xs: 16, sm: 20, md: 24 },
+                right: { sm: 20, md: 24 },
+                top: { sm: 20, md: 24 },
                 minWidth: 0,
                 minHeight: 0,
               }}>
@@ -1450,25 +1576,28 @@ const Dashboard: React.FC = () => {
             bgcolor: dashboardCardBg,
             border: 'none',
             transition: 'all 0.3s ease',
-            minHeight: { xs: 140, sm: 160, md: 185 },
+            minHeight: { xs: 'auto', sm: 160, md: 185 },
             '&:hover': { boxShadow: 'none' },
           }}
         >
           <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative', bgcolor: dashboardCardBg }}>
             <Box sx={{ 
               display: 'flex', 
-              flexDirection: 'column',
-              alignItems: 'flex-start',
+              flexDirection: { xs: 'row', sm: 'column' },
+              alignItems: { xs: 'center', sm: 'flex-start' },
+              justifyContent: { xs: 'space-between', sm: 'flex-start' },
               gap: 5,
             }}>
-              <FontAwesomeIcon 
-                icon={faTags} 
-                style={{
-                  color: "#8135e6",
-                  fontSize: 36,
-                }} 
-              />
-              <Box sx={{ textAlign: 'left' }}>
+              <Box sx={{ flexShrink: 0 }}>
+                <FontAwesomeIcon 
+                  icon={faTags} 
+                  style={{
+                    color: "#8135e6",
+                    fontSize: 36,
+                  }} 
+                />
+              </Box>
+              <Box sx={{ textAlign: { xs: 'right', sm: 'left' }, alignItems: { xs: 'flex-end', sm: 'flex-start' }, display: 'flex', flexDirection: 'column' }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
@@ -1506,25 +1635,28 @@ const Dashboard: React.FC = () => {
             bgcolor: dashboardCardBg,
             border: 'none',
             transition: 'all 0.3s ease',
-            minHeight: { xs: 140, sm: 160, md: 185 },
+            minHeight: { xs: 'auto', sm: 160, md: 185 },
             '&:hover': { boxShadow: 'none' },
           }}
         >
           <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative', bgcolor: dashboardCardBg }}>
             <Box sx={{ 
               display: 'flex', 
-              flexDirection: 'column',
-              alignItems: 'flex-start',
+              flexDirection: { xs: 'row', sm: 'column' },
+              alignItems: { xs: 'center', sm: 'flex-start' },
+              justifyContent: { xs: 'space-between', sm: 'flex-start' },
               gap: 5,
             }}>
-              <FontAwesomeIcon 
-                icon={faBuilding} 
-                style={{
-                  color: "#eba316",
-                  fontSize: 36,
-                }} 
-              />
-              <Box sx={{ textAlign: 'left' }}>
+              <Box sx={{ flexShrink: 0 }}>
+                <FontAwesomeIcon 
+                  icon={faBuilding} 
+                  style={{
+                    color: "#eba316",
+                    fontSize: 36,
+                  }} 
+                />
+              </Box>
+              <Box sx={{ textAlign: { xs: 'right', sm: 'left' }, alignItems: { xs: 'flex-end', sm: 'flex-start' }, display: 'flex', flexDirection: 'column' }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
@@ -1562,25 +1694,28 @@ const Dashboard: React.FC = () => {
             bgcolor: dashboardCardBg,
             border: 'none',
             transition: 'all 0.3s ease',
-            minHeight: { xs: 140, sm: 160, md: 185 },
+            minHeight: { xs: 'auto', sm: 160, md: 185 },
             '&:hover': { boxShadow: 'none' },
           }}
         >
           <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, position: 'relative', bgcolor: dashboardCardBg }}>
             <Box sx={{ 
               display: 'flex', 
-              flexDirection: 'column',
-              alignItems: 'flex-start',
+              flexDirection: { xs: 'row', sm: 'column' },
+              alignItems: { xs: 'center', sm: 'flex-start' },
+              justifyContent: { xs: 'space-between', sm: 'flex-start' },
               gap: 5,
             }}>
-              <FontAwesomeIcon 
-                icon={faPeopleGroup} 
-                style={{
-                  color: "#ef6141",
-                  fontSize: 36,
-                }} 
-              />
-              <Box sx={{ textAlign: 'left' }}>
+              <Box sx={{ flexShrink: 0 }}>
+                <FontAwesomeIcon 
+                  icon={faPeopleGroup} 
+                  style={{
+                    color: "#ef6141",
+                    fontSize: 36,
+                  }} 
+                />
+              </Box>
+              <Box sx={{ textAlign: { xs: 'right', sm: 'left' }, alignItems: { xs: 'flex-end', sm: 'flex-start' }, display: 'flex', flexDirection: 'column' }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
@@ -1597,6 +1732,7 @@ const Dashboard: React.FC = () => {
                   display: 'flex', 
                   alignItems: 'center',
                   gap: 1,
+                  justifyContent: { xs: 'flex-end', sm: 'flex-start' },
                 }}>
                   <Typography 
                     variant="h6" 
@@ -1657,8 +1793,8 @@ const Dashboard: React.FC = () => {
           lg: '0.85fr 1.35fr',
           xl: '0.85fr 1.35fr' 
         },
-        gap: { xs: 1.5, sm: 2, md: 3 },
-        mb: { xs: 2, sm: 2.5, md: 3 } 
+        gap: { xs: 2.5, sm: 1.5, md: 3 },
+        mb: { xs: 2, sm: 3, md: 4 } 
       }}>
         {/* Sales Distribution - mismo componente y estilos que Reportes */}
         <Card
@@ -1669,18 +1805,18 @@ const Dashboard: React.FC = () => {
             bgcolor: dashboardCardBg,
             border: 'none',
             transition: 'all 0.3s ease',
-            minHeight: { xs: 400, sm: 480 },
+            minHeight: { xs: 320, sm: 480 },
             display: 'flex',
             flexDirection: 'column',
             '&:hover': { boxShadow: 'none' },
           }}
         >
-          <Box sx={{ p: { xs: 2, md: 3 }, bgcolor: dashboardCardBg, flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ p: { xs: 1.5, md: 3 }, bgcolor: dashboardCardBg, flex: 1, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              mb: 4,
+              mb: { xs: 2, sm: 4 },
             }}>
               <Typography 
                 variant="h6" 
@@ -1721,24 +1857,102 @@ const Dashboard: React.FC = () => {
                 '& [class*="apexcharts"]': { background: 'transparent !important' },
               }}
             >
-              <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: 360 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                width: '100%', 
+                maxWidth: isMobile ? 280 : 360,
+                position: 'relative',
+              }}>
+                {isMobile && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      pointerEvents: 'none',
+                      minWidth: 100,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                        fontSize: '0.85rem',
+                        textAlign: 'center',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {selectedSalesSegmentIndex !== null && salesDistributionData[selectedSalesSegmentIndex]
+                        ? salesDistributionData[selectedSalesSegmentIndex].name
+                        : 'Total'}
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        fontWeight: 700,
+                        color: theme.palette.text.primary,
+                        fontSize: '1.1rem',
+                        mt: 0.25,
+                      }}
+                    >
+                      {selectedSalesSegmentIndex !== null && salesDistributionData[selectedSalesSegmentIndex]
+                        ? salesDistributionData[selectedSalesSegmentIndex].value.toLocaleString()
+                        : salesDistributionTotal.toLocaleString()}
+                    </Typography>
+                  </Box>
+                )}
                 <ReactApexChart
                   options={salesDistributionChartOptions}
                   series={salesDistributionChartSeries}
                   type="donut"
-                  height={300}
-                  width={1000}
+                  height={isMobile ? 260 : 300}
+                  width={isMobile ? 280 : 1000}
                 />
               </Box>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, justifyContent: 'center' }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: isMobile ? 1.5 : 2, mt: isMobile ? 1.5 : 2, justifyContent: 'center', flexDirection: 'row' }}>
                 {salesDistributionData.map((entry, index) => (
-                  <Box key={`${entry.name}-${entry.color}`} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    key={`${entry.name}-${entry.color}`}
+                    {...(isMobile && {
+                      onClick: () => {
+                        requestAnimationFrame(() => {
+                          setSelectedSalesSegmentIndex((prev) => (prev === index ? null : index));
+                        });
+                      },
+                    })}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      flexShrink: 0,
+                      ...(isMobile && {
+                        cursor: 'pointer',
+                        opacity: selectedSalesSegmentIndex === null || selectedSalesSegmentIndex === index ? 1 : 0.7,
+                        '&:hover': { opacity: 1 },
+                      }),
+                    }}
+                  >
                     <Box
                       component="span"
-                      sx={{ width: 12, height: 12, borderRadius: '50%', flexShrink: 0 }}
+                      sx={{ width: isMobile ? 10 : 12, height: isMobile ? 10 : 12, borderRadius: '50%', flexShrink: 0 }}
                       style={{ backgroundColor: entry.color }}
                     />
-                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.85rem' }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        fontWeight: 500,
+                        fontSize: isMobile ? '0.8rem' : '0.85rem',
+                        ...(isMobile && { whiteSpace: 'nowrap' }),
+                      }}
+                    >
                       {entry.name}
                     </Typography>
                   </Box>
@@ -1758,11 +1972,11 @@ const Dashboard: React.FC = () => {
             border: 'none',
             transition: 'all 0.3s ease',
             alignSelf: 'start',
-            minHeight: { xs: 505, sm: 460 },
+            minHeight: { xs: 'auto', sm: 460 },
             '&:hover': { boxShadow: 'none' },
           }}
         >
-          <Box sx={{ p: { xs: 2, md: 2.5 }, pt: { xs: 1.75, md: 2.25 }, bgcolor: dashboardCardBg }}>
+          <Box sx={{ p: { xs: 2, md: 2.5 }, pt: { xs: 1.75, md: 2.25 }, pb: { xs: 0, sm: 2 }, bgcolor: dashboardCardBg, overflow: 'hidden' }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -1799,7 +2013,23 @@ const Dashboard: React.FC = () => {
                 <ArrowOutward />
               </IconButton>
             </Box>
-            <Box sx={{ width: '100%', height: 400, minWidth: 0 }}>
+            <Box
+              sx={{
+                width: '100%',
+                height: 400,
+                minWidth: 0,
+                overflow: 'hidden',
+                ...(isMobile && {
+                  bgcolor: dashboardCardBg,
+                  '& [class*="apexcharts"]': {
+                    background: `${dashboardCardBg} !important`,
+                  },
+                }),
+                ...(!isMobile && {
+                  '& [class*="apexcharts"]': { background: 'transparent !important' },
+                }),
+              }}
+            >
               {salesChartApexSeries[0]?.data && (
                 <ReactApexChart
                   options={salesChartApexOptions}
@@ -1812,6 +2042,68 @@ const Dashboard: React.FC = () => {
             </Box>
           </Box>
         </Card>
+
+        {/* Popover nube de información - Ventas (al hacer clic en barra) */}
+        <Popover
+            open={Boolean(salesChartTooltip)}
+            anchorReference="anchorPosition"
+            anchorPosition={
+              salesChartTooltipAnchor
+                ? { top: salesChartTooltipAnchor.top, left: salesChartTooltipAnchor.left }
+                : undefined
+            }
+            onClose={() => {
+              setSalesChartTooltip(null);
+              setSalesChartTooltipAnchor(null);
+            }}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            slotProps={{
+              paper: {
+                sx: {
+                  ml: -45,
+                  minWidth: 100,
+                  borderRadius: 2,
+                  boxShadow: 4,
+                  overflow: 'hidden',
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(40, 50, 60, 0.98)' : 'rgba(255,255,255,0.98)',
+                  border: `1px solid ${theme.palette.divider}`,
+                  p: 0,
+                },
+              },
+            }}
+          >
+            {salesChartTooltip && (
+              <Box>
+                <Box
+                  sx={{
+                    px: 1.5,
+                    py: 1,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.06)',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={600} color="text.primary">
+                    {selectedMonth !== null ? `Día ${salesChartTooltip.label}` : salesChartTooltip.label}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, px: 1.5, py: 1.25 }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      bgcolor: theme.palette.mode === 'dark' ? '#E5AC03' : '#FFD54F',
+                    }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    Ventas: {formatCurrencyPE(salesChartTooltip.value)}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </Popover>
       </Box>
 
       {/* Sección: Pipeline de Ventas */}
@@ -1823,8 +2115,8 @@ const Dashboard: React.FC = () => {
           lg: '1fr',
           xl: '1fr' 
         },
-        gap: { xs: 1.5, sm: 2, md: 3 },
-        mb: { xs: 2, sm: 2.5, md: 3 } 
+        gap: { xs: 2.5, sm: 1.5, md: 3 },
+        mb: { xs: 2, sm: 3, md: 4 } 
       }}>
 
       </Box>
@@ -1838,8 +2130,8 @@ const Dashboard: React.FC = () => {
           lg: '1.4fr 1.25fr',
           xl: '1.65fr 1.25fr'   
         },
-        gap: { xs: 1.5, sm: 2, md: 3 },
-        mb: { xs: 2, sm: 2.5, md: 3 } 
+        gap: { xs: 2.5, sm: 1.5, md: 3 },
+        mb: { xs: 2, sm: 3, md: 4 } 
       }}>
         {/* Ventas Semanales */}
         <Card
@@ -1853,12 +2145,12 @@ const Dashboard: React.FC = () => {
             '&:hover': { boxShadow: 'none' },
           }}
         >
-          <Box sx={{ p: { xs: 2, md: 3 }, bgcolor: dashboardCardBg }}>
+          <Box sx={{ p: { xs: 1.5, md: 3 }, bgcolor: dashboardCardBg }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              mb: 1,
+              mb: { xs: 0.5, md: 1 },
             }}>
               <Typography 
                 variant="h6" 
@@ -1919,7 +2211,7 @@ const Dashboard: React.FC = () => {
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center',
-                mb: 1,
+                mb: { xs: 0.5, sm: 1 },
               }}>
                 <Typography 
                   variant="h6" 
@@ -1952,12 +2244,12 @@ const Dashboard: React.FC = () => {
                 </IconButton>
               </Box>
               {kpiAreaChartSeries.length > 0 ? (
-                <Box sx={{ width: '100%', height: 400, pt:3, }}>
+                <Box sx={{ width: '100%', height: { xs: 350, sm: 420 }, pt: { xs: 0, sm: 1 }, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <ReactApexChart
                     options={kpiAreaChartOptions}
                     series={kpiAreaChartSeries}
                     type="polarArea"
-                    height={360}
+                    height={isMobile ? 360 : 380}
                     width="100%"
                   />
                 </Box>

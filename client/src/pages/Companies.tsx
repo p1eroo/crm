@@ -1731,7 +1731,8 @@ const Companies: React.FC = () => {
 
   return (
     <Box sx={{ 
-      bgcolor: theme.palette.background.default, 
+      bgcolor: theme.palette.background.default,
+      minWidth: 0,
     }}>
 
       {/* Indicador de filtros por columna activos */}
@@ -1828,7 +1829,7 @@ const Companies: React.FC = () => {
       )}
 
       {/* Contenedor principal con layout flex para tabla y panel de filtros */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' }, minWidth: 0, overflow: 'hidden' }}>
         {/* Contenido principal (tabla completa con header y filas) */}
         <UnifiedTable
           title="Empresas"

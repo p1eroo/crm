@@ -95,6 +95,7 @@ import {
   ActivityDetailDialog,
   ActivitiesTabContent,
 } from "../components/DetailCards";
+import { TaskModal } from "../components/ActivityModals";
 import { useAuth } from "../context/AuthContext";
 import { useTaskCompleteFlow } from "../hooks/useTaskCompleteFlow";
 import { formatDatePeru } from "../utils/dateUtils";
@@ -7852,10 +7853,28 @@ const TaskDetail: React.FC = () => {
         </Snackbar>
       )}
 
-      {/* Dialog para ver detalles de actividad expandida */}
+      {/* Modal de editar tarea (cuando se hace clic en una tarea de la lista de actividades) */}
+      <TaskModal
+        open={!!expandedActivity && !!(expandedActivity as any)?.isTask}
+        onClose={() => setExpandedActivity(null)}
+        entityType="task"
+        entityId={id || ""}
+        entityName={task?.title || "Sin nombre"}
+        user={user}
+        activity={(expandedActivity as any)?.isTask ? expandedActivity : undefined}
+        onSave={(updatedTask: any) => {
+          setActivities((prev) =>
+            prev.map((a: any) => (a.id === updatedTask.id ? { ...a, ...updatedTask } : a))
+          );
+          setExpandedActivity(null);
+          fetchTask();
+        }}
+      />
+
+      {/* Dialog para ver detalles de actividad expandida (solo no-tareas) */}
       <ActivityDetailDialog
-        activity={expandedActivity}
-        open={!!expandedActivity}
+        activity={expandedActivity && !(expandedActivity as any)?.isTask ? expandedActivity : null}
+        open={!!expandedActivity && !(expandedActivity as any)?.isTask}
         onClose={() => setExpandedActivity(null)}
         getActivityTypeLabel={getActivityTypeLabel}
       />
