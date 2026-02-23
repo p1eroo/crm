@@ -5,8 +5,11 @@ import {
   Checkbox,
   Typography,
   Paper,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import { Assignment } from "@mui/icons-material";
+import { Trash } from "lucide-react";
 import { useTheme } from "@mui/material/styles";
 import { taxiMonterricoColors } from "../../theme/colors";
 
@@ -33,7 +36,8 @@ interface ActivitiesTabContentProps {
   onSearchChange: (value: string) => void;
   onCreateActivity: (type: string) => void;
   onActivityClick: (activity: any) => void;
-  onToggleComplete: (activityId: number, completed: boolean) => void;
+  onToggleComplete: (activity: any, completed: boolean) => void;
+  onDelete?: (activity: any) => void | Promise<void>;
   completedActivities: { [key: number]: boolean };
   getActivityTypeLabel: (type: string) => string;
   getActivityStatusColor: (activity: any) => any;
@@ -47,6 +51,7 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
   onCreateActivity,
   onActivityClick,
   onToggleComplete,
+  onDelete,
   completedActivities,
   getActivityTypeLabel,
   getActivityStatusColor,
@@ -54,6 +59,11 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
 }) => {
   const theme = useTheme();
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
+
+  const isTaskActivity = (activity: any) => {
+    const t = (activity.type || '').toLowerCase();
+    return ['task', 'todo', 'other'].includes(t) || !!activity.isTask;
+  };
 
   const counts = useMemo(() => {
     const getActivityType = (activity: any) => {
@@ -288,17 +298,39 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
                     gap: 0.5,
                   }}
                 >
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: taxiMonterricoColors.green,
-                      fontWeight: 600,
-                      fontSize: "0.7rem",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {getActivityTypeLabel(activity.type)}
-                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: taxiMonterricoColors.green,
+                        fontWeight: 600,
+                        fontSize: "0.7rem",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {((activity as any).isTask || (activity as any).type === 'task') ? 'Tarea' : getActivityTypeLabel((activity as any).taskSubType || activity.type || '')}
+                    </Typography>
+                    {onDelete && (
+                      <Tooltip title="Eliminar">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(activity);
+                          }}
+                          sx={{
+                            p: 0.25,
+                            color: theme.palette.error.main,
+                            "&:hover": {
+                              bgcolor: theme.palette.mode === "dark" ? "rgba(244, 67, 54, 0.12)" : "rgba(244, 67, 54, 0.08)",
+                            },
+                          }}
+                        >
+                          <Trash size={16} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
                   {activity.User && (
                     <Typography
                       variant="caption"
@@ -331,21 +363,24 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
                     gap: 1,
                   }}
                 >
-                  <Checkbox
-                    checked={completedActivities[activity.id] || false}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      onToggleComplete(activity.id, e.target.checked);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    size="small"
-                    sx={{
-                      p: 0.5,
-                      "& .MuiSvgIcon-root": {
-                        fontSize: 20,
-                      },
-                    }}
-                  />
+                  {isTaskActivity(activity) && (
+                    <Checkbox
+                      checked={completedActivities[activity.id] || false}
+                      disabled={completedActivities[activity.id] || false}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        onToggleComplete(activity, e.target.checked);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      size="small"
+                      sx={{
+                        p: 0.5,
+                        "& .MuiSvgIcon-root": {
+                          fontSize: 20,
+                        },
+                      }}
+                    />
+                  )}
                   <Typography
                     variant="subtitle2"
                     sx={{

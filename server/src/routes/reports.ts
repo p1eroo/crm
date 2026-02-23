@@ -544,6 +544,77 @@ router.get('/deals-by-user', async (req: AuthRequest, res) => {
   }
 });
 
+// Listar negocios por etapa (mismos filtros que deals-by-user). Query: stage (opcional; si se omite devuelve todos), userId, fromDate, toDate, page, limit.
+router.get('/deals-list', async (req: AuthRequest, res) => {
+  try {
+    const stageParam = req.query.stage as string | undefined;
+    const stage = (stageParam && typeof stageParam === 'string') ? stageParam.trim().toLowerCase() : null;
+    const userId = req.query.userId != null ? Number(req.query.userId) : null;
+    const fromDateParam = req.query.fromDate as string | undefined;
+    const toDateParam = req.query.toDate as string | undefined;
+    const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
+    const offset = (page - 1) * limit;
+
+    let periodCondition = '';
+    const replacements: Record<string, unknown> = { limit, offset };
+    if (stage) {
+      replacements.stage = stage;
+    }
+    if (fromDateParam && toDateParam) {
+      const fromDate = new Date(fromDateParam);
+      const toDate = new Date(toDateParam);
+      if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
+        periodCondition = ' AND d."createdAt" >= :fromDate AND d."createdAt" <= :toDate';
+        replacements.fromDate = fromDate.toISOString();
+        replacements.toDate = toDate.toISOString();
+      }
+    }
+    let userIdCondition = '';
+    if (userId != null && !Number.isNaN(userId)) {
+      userIdCondition = ' AND d."ownerId" = :userId';
+      replacements.userId = userId;
+    }
+    const stageCondition = stage ? ' AND d.stage = :stage' : '';
+
+    const countResult = await Deal.sequelize!.query(`
+      SELECT COUNT(d.id)::integer as total
+      FROM deals d
+      INNER JOIN users u ON u.id = d."ownerId"
+      INNER JOIN roles r ON r.id = u."roleId"
+      WHERE r.name = 'user'
+      ${stageCondition}
+      ${userIdCondition}
+      ${periodCondition}
+    `, { replacements, type: QueryTypes.SELECT }) as Array<{ total: number }>;
+    const total = (countResult && countResult[0] && countResult[0].total != null) ? countResult[0].total : 0;
+
+    const rows = await Deal.sequelize!.query(`
+      SELECT d.id, d.name, d.amount, d.stage
+      FROM deals d
+      INNER JOIN users u ON u.id = d."ownerId"
+      INNER JOIN roles r ON r.id = u."roleId"
+      WHERE r.name = 'user'
+      ${stageCondition}
+      ${userIdCondition}
+      ${periodCondition}
+      ORDER BY d.name ASC
+      LIMIT :limit OFFSET :offset
+    `, { replacements, type: QueryTypes.SELECT }) as Array<{ id: number; name: string; amount: number; stage: string }>;
+
+    res.json({
+      deals: rows,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (error: any) {
+    console.error('Error en /reports/deals-list:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Función para calcular la semana del año (ISO 8601)
 function getWeekNumber(date: Date): number {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));

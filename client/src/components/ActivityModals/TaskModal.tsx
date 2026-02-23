@@ -15,6 +15,7 @@ import {
   Checkbox,
   FormControlLabel,
   useTheme,
+  Autocomplete,
 } from "@mui/material";
 import {
   Close,
@@ -57,6 +58,8 @@ interface TaskModalProps {
   user: User | null;
   onSave: (newTask: any) => void;
   taskType?: "todo" | "meeting"; // valor inicial al abrir
+  /** Contactos de la empresa ya cargados (evita petición duplicada cuando se abre desde CompanyDetail) */
+  initialCompanyContacts?: { id: number; firstName?: string; lastName?: string }[];
 }
 
 type TaskTypeValue = "call" | "email" | "meeting" | "note" | "todo" | "other";
@@ -70,6 +73,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   user,
   onSave,
   taskType = "todo",
+  initialCompanyContacts: initialCompanyContactsProp,
 }) => {
   const theme = useTheme();
   const [taskData, setTaskData] = useState<{
@@ -81,6 +85,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
     type: TaskTypeValue;
     status: string;
     estimatedTime: string;
+    companyId: string;
+    contactId: string;
   }>({
     title: "",
     description: "",
@@ -90,8 +96,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
     type: taskType as TaskTypeValue,
     status: "pending",
     estimatedTime: "",
+    companyId: "",
+    contactId: "",
   });
+  const [companies, setCompanies] = useState<{ id: number; name: string }[]>([]);
+  const [contacts, setContacts] = useState<{ id: number; firstName: string; lastName: string }[]>([]);
+  const [companyContacts, setCompanyContacts] = useState<{ id: number; firstName: string; lastName: string }[]>([]);
+  const [companyContactsLoading, setCompanyContactsLoading] = useState(false);
+  const [companySearchInput, setCompanySearchInput] = useState("");
+  const [contactSearchInput, setContactSearchInput] = useState("");
+  const [contactAutocompleteOpen, setContactAutocompleteOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const companyClearedByUserRef = useRef(false);
   const descriptionEditorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const savedSelectionRef = useRef<Range | null>(null);
@@ -117,9 +133,12 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const estimatedTimeInputRef = useRef<HTMLInputElement>(null);
   const startDateInputRef = useRef<HTMLInputElement>(null);
 
-  // Resetear estados cuando se abre/cierra el modal
+  const prevOpenRef = useRef(false);
+
+  // Resetear estados cuando se abre/cierra el modal; pre-llenar empresa/contacto según contexto
   useEffect(() => {
     if (!open) {
+      prevOpenRef.current = false;
       setTaskData({
         title: "",
         description: "",
@@ -129,6 +148,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
         type: taskType,
         status: "pending",
         estimatedTime: "",
+        companyId: "",
+        contactId: "",
       });
       setLinkDialogOpen(false);
       setTableDialogOpen(false);
@@ -138,14 +159,139 @@ const TaskModal: React.FC<TaskModalProps> = ({
       setLinkUrl("");
       setTableRows("3");
       setTableCols("3");
+      setCompanySearchInput("");
+      setContactSearchInput("");
+      setCompanyContacts([]);
+      setCompanyContactsLoading(false);
+      setContactAutocompleteOpen(false);
+      companyClearedByUserRef.current = false;
     } else {
-      // Actualizar el tipo cuando el modal se abre o cuando taskType cambia
-      setTaskData((prev) => ({
-        ...prev,
-        type: taskType,
-      }));
+      const justOpened = !prevOpenRef.current;
+      prevOpenRef.current = true;
+      setTaskData((prev) => {
+        const next = { ...prev };
+        if (justOpened) next.type = taskType;
+        if (entityType === "company" && entityId) {
+          next.companyId = String(entityId);
+          next.contactId = "";
+          setCompanies((prevCompanies) => {
+            const exists = prevCompanies.some((c) => c.id === Number(entityId));
+            if (exists) return prevCompanies;
+            return [...prevCompanies, { id: Number(entityId), name: entityName || "" }];
+          });
+        } else if (entityType === "contact" && entityId) {
+          next.contactId = String(entityId);
+          const parts = (entityName || "").trim().split(/\s+/);
+          setContacts((prevContacts) => {
+            const exists = prevContacts.some((c) => c.id === Number(entityId));
+            if (exists) return prevContacts;
+            return [
+              ...prevContacts,
+              {
+                id: Number(entityId),
+                firstName: parts[0] || "",
+                lastName: parts.slice(1).join(" ") || "",
+              },
+            ];
+          });
+        } else if (entityType === "deal" && entityId) {
+          next.companyId = "";
+          next.contactId = "";
+        }
+        return next;
+      });
     }
-  }, [open, taskType]);
+  }, [open, taskType, entityType, entityId, entityName]);
+
+  // Cargar empresas siempre; contactos solo cuando NO hay empresa seleccionada (para búsqueda general)
+  const effectiveCompanyIdForFetch =
+    taskData.companyId ||
+    (companyClearedByUserRef.current ? "" : entityType === "company" && entityId ? String(entityId) : "");
+  useEffect(() => {
+    if (open) {
+      api
+        .get("/companies", { params: { limit: 1000 } })
+        .then((res) => setCompanies(res.data.companies || res.data || []))
+        .catch((err) => console.error("Error fetching companies:", err));
+      if (!effectiveCompanyIdForFetch) {
+        api
+          .get("/contacts", { params: { limit: 1000 } })
+          .then((res) => setContacts(res.data.contacts || res.data || []))
+          .catch((err) => console.error("Error fetching contacts:", err));
+      } else {
+        setContacts([]);
+      }
+    }
+  }, [open, effectiveCompanyIdForFetch]);
+
+  const fetchCompanyContacts = useCallback((companyId: string) => {
+    if (!companyId) {
+      setCompanyContacts([]);
+      return;
+    }
+    setCompanyContactsLoading(true);
+    const normalizeList = (raw: any) => {
+      const list = Array.isArray(raw) ? raw : [];
+      return list.map((x: any) => ({
+        id: x.id,
+        firstName: x.firstName ?? x.first_name ?? "",
+        lastName: x.lastName ?? x.last_name ?? "",
+      }));
+    };
+    // GET /companies/:id/contacts — solo id y nombre, sin cargar empresa/deals/activities
+    api
+      .get(`/companies/${companyId}/contacts`)
+      .then((res) => {
+        const raw = res.data?.contacts ?? res.data?.Contacts ?? [];
+        setCompanyContacts(normalizeList(raw));
+      })
+      .catch(() => {
+        // Fallback: GET /contacts?companyId
+        return api
+          .get("/contacts", { params: { companyId, limit: 500 } })
+          .then((res) => {
+            const raw = res.data?.contacts ?? res.data?.Contacts ?? [];
+            setCompanyContacts(normalizeList(raw));
+          });
+      })
+      .catch(() => setCompanyContacts([]))
+      .finally(() => setCompanyContactsLoading(false));
+  }, []);
+
+  // Cargar contactos de la empresa seleccionada (incluye vinculados por companyId y muchos-a-muchos)
+  // Usar entityId como fallback cuando se abre desde CompanyDetail (evita race con setTaskData)
+  const effectiveCompanyId = taskData.companyId || (entityType === "company" && entityId ? String(entityId) : "");
+  const canUseInitialContacts =
+    open &&
+    effectiveCompanyId &&
+    entityType === "company" &&
+    String(entityId) === effectiveCompanyId &&
+    initialCompanyContactsProp &&
+    initialCompanyContactsProp.length >= 0;
+  useEffect(() => {
+    if (!open) {
+      setCompanyContacts([]);
+      setCompanyContactsLoading(false);
+      return;
+    }
+    if (!effectiveCompanyId) {
+      setCompanyContacts([]);
+      setCompanyContactsLoading(false);
+      return;
+    }
+    if (canUseInitialContacts && initialCompanyContactsProp) {
+      setCompanyContacts(
+        initialCompanyContactsProp.map((c) => ({
+          id: c.id,
+          firstName: c.firstName ?? "",
+          lastName: c.lastName ?? "",
+        }))
+      );
+      setCompanyContactsLoading(false);
+      return;
+    }
+    fetchCompanyContacts(effectiveCompanyId);
+  }, [open, effectiveCompanyId, fetchCompanyContacts, canUseInitialContacts, initialCompanyContactsProp]);
 
   useEffect(() => {
     if (descriptionEditorRef.current && open) {
@@ -510,7 +656,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
         const timePart = taskData.estimatedTime ? `${taskData.estimatedTime}:00` : "00:00:00";
         dueDateToSend = `${taskData.dueDate}T${timePart}${tzSign}${tzHours}:${tzMins}`;
       }
-      // Guardar siempre como tarea en /tasks (incluyendo reuniones) para que aparezca en la lista de tareas
+      const companyIdToSend = taskData.companyId
+        ? Number(taskData.companyId)
+        : entityType === "company"
+        ? Number(entityId)
+        : undefined;
+      const contactIdToSend = taskData.contactId
+        ? Number(taskData.contactId)
+        : entityType === "contact"
+        ? Number(entityId)
+        : undefined;
+      const dealIdToSend = entityType === "deal" ? Number(entityId) : undefined;
+
       const response = await api.post("/tasks", {
         title: taskData.title,
         description: taskData.description,
@@ -519,7 +676,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
         priority: taskData.priority || "medium",
         dueDate: dueDateToSend,
         startDate: taskData.startDate || undefined,
-        [`${entityType}Id`]: Number(entityId),
+        ...(companyIdToSend != null && !isNaN(companyIdToSend) ? { companyId: companyIdToSend } : {}),
+        ...(contactIdToSend != null && !isNaN(contactIdToSend) ? { contactId: contactIdToSend } : {}),
+        ...(dealIdToSend != null && !isNaN(dealIdToSend) ? { dealId: dealIdToSend } : {}),
       });
       const newTask = response.data;
       // Convertir a formato compatible con onSave para la UI de actividades (CompanyDetail, ContactDetail, DealDetail)
@@ -772,44 +931,178 @@ const TaskModal: React.FC<TaskModalProps> = ({
             />
           </Box>
 
-          {/* Fila 2: Tipo | Fecha de inicio */}
-          <Box sx={{ display: "flex", gap: 1.5, mb: 0.5 }}>
+          {/* Fila: Empresa | Contacto */}
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.2, mt: 1 }}>
             <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  mb: 0.75,
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
+              <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500 }}>Empresa</Typography>
+              <Autocomplete
+                size="small"
+                options={companies}
+                getOptionLabel={(option) => option.name || ""}
+                value={companies.find((c) => c.id === parseInt(taskData.companyId || "0", 10)) || null}
+                onChange={(_, newValue) => {
+                  if (!newValue) companyClearedByUserRef.current = true;
+                  setTaskData({
+                    ...taskData,
+                    companyId: newValue ? newValue.id.toString() : "",
+                    contactId: "",
+                  });
+                  setCompanySearchInput("");
                 }}
-              >
-                Tipo
-              </Typography>
+                onInputChange={(_, newInputValue, reason) => {
+                  if (reason === "reset") setCompanySearchInput("");
+                  else if (reason === "input") {
+                    const sel = companies.find((c) => c.id === parseInt(taskData.companyId || "0", 10));
+                    if (sel && newInputValue !== sel.name) {
+                      companyClearedByUserRef.current = true;
+                      setTaskData({ ...taskData, companyId: "", contactId: "" });
+                    }
+                    setCompanySearchInput(newInputValue);
+                  }
+                }}
+                inputValue={
+                  (companies.find((c) => c.id === parseInt(taskData.companyId || "0", 10)) || null)?.name ?? companySearchInput
+                }
+                open={companySearchInput.length > 0 && companySearchInput.trim().length > 0}
+                openOnFocus={false}
+                onClose={() => setCompanySearchInput("")}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                filterOptions={(options, { inputValue }) => {
+                  if (!inputValue || inputValue.trim().length === 0) return [];
+                  const searchTerm = inputValue.toLowerCase().trim();
+                  return options.filter((o) => o.name.toLowerCase().includes(searchTerm));
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Buscar empresa..."
+                    InputProps={{
+                      ...params.InputProps,
+                      sx: {
+                        borderRadius: 2,
+                        "& fieldset": { borderWidth: "2px", borderColor: theme.palette.divider },
+                        "&:hover fieldset": { borderColor: theme.palette.divider },
+                        "&.Mui-focused fieldset": { borderColor: theme.palette.divider, borderWidth: "2px" },
+                        "& .MuiInputBase-input": { py: 1 },
+                      },
+                    }}
+                  />
+                )}
+                ListboxProps={{ sx: { maxHeight: 300 } }}
+                slotProps={{ popper: { sx: { zIndex: 1700 } } }}
+                noOptionsText={companySearchInput.trim().length > 0 ? "No se encontraron empresas" : null}
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500 }}>Contacto</Typography>
+              <Autocomplete
+                size="small"
+                options={taskData.companyId ? companyContacts : contacts}
+                loading={!!(taskData.companyId && companyContactsLoading)}
+                getOptionLabel={(option) => `${option.firstName} ${option.lastName}`.trim() || ""}
+                value={(taskData.companyId ? companyContacts : contacts).find((c) => c.id === parseInt(taskData.contactId || "0", 10)) || null}
+                onChange={(_, newValue) => {
+                  setTaskData({ ...taskData, contactId: newValue ? newValue.id.toString() : "" });
+                  setContactSearchInput("");
+                }}
+                onInputChange={(_, newInputValue, reason) => {
+                  if (reason === "reset") setContactSearchInput("");
+                  else if (reason === "input") {
+                    const list = taskData.companyId ? companyContacts : contacts;
+                    const sel = list.find((c) => c.id === parseInt(taskData.contactId || "0", 10));
+                    const selLabel = sel ? `${sel.firstName} ${sel.lastName}`.trim() : "";
+                    if (sel && newInputValue !== selLabel) {
+                      setTaskData({ ...taskData, contactId: "" });
+                    }
+                    setContactSearchInput(newInputValue);
+                    if (!taskData.companyId && newInputValue.trim().length > 0) setContactAutocompleteOpen(true);
+                  }
+                }}
+                onFocus={() => {
+                  if (taskData.companyId) {
+                    setContactAutocompleteOpen(true);
+                    if (companyContacts.length === 0 && !companyContactsLoading) {
+                      fetchCompanyContacts(taskData.companyId);
+                    }
+                  }
+                }}
+                onOpen={() => setContactAutocompleteOpen(true)}
+                onClose={() => {
+                  setContactAutocompleteOpen(false);
+                  setContactSearchInput("");
+                }}
+                inputValue={
+                  (() => {
+                    const list = taskData.companyId ? companyContacts : contacts;
+                    const sel = list.find((c) => c.id === parseInt(taskData.contactId || "0", 10));
+                    return sel ? `${sel.firstName} ${sel.lastName}`.trim() : contactSearchInput;
+                  })()
+                }
+                open={contactAutocompleteOpen}
+                openOnFocus={!!taskData.companyId}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                filterOptions={(options, { inputValue }) => {
+                  if (taskData.companyId && (!inputValue || inputValue.trim().length === 0)) return options;
+                  if (!inputValue || inputValue.trim().length === 0) return [];
+                  const searchTerm = inputValue.toLowerCase().trim();
+                  return options.filter((o) =>
+                    `${o.firstName} ${o.lastName}`.toLowerCase().includes(searchTerm)
+                  );
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder={taskData.companyId ? "Seleccionar contacto de la empresa..." : "Buscar contacto..."}
+                    InputProps={{
+                      ...params.InputProps,
+                      sx: {
+                        borderRadius: 2,
+                        "& fieldset": { borderWidth: "2px", borderColor: theme.palette.divider },
+                        "&:hover fieldset": { borderColor: theme.palette.divider },
+                        "&.Mui-focused fieldset": { borderColor: theme.palette.divider, borderWidth: "2px" },
+                        "& .MuiInputBase-input": { py: 1 },
+                      },
+                    }}
+                  />
+                )}
+                ListboxProps={{ sx: { maxHeight: 300 } }}
+                slotProps={{ popper: { sx: { zIndex: 1700 } } }}
+                noOptionsText={
+                  taskData.companyId
+                    ? companyContactsLoading
+                      ? "Cargando contactos..."
+                      : "No hay contactos en esta empresa"
+                    : contactSearchInput.trim().length > 0
+                    ? "No se encontraron contactos"
+                    : null
+                }
+              />
+            </Box>
+          </Box>
+
+          {/* Fila: Tipo | Estado | Prioridad */}
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500 }}>Tipo</Typography>
               <TextField
                 select
                 size="small"
                 value={taskData.type}
-                onChange={(e) =>
-                  setTaskData({ ...taskData, type: e.target.value as TaskTypeValue })
-                }
+                onChange={(e) => setTaskData({ ...taskData, type: e.target.value as TaskTypeValue })}
                 fullWidth
                 SelectProps={{
                   MenuProps: {
                     disablePortal: false,
                     disableScrollLock: true,
                     style: { zIndex: 1600 },
-                    slotProps: {
-                      root: { style: { zIndex: 1600 } },
-                    },
+                    slotProps: { root: { style: { zIndex: 1600 } } },
                     PaperProps: {
                       sx: {
                         borderRadius: 2,
                         mt: 1,
                         zIndex: "1600 !important",
                         backgroundColor: theme.palette.background.paper,
-                        boxShadow: theme.palette.mode === "dark"
-                          ? "0 8px 32px rgba(0, 0, 0, 0.4)"
-                          : "0 8px 32px rgba(0, 0, 0, 0.15)",
+                        boxShadow: theme.palette.mode === "dark" ? "0 8px 32px rgba(0, 0, 0, 0.4)" : "0 8px 32px rgba(0, 0, 0, 0.15)",
                         maxHeight: 300,
                         border: `1px solid ${theme.palette.divider}`,
                         "& .MuiMenuItem-root": {
@@ -832,15 +1125,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
                     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
+                    "& fieldset": { borderWidth: "2px", borderColor: theme.palette.divider },
                     "&:hover fieldset": { borderColor: theme.palette.divider },
-                    "&.Mui-focused fieldset": {
-                      borderColor: theme.palette.divider,
-                      borderWidth: "2px",
-                    },
+                    "&.Mui-focused fieldset": { borderColor: theme.palette.divider, borderWidth: "2px" },
                   },
                   "& .MuiInputBase-input": { py: 1 },
                 }}
@@ -853,26 +1140,129 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <MenuItem value="other">Otro</MenuItem>
               </TextField>
             </Box>
-            <Box sx={{ flex: 1, position: "relative" }}>
-              <Typography
-                variant="body2"
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500 }}>Estado</Typography>
+              <TextField
+                select
+                size="small"
+                value={taskData.status}
+                onChange={(e) => setTaskData({ ...taskData, status: e.target.value })}
+                fullWidth
+                SelectProps={{
+                  MenuProps: {
+                    disablePortal: false,
+                    disableScrollLock: true,
+                    style: { zIndex: 1600 },
+                    slotProps: { root: { style: { zIndex: 1600 } } },
+                    PaperProps: {
+                      sx: {
+                        borderRadius: 2,
+                        mt: 1,
+                        zIndex: "1600 !important",
+                        backgroundColor: theme.palette.background.paper,
+                        boxShadow: theme.palette.mode === "dark" ? "0 8px 32px rgba(0, 0, 0, 0.4)" : "0 8px 32px rgba(0, 0, 0, 0.15)",
+                        maxHeight: 300,
+                        border: `1px solid ${theme.palette.divider}`,
+                        "& .MuiMenuItem-root": {
+                          color: theme.palette.text.primary,
+                          py: 0.75,
+                          "&:hover": { backgroundColor: theme.palette.action.hover },
+                          "&.Mui-selected": {
+                            backgroundColor: `${taxiMonterricoColors.green}20`,
+                            color: taxiMonterricoColors.green,
+                            "&:hover": { backgroundColor: `${taxiMonterricoColors.green}30` },
+                          },
+                        },
+                      },
+                    },
+                    anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                    transformOrigin: { vertical: "top", horizontal: "left" },
+                  },
+                }}
                 sx={{
-                  mb: 0.75,
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": { borderWidth: "2px", borderColor: theme.palette.divider },
+                    "&:hover fieldset": { borderColor: theme.palette.divider },
+                    "&.Mui-focused fieldset": { borderColor: theme.palette.divider, borderWidth: "2px" },
+                  },
+                  "& .MuiInputBase-input": { py: 1 },
                 }}
               >
-                Fecha de inicio
-              </Typography>
+                <MenuItem value="pending">Pendiente</MenuItem>
+                <MenuItem value="in progress">En Progreso</MenuItem>
+                <MenuItem value="completed">Completada</MenuItem>
+              </TextField>
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500 }}>Prioridad</Typography>
+              <TextField
+                select
+                size="small"
+                value={taskData.priority}
+                onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
+                fullWidth
+                SelectProps={{
+                  MenuProps: {
+                    disablePortal: false,
+                    disableScrollLock: true,
+                    style: { zIndex: 1600 },
+                    slotProps: { root: { style: { zIndex: 1600 } } },
+                    PaperProps: {
+                      sx: {
+                        borderRadius: 2,
+                        mt: 1,
+                        zIndex: "1600 !important",
+                        backgroundColor: theme.palette.background.paper,
+                        boxShadow: theme.palette.mode === "dark" ? "0 8px 32px rgba(0, 0, 0, 0.4)" : "0 8px 32px rgba(0, 0, 0, 0.15)",
+                        maxHeight: 300,
+                        border: `1px solid ${theme.palette.divider}`,
+                        "& .MuiMenuItem-root": {
+                          color: theme.palette.text.primary,
+                          py: 0.75,
+                          "&:hover": { backgroundColor: theme.palette.action.hover },
+                          "&.Mui-selected": {
+                            backgroundColor: `${taxiMonterricoColors.green}20`,
+                            color: taxiMonterricoColors.green,
+                            "&:hover": { backgroundColor: `${taxiMonterricoColors.green}30` },
+                          },
+                        },
+                      },
+                    },
+                    anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                    transformOrigin: { vertical: "top", horizontal: "left" },
+                  },
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": { borderWidth: "2px", borderColor: theme.palette.divider },
+                    "&:hover fieldset": { borderColor: theme.palette.divider },
+                    "&.Mui-focused fieldset": { borderColor: theme.palette.divider, borderWidth: "2px" },
+                  },
+                  "& .MuiInputBase-input": { py: 1 },
+                }}
+              >
+                <MenuItem value="low">Baja</MenuItem>
+                <MenuItem value="medium">Media</MenuItem>
+                <MenuItem value="high">Alta</MenuItem>
+              </TextField>
+            </Box>
+          </Box>
+
+          {/* Fila: Fecha de inicio | Hora estimada | Fecha límite */}
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
+            <Box sx={{ flex: 1, position: "relative" }}>
+              <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500 }}>Fecha de inicio</Typography>
               <Box sx={{ position: "relative", width: "100%" }}>
                 <TextField
                   inputRef={startDateInputRef}
                   size="small"
                   type="date"
                   value={taskData.startDate}
-                  onChange={(e) =>
-                    setTaskData({ ...taskData, startDate: e.target.value })
-                  }
+                  onChange={(e) => setTaskData({ ...taskData, startDate: e.target.value })}
                   fullWidth
                   InputLabelProps={{ shrink: true }}
                   inputProps={{ title: "" }}
@@ -882,22 +1272,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                       "& fieldset": {
                         borderWidth: "2px",
-                        borderColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(255, 255, 255, 0.08)"
-                            : "rgba(0, 0, 0, 0.23)",
+                        borderColor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.23)",
                       },
                       "&:hover fieldset": {
-                        borderColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(255, 255, 255, 0.08)"
-                            : "rgba(0, 0, 0, 0.23)",
+                        borderColor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.23)",
                         borderWidth: "2px",
                       },
-                      "&.Mui-focused fieldset": {
-                        borderColor: theme.palette.divider,
-                        borderWidth: "2px",
-                      },
+                      "&.Mui-focused fieldset": { borderColor: theme.palette.divider, borderWidth: "2px" },
                       "& .MuiInputBase-input": {
                         py: 1,
                         outline: "none",
@@ -912,15 +1293,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       },
                     },
                     endAdornment: (
-                      <IconButton
-                        size="small"
-                        sx={{
-                          color: theme.palette.text.secondary,
-                          mr: 0.5,
-                          pointerEvents: "none",
-                        }}
-                        aria-hidden
-                      >
+                      <IconButton size="small" sx={{ color: theme.palette.text.secondary, mr: 0.5, pointerEvents: "none" }} aria-hidden>
                         <CalendarToday sx={{ fontSize: 20 }} />
                       </IconButton>
                     ),
@@ -948,116 +1321,19 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       }
                     }
                   }}
-                  sx={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    cursor: "pointer",
-                    zIndex: 1,
-                  }}
+                  sx={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, cursor: "pointer", zIndex: 1 }}
                 />
               </Box>
             </Box>
-          </Box>
-
-          {/* Estado y Hora estimada */}
-          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  mb: 0.75,
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
-                }}
-              >
-                Estado
-              </Typography>
-              <TextField
-                select
-                size="small"
-                value={taskData.status}
-                onChange={(e) =>
-                  setTaskData({ ...taskData, status: e.target.value })
-                }
-                fullWidth
-                SelectProps={{
-                  MenuProps: {
-                    disablePortal: false,
-                    disableScrollLock: true,
-                    style: { zIndex: 1600 },
-                    slotProps: { root: { style: { zIndex: 1600 } } },
-                    PaperProps: {
-                      sx: {
-                        borderRadius: 2,
-                        mt: 1,
-                        zIndex: "1600 !important",
-                        backgroundColor: theme.palette.background.paper,
-                        boxShadow: theme.palette.mode === "dark"
-                          ? "0 8px 32px rgba(0, 0, 0, 0.4)"
-                          : "0 8px 32px rgba(0, 0, 0, 0.15)",
-                        maxHeight: 300,
-                        border: `1px solid ${theme.palette.divider}`,
-                        "& .MuiMenuItem-root": {
-                          color: theme.palette.text.primary,
-                          py: 0.75,
-                          "&:hover": { backgroundColor: theme.palette.action.hover },
-                          "&.Mui-selected": {
-                            backgroundColor: `${taxiMonterricoColors.green}20`,
-                            color: taxiMonterricoColors.green,
-                            "&:hover": { backgroundColor: `${taxiMonterricoColors.green}30` },
-                          },
-                        },
-                      },
-                    },
-                    anchorOrigin: { vertical: "bottom", horizontal: "left" },
-                    transformOrigin: { vertical: "top", horizontal: "left" },
-                  },
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": { borderColor: theme.palette.divider },
-                    "&.Mui-focused fieldset": {
-                      borderColor: theme.palette.divider,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputBase-input": { py: 1 },
-                }}
-              >
-                <MenuItem value="pending">Pendiente</MenuItem>
-                <MenuItem value="in progress">En Progreso</MenuItem>
-                <MenuItem value="completed">Completada</MenuItem>
-              </TextField>
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  mb: 0.75,
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
-                }}
-              >
-                Hora estimada
-              </Typography>
+              <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500 }}>Hora estimada</Typography>
               <Box sx={{ position: "relative", width: "100%" }}>
                 <TextField
                   inputRef={estimatedTimeInputRef}
                   size="small"
                   type="time"
                   value={taskData.estimatedTime}
-                  onChange={(e) =>
-                    setTaskData({ ...taskData, estimatedTime: e.target.value })
-                  }
+                  onChange={(e) => setTaskData({ ...taskData, estimatedTime: e.target.value })}
                   fullWidth
                   inputProps={{ title: "" }}
                   InputProps={{
@@ -1066,22 +1342,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                       "& fieldset": {
                         borderWidth: "2px",
-                        borderColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(255, 255, 255, 0.08)"
-                            : "rgba(0, 0, 0, 0.23)",
+                        borderColor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.23)",
                       },
                       "&:hover fieldset": {
-                        borderColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(255, 255, 255, 0.08)"
-                            : "rgba(0, 0, 0, 0.23)",
+                        borderColor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.23)",
                         borderWidth: "2px",
                       },
-                      "&.Mui-focused fieldset": {
-                        borderColor: theme.palette.divider,
-                        borderWidth: "2px",
-                      },
+                      "&.Mui-focused fieldset": { borderColor: theme.palette.divider, borderWidth: "2px" },
                       "& .MuiInputBase-input": {
                         py: 1,
                         outline: "none",
@@ -1096,21 +1363,12 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       },
                     },
                     endAdornment: (
-                      <IconButton
-                        size="small"
-                        sx={{
-                          color: theme.palette.text.secondary,
-                          mr: 0.5,
-                          pointerEvents: "none",
-                        }}
-                        aria-hidden
-                      >
+                      <IconButton size="small" sx={{ color: theme.palette.text.secondary, mr: 0.5, pointerEvents: "none" }} aria-hidden>
                         <Schedule sx={{ fontSize: 20 }} />
                       </IconButton>
                     ),
                   }}
                 />
-                {/* Overlay para ocultar el tooltip nativo del navegador y evitar borde blanco en hover */}
                 <Box
                   component="span"
                   role="presentation"
@@ -1133,138 +1391,16 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       }
                     }
                   }}
-                  sx={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    cursor: "pointer",
-                    zIndex: 1,
-                  }}
+                  sx={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, cursor: "pointer", zIndex: 1 }}
                 />
               </Box>
             </Box>
-          </Box>
-
-          {/* Prioridad y Fecha límite */}
-          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  mb: 0.75,
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
-                }}
-              >
-                Prioridad
-              </Typography>
-              <TextField
-                select
-                value={taskData.priority}
-                onChange={(e) =>
-                  setTaskData({ ...taskData, priority: e.target.value })
-                }
-                fullWidth
-                SelectProps={{
-                  MenuProps: {
-                    disablePortal: false,
-                    disableScrollLock: true,
-                    style: {
-                      zIndex: 1600,
-                    },
-                    slotProps: {
-                      root: {
-                        style: {
-                          zIndex: 1600,
-                        },
-                      },
-                    },
-                    PaperProps: {
-                      sx: {
-                        borderRadius: 2,
-                        mt: 1,
-                        zIndex: "1600 !important",
-                        backgroundColor: theme.palette.background.paper,
-                        boxShadow: theme.palette.mode === "dark" 
-                          ? "0 8px 32px rgba(0, 0, 0, 0.4)"
-                          : "0 8px 32px rgba(0, 0, 0, 0.15)",
-                        maxHeight: 300,
-                        border: `1px solid ${theme.palette.divider}`,
-                        "& .MuiMenuItem-root": {
-                          color: theme.palette.text.primary,
-                          py: 1,
-                          "&:hover": {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                          "&.Mui-selected": {
-                            backgroundColor: `${taxiMonterricoColors.green}20`,
-                            color: taxiMonterricoColors.green,
-                            "&:hover": {
-                              backgroundColor: `${taxiMonterricoColors.green}30`,
-                            },
-                          },
-                        },
-                      },
-                    },
-                    anchorOrigin: {
-                      vertical: "bottom",
-                      horizontal: "left",
-                    },
-                    transformOrigin: {
-                      vertical: "top",
-                      horizontal: "left",
-                    },
-                  },
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: theme.palette.divider,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: theme.palette.divider,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputBase-input": {
-                    py: 1,
-                  },
-                }}
-              >
-                <MenuItem value="low" sx={{ py: 0.75 }}>
-                  Baja
-                </MenuItem>
-                <MenuItem value="medium" sx={{ py: 0.75 }}>
-                  Media
-                </MenuItem>
-                <MenuItem value="high" sx={{ py: 0.75 }}>
-                  Alta
-                </MenuItem>
-              </TextField>
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  mb: 0.75,
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
-                }}
-              >
+              <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500 }}>
                 {taskType === "meeting" ? "Fecha" : "Fecha límite"}
               </Typography>
               <TextField
-                value={
-                  taskData.dueDate ? formatDateDisplay(taskData.dueDate) : ""
-                }
+                value={taskData.dueDate ? formatDateDisplay(taskData.dueDate) : ""}
                 onClick={handleOpenDatePicker}
                 fullWidth
                 InputProps={{
@@ -1276,10 +1412,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       sx={{
                         color: theme.palette.text.secondary,
                         mr: 0.5,
-                        "&:hover": {
-                          backgroundColor: "transparent",
-                          color: taxiMonterricoColors.orange,
-                        },
+                        "&:hover": { backgroundColor: "transparent", color: taxiMonterricoColors.orange },
                       }}
                     >
                       <CalendarToday sx={{ fontSize: 18 }} />
@@ -1291,22 +1424,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
                     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: theme.palette.divider,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: theme.palette.divider,
-                      borderWidth: "2px",
-                    },
+                    "& fieldset": { borderWidth: "2px", borderColor: theme.palette.divider },
+                    "&:hover fieldset": { borderColor: theme.palette.divider },
+                    "&.Mui-focused fieldset": { borderColor: theme.palette.divider, borderWidth: "2px" },
                   },
-                  "& .MuiInputBase-input": {
-                    py: 1,
-                    cursor: "pointer",
-                  },
+                  "& .MuiInputBase-input": { py: 1, cursor: "pointer" },
                 }}
               />
             </Box>

@@ -53,7 +53,7 @@ interface FullActivitiesTableCardProps {
   onSearchChange: (value: string) => void;
   onCreateActivity?: (type: 'note' | 'task' | 'email' | 'call' | 'meeting') => void;
   onActivityClick?: (activity: Activity) => void;
-  onToggleComplete?: (activityId: number, completed: boolean) => void;
+  onToggleComplete?: (activity: Activity, completed: boolean) => void;
   completedActivities?: { [key: number]: boolean };
   getActivityTypeLabel?: (type: string) => string;
 }
@@ -82,35 +82,54 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // En lista: nota/llamada/correo se muestran por tipo; meeting/task/todo/other como "Tarea"
+  // Tareas (isTask): siempre "Tarea". Actividades registradas: su tipo real (Reunión, Correo, etc.)
   const defaultGetActivityTypeLabel = (type: string) => {
     const t = type?.toLowerCase() || '';
-    if (['meeting', 'task', 'todo', 'other'].includes(t)) return 'Tarea';
     const typeMap: { [key: string]: string } = {
       note: 'Nota',
       email: 'Correo',
       call: 'Llamada',
+      meeting: 'Reunión',
+      task: 'Tarea',
+      todo: 'Tarea',
+      other: 'Tarea',
     };
     return typeMap[t] || 'Actividad';
   };
 
-  const getActivityTypeLabelFn = getActivityTypeLabel || defaultGetActivityTypeLabel;
+  const getActivityTypeLabelFn = (activity: any, type: string) => {
+    if ((activity as any)?.isTask || (activity as any)?.type === 'task') return 'Tarea';
+    return (getActivityTypeLabel || defaultGetActivityTypeLabel)(type);
+  };
 
-  const getActivityIconCompact = (type?: string) => {
+  const isTaskForDisplay = (activity: any) =>
+    !!(activity as any)?.isTask || (activity as any)?.type === 'task';
+
+  const isTaskActivity = (activity: Activity) => {
+    const t = (activity.type || '').toLowerCase();
+    return ['task', 'todo', 'other'].includes(t) || !!(activity as any).isTask;
+  };
+
+  const TASK_ORANGE = '#F57C00';
+
+  const getActivityIconCompact = (type?: string, colorOverride?: string) => {
+    const color = colorOverride ?? (type === 'note' ? '#9E9E9E' : type === 'email' ? '#1976D2' : type === 'call' ? '#2E7D32' : type === 'meeting' ? '#7B1FA2' : type === 'task' || type === 'todo' ? TASK_ORANGE : theme.palette.text.secondary);
     switch (type) {
       case 'note':
-        return <FontAwesomeIcon icon={['fas', 'note-sticky']} style={{ fontSize: 18, color: '#9E9E9E' }} />;
+        return <FontAwesomeIcon icon={['fas', 'note-sticky']} style={{ fontSize: 18, color }} />;
       case 'email':
-        return <Comment sx={{ fontSize: 18, color: '#1976D2' }} />;
+        return <Comment sx={{ fontSize: 18, color }} />;
       case 'call':
-        return <FontAwesomeIcon icon={['fas', 'phone']} style={{ fontSize: 18, color: '#2E7D32' }} />;
+        return <FontAwesomeIcon icon={['fas', 'phone']} style={{ fontSize: 18, color }} />;
       case 'task':
       case 'todo':
-        return <FontAwesomeIcon icon={['fas', 'thumbtack']} style={{ fontSize: 18, color: '#F57C00' }} />;
+        return <FontAwesomeIcon icon={['fas', 'thumbtack']} style={{ fontSize: 18, color }} />;
       case 'meeting':
-        return <FontAwesomeIcon icon={['fas', 'calendar-week']} style={{ fontSize: 18, color: '#7B1FA2' }} />;
+        return <FontAwesomeIcon icon={['fas', 'calendar-week']} style={{ fontSize: 18, color }} />;
+      case 'other':
+        return <FontAwesomeIcon icon={['fas', 'thumbtack']} style={{ fontSize: 18, color }} />;
       default:
-        return <Comment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />;
+        return <Comment sx={{ fontSize: 18, color }} />;
     }
   };
 
@@ -132,9 +151,9 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
     }
   };
 
-  const handleToggleComplete = (activityId: number, checked: boolean) => {
+  const handleToggleComplete = (activity: Activity, checked: boolean) => {
     if (onToggleComplete) {
-      onToggleComplete(activityId, checked);
+      onToggleComplete(activity, checked);
     }
   };
 
@@ -158,7 +177,7 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
       Reunión: ['meeting'],
     };
     filteredActivities = filteredActivities.filter((activity) => {
-      let activityType = activity.type?.toLowerCase() || '';
+      let activityType = ((activity as any).taskSubType || activity.type || '')?.toLowerCase() || '';
       if (activity.isTask && !activityType) {
         activityType = 'task';
       }
@@ -824,13 +843,14 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
                     },
                   }}
                 >
-                  {/* Checkbox */}
-                  {onToggleComplete && (
+                  {/* Checkbox: solo para tareas (task, todo, other). Bloqueado cuando ya está completada */}
+                  {onToggleComplete && isTaskActivity(activity) && (
                     <Checkbox
                       checked={isCompleted}
+                      disabled={isCompleted}
                       onChange={(e) => {
                         e.stopPropagation();
-                        handleToggleComplete(activity.id, e.target.checked);
+                        handleToggleComplete(activity, e.target.checked);
                       }}
                       onClick={(e) => e.stopPropagation()}
                       size="small"
@@ -851,7 +871,10 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
                       flexShrink: 0,
                     }}
                   >
-                    {getActivityIconCompact(activity.type)}
+                    {getActivityIconCompact(
+                      (activity as any).taskSubType || activity.type || 'task',
+                      isTaskForDisplay(activity) ? TASK_ORANGE : undefined
+                    )}
                   </Box>
 
                   {/* Título */}
@@ -912,7 +935,7 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
                   <Typography
                     variant="body2"
                     sx={{
-                      color: getTypeColor(activity.type),
+                      color: getTypeColor(isTaskForDisplay(activity) ? 'task' : ((activity as any).taskSubType || activity.type)),
                       fontWeight: 600,
                       fontSize: '0.75rem',
                       textTransform: 'uppercase',
@@ -920,7 +943,7 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
                       textAlign: 'right',
                     }}
                   >
-                    {getActivityTypeLabelFn(activity.type || '')}
+                    {getActivityTypeLabelFn(activity, (activity as any).taskSubType || activity.type || '')}
                   </Typography>
                 </Box>
               );

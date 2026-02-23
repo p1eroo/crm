@@ -1310,7 +1310,6 @@ const Contacts: React.FC = () => {
     <Box
       sx={{
         bgcolor: theme.palette.background.default,
-        minHeight: "100vh",
       }}
     >
       {/* Contenedor principal */}

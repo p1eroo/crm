@@ -352,7 +352,6 @@ const MassEmail: React.FC = () => {
     <Box
       sx={{
         backgroundColor: theme.palette.background.default,
-        minHeight: '100vh',
         pb: { xs: 2, sm: 3, md: 4 },
         px: { xs: 1.5, sm: 2, md: 3 },
         maxWidth: 1200,

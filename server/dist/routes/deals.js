@@ -71,13 +71,14 @@ const transformDeal = (deal) => {
 // Obtener todos los deals
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit: limitParam = 50, search, stage, ownerId, pipelineId, contactId, companyId, 
+        const { page = 1, limit: limitParam = 50, search, stage, ownerId, pipelineId, contactId, companyId, minimal, 
         // Nuevos parámetros de filtro
         stages, // Array de etapas
         owners, // Array: ["me", "unassigned", "1", "2"]
         sortBy = 'newest', // newest, oldest, name, nameDesc
         // Filtros por columna
         filterNombre, filterContacto, filterEmpresa, filterEtapa, filterPropietario, } = req.query;
+        const isMinimal = String(minimal) === 'true';
         // Limitar el tamaño máximo de página para evitar sobrecarga
         const maxLimit = 100;
         const requestedLimit = Number(limitParam);
@@ -296,16 +297,18 @@ router.get('/', async (req, res) => {
                 }
             }
         }
-        // Configurar includes
+        // Configurar includes (minimal=true excluye email del Owner para listados)
+        const ownerAttrs = isMinimal ? ['id', 'firstName', 'lastName'] : ['id', 'firstName', 'lastName', 'email'];
         const includes = [
-            { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+            { model: User_1.User, as: 'Owner', attributes: ownerAttrs, required: false },
         ];
+        const contactAttrs = isMinimal ? ['id', 'firstName', 'lastName'] : ['id', 'firstName', 'lastName', 'email'];
         // Si hay filtro por contacto, hacer el include requerido
         if (filterContacto) {
             includes.push({
                 model: Contact_1.Contact,
                 as: 'Contact',
-                attributes: ['id', 'firstName', 'lastName', 'email'],
+                attributes: contactAttrs,
                 required: true,
                 where: {
                     [sequelize_1.Op.or]: [
@@ -319,7 +322,7 @@ router.get('/', async (req, res) => {
             includes.push({
                 model: Contact_1.Contact,
                 as: 'Contact',
-                attributes: ['id', 'firstName', 'lastName', 'email'],
+                attributes: contactAttrs,
                 required: false,
             });
         }

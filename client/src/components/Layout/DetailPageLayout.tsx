@@ -7,7 +7,6 @@ import {
   Button,
   Divider,
   IconButton,
-  Tooltip,
   useTheme,
   CircularProgress,
   Drawer,
@@ -79,7 +78,8 @@ interface DetailPageLayoutProps {
   // Botones de actividades
   activityButtons?: Array<{
     icon: any;
-    tooltip: string;
+    tooltip?: string;
+    label?: string;
     onClick: () => void;
   }>;
   /** Contenido extra bajo el subtítulo (ej. botón Subir logo) */
@@ -168,7 +168,6 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
     <Box
       sx={{
         bgcolor: theme.palette.background.default,
-        minHeight: "100vh",
         mt: { xs: 2, sm: 3, md: 0 },
         pb: { xs: 2, sm: 3, md: 4 },
         display: "flex",
@@ -249,7 +248,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
             variant="h4"
             sx={{
               fontWeight: 700,
-              color: theme.palette.common.white,
+              color: theme.palette.text.primary,
               fontSize: { xs: "1.125rem", sm: "1.375rem", md: "1.5rem" },
             }}
           >
@@ -389,7 +388,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                     fontWeight: 700,
                     fontSize: "1.375rem",
                     textAlign: "center",
-                    color: theme.palette.common.white,
+                    color: theme.palette.text.primary,
                   }}
                 >
                   {entityName}
@@ -414,10 +413,19 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                     gap: 2,
                     mt: 1,
                     mb: -1,
+                    flexWrap: "wrap",
                   }}
                 >
                   {activityButtons.map((button, index) => (
-                    <Tooltip key={index} title={button.tooltip} arrow>
+                    <Box
+                      key={index}
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 0.5,
+                      }}
+                    >
                       <IconButton
                         onClick={button.onClick}
                         sx={{
@@ -445,7 +453,19 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                           style={{ fontSize: 20 }}
                         />
                       </IconButton>
-                    </Tooltip>
+                      {(button.label || button.tooltip) && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            fontSize: "0.75rem",
+                            textAlign: "center",
+                          }}
+                        >
+                          {button.label ?? button.tooltip}
+                        </Typography>
+                      )}
+                    </Box>
                   ))}
                 </Box>
               )}

@@ -111,7 +111,7 @@ export const DealFormContent: React.FC<DealFormContentProps> = (props) => {
   
   // Buscar la empresa seleccionada en ambas listas (companyOptions y companies)
   // Esto asegura que la empresa vinculada aparezca cuando se abre el drawer
-  let selectedCompany = null;
+  let selectedCompany: { id: number; name: string } | null = null;
   if (formData.companyId) {
     // Buscar primero en companyOptions (resultados de búsqueda)
     if (companyOptions.length > 0) {
@@ -302,15 +302,16 @@ export const DealFormContent: React.FC<DealFormContentProps> = (props) => {
               onInputChange={(event, newInputValue, reason) => {
                 if (setCompanySearch) {
                   if (reason === 'reset') {
-                    // Cuando se resetea (selección de opción), limpiar el input
                     setCompanySearch('');
-                  } else {
-                    // Cuando el usuario escribe, actualizar el input
+                  } else if (reason === 'input') {
+                    if (selectedCompany && newInputValue !== selectedCompany.name) {
+                      setFormData({ ...formData, companyId: '' });
+                    }
                     setCompanySearch(newInputValue);
                   }
                 }
               }}
-              inputValue={companySearch || ''}
+              inputValue={selectedCompany ? selectedCompany.name : (companySearch || '')}
               open={companySearch.length > 0 && companySearch.trim().length > 0}
               openOnFocus={false}
               onClose={() => {
@@ -401,12 +402,18 @@ export const DealFormContent: React.FC<DealFormContentProps> = (props) => {
                 if (setContactSearchInput) {
                   if (reason === 'reset') {
                     setContactSearchInput('');
-                  } else {
+                  } else if (reason === 'input') {
+                    const contactLabel = selectedContact ? `${selectedContact.firstName} ${selectedContact.lastName}`.trim() : '';
+                    if (selectedContact && newInputValue !== contactLabel) {
+                      setFormData({ ...formData, contactId: '' });
+                    }
                     setContactSearchInput(newInputValue);
                   }
                 }
               }}
-              inputValue={contactSearchInput}
+              inputValue={
+                selectedContact ? `${selectedContact.firstName} ${selectedContact.lastName}`.trim() : (contactSearchInput || '')
+              }
               open={contactSearchInput.length > 0 && contactSearchInput.trim().length > 0}
               openOnFocus={false}
               onClose={() => {

@@ -13,10 +13,11 @@ import {
   Alert,
   useTheme,
 } from "@mui/material";
-import { Close, Send } from "@mui/icons-material";
+import { Close, Save, Send } from "@mui/icons-material";
 import RichTextEditor from "./RichTextEditor";
 import { taxiMonterricoColors } from "../theme/colors";
 import { pageStyles } from "../theme/styles";
+import api from "../config/api";
 
 interface EmailComposerProps {
   open: boolean;
@@ -25,6 +26,15 @@ interface EmailComposerProps {
   recipientName?: string;
   initialSubject?: string;
   initialBody?: string;
+  /** Solo registrar la actividad, sin enviar por Gmail */
+  registerOnly?: boolean;
+  contactId?: number;
+  companyId?: number;
+  /** Para contactos con varias empresas: crear una actividad por empresa */
+  companyIds?: number[];
+  /** Callback cuando se guarda la actividad (modo registerOnly) */
+  onSave?: (newActivity: any) => void | Promise<void>;
+  /** Callback legacy para envío real (no usado cuando registerOnly=true) */
   onSend?: (emailData: {
     to: string;
     subject: string;
@@ -39,6 +49,11 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
   recipientName,
   initialSubject,
   initialBody,
+  registerOnly = true,
+  contactId,
+  companyId,
+  companyIds,
+  onSave,
   onSend,
 }) => {
   const theme = useTheme();
@@ -63,12 +78,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
     }
   }, [initialSubject]);
 
-  const handleSend = async () => {
-    if (!to.trim()) {
-      setError("El destinatario es requerido");
-      return;
-    }
-
+  const handleSave = async () => {
     if (!subject.trim()) {
       setError("El asunto es requerido");
       return;
@@ -84,11 +94,54 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
       return;
     }
 
+    if (!registerOnly && !to.trim()) {
+      setError("El destinatario es requerido");
+      return;
+    }
+
     setError("");
     setSending(true);
 
     try {
-      if (onSend) {
+      if (registerOnly) {
+        const description = body.replace(/<[^>]*>/g, "").trim() || undefined;
+        const ids = companyIds && companyIds.length > 0 ? companyIds : companyId != null ? [companyId] : [];
+        let newActivity: any = null;
+
+        if (ids.length > 0) {
+          const responses = await Promise.all(
+            ids.map((cid) =>
+              api.post("/activities/emails", {
+                subject: subject.trim(),
+                description,
+                contactId,
+                companyId: cid,
+              })
+            )
+          );
+          const newActivities = responses.map((r) => r?.data).filter(Boolean);
+          newActivity = newActivities[0];
+          setSuccess(true);
+          if (onSave && newActivities.length > 0) {
+            await onSave(newActivities.length > 1 ? newActivities : newActivity);
+          }
+        } else {
+          const res = await api.post("/activities/emails", {
+            subject: subject.trim(),
+            description,
+            contactId,
+            companyId,
+          });
+          newActivity = res.data;
+          setSuccess(true);
+          if (onSave && newActivity) {
+            await onSave(newActivity);
+          }
+        }
+        setTimeout(() => {
+          handleClose();
+        }, 1500);
+      } else if (onSend) {
         await onSend({
           to: to.trim(),
           subject: subject.trim(),
@@ -100,7 +153,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
         }, 1500);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Error al enviar el correo");
+      setError(err.response?.data?.message || "Error al guardar la actividad");
     } finally {
       setSending(false);
     }
@@ -368,7 +421,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
                 },
               }}
             >
-              Correo enviado exitosamente
+              {registerOnly ? "Actividad registrada correctamente" : "Correo enviado exitosamente"}
             </Alert>
           )}
         </Box>
@@ -382,9 +435,9 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
           Cancelar
         </Button>
         <Button
-          onClick={handleSend}
+          onClick={handleSave}
           variant="contained"
-          startIcon={sending ? <CircularProgress size={16} /> : <Send />}
+          startIcon={sending ? <CircularProgress size={16} /> : (registerOnly ? <Save /> : <Send />)}
           disabled={
             sending ||
             !subject.trim() ||
@@ -395,7 +448,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
           }
           sx={pageStyles.saveButton}
         >
-          {sending ? "Enviando..." : "Enviar"}
+          {sending ? (registerOnly ? "Guardando..." : "Enviando...") : (registerOnly ? "Guardar" : "Enviar")}
         </Button>
       </DialogActions>
     </Dialog>

@@ -1732,7 +1732,6 @@ const Companies: React.FC = () => {
   return (
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
-      minHeight: '100vh',
     }}>
 
       {/* Indicador de filtros por columna activos */}

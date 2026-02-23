@@ -35,6 +35,11 @@ interface MeetingModalProps {
   entityName: string;
   user: User | null;
   onSave: (newTask: any) => void;
+  // Opcional: valores iniciales al completar tarea desde Tasks
+  initialTitle?: string;
+  initialDueDate?: string;
+  initialTime?: string;
+  initialDescription?: string;
 }
 
 const MeetingModal: React.FC<MeetingModalProps> = ({
@@ -45,6 +50,10 @@ const MeetingModal: React.FC<MeetingModalProps> = ({
   entityName,
   user,
   onSave,
+  initialTitle,
+  initialDueDate,
+  initialTime,
+  initialDescription,
 }) => {
   const theme = useTheme();
   const [taskData, setTaskData] = useState({
@@ -61,7 +70,7 @@ const MeetingModal: React.FC<MeetingModalProps> = ({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Resetear estados cuando se abre/cierra el modal
+  // Resetear estados cuando se abre/cierra el modal; pre-llenar si hay valores iniciales
   useEffect(() => {
     if (!open) {
       setTaskData({
@@ -73,6 +82,14 @@ const MeetingModal: React.FC<MeetingModalProps> = ({
       });
       setDatePickerAnchorEl(null);
       setSelectedDate(null);
+    } else if (initialTitle || initialDueDate || initialTime || initialDescription) {
+      setTaskData({
+        title: initialTitle || "",
+        description: initialDescription || "",
+        time: initialTime || "",
+        dueDate: initialDueDate || "",
+        type: "meeting",
+      });
     } else {
       // Asegurar que siempre sea "meeting"
       setTaskData((prev) => ({
@@ -80,7 +97,7 @@ const MeetingModal: React.FC<MeetingModalProps> = ({
         type: "meeting",
       }));
     }
-  }, [open]);
+  }, [open, initialTitle, initialDueDate, initialTime, initialDescription]);
 
   useEffect(() => {
     if (descriptionEditorRef.current && open) {

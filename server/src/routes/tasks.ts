@@ -61,6 +61,7 @@ router.get('/', async (req: AuthRequest, res) => {
       companyId, 
       dealId,
       search,
+      minimal,
       sortBy = 'newest', // newest, oldest, name, nameDesc, dueDate
       // Filtros por columna
       filterTitulo,
@@ -73,6 +74,7 @@ router.get('/', async (req: AuthRequest, res) => {
       filterEmpresa,
       filterContacto,
     } = req.query;
+    const isMinimal = String(minimal) === 'true';
     
     // Limitar el tamaño máximo de página para evitar sobrecarga
     const maxLimit = 100;
@@ -227,7 +229,8 @@ router.get('/', async (req: AuthRequest, res) => {
     const filterEmpresaStr = filterEmpresa ? String(filterEmpresa).trim() : '';
     const filterContactoStr = filterContacto ? String(filterContacto).trim() : '';
 
-    const includeAssignedTo: any = { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false };
+    const userAttrs = isMinimal ? ['id', 'firstName', 'lastName'] : ['id', 'firstName', 'lastName', 'email', 'avatar'];
+    const includeAssignedTo: any = { model: User, as: 'AssignedTo', attributes: userAttrs, required: false };
     if (filterAsignadoAStr) {
       includeAssignedTo.required = true;
       includeAssignedTo.where = {
@@ -257,7 +260,7 @@ router.get('/', async (req: AuthRequest, res) => {
       where,
       include: [
         includeAssignedTo,
-        { model: User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false },
+        { model: User, as: 'CreatedBy', attributes: userAttrs, required: false },
         includeContact,
         includeCompany,
         { model: Deal, as: 'Deal', attributes: ['id', 'name'], required: false },
@@ -282,7 +285,7 @@ router.get('/', async (req: AuthRequest, res) => {
     if (error.message && (error.message.includes('no existe la columna') || error.message.includes('does not exist'))) {
       console.warn('⚠️  Columna faltante detectada, intentando sin filtros de status/priority...');
       try {
-        const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId, dealId: fallbackDealId, page: fallbackPage = 1, limit: fallbackLimit = 50 } = req.query;
+        const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId, dealId: fallbackDealId, page: fallbackPage = 1, limit: fallbackLimit = 50, minimal: fallbackMinimal } = req.query;
         const fallbackOffset = (Number(fallbackPage) - 1) * Number(fallbackLimit);
         const simpleWhere: any = {};
         if (fallbackAssignedToId) simpleWhere.assignedToId = fallbackAssignedToId;
@@ -290,11 +293,13 @@ router.get('/', async (req: AuthRequest, res) => {
         if (fallbackCompanyId) simpleWhere.companyId = fallbackCompanyId;
         if (fallbackDealId) simpleWhere.dealId = fallbackDealId;
         
+        const fallbackIsMinimal = String(fallbackMinimal) === 'true';
+        const fallbackUserAttrs = fallbackIsMinimal ? ['id', 'firstName', 'lastName'] : ['id', 'firstName', 'lastName', 'email'];
         const tasks = await Task.findAndCountAll({
           where: simpleWhere,
           include: [
-            { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
-            { model: User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+            { model: User, as: 'AssignedTo', attributes: fallbackUserAttrs, required: false },
+            { model: User, as: 'CreatedBy', attributes: fallbackUserAttrs, required: false },
             { model: Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName'], required: false },
             { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
             { model: Deal, as: 'Deal', attributes: ['id', 'name'], required: false },

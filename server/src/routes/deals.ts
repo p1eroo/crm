@@ -72,6 +72,7 @@ router.get('/', async (req: AuthRequest, res) => {
       pipelineId, 
       contactId, 
       companyId,
+      minimal,
       // Nuevos parámetros de filtro
       stages, // Array de etapas
       owners, // Array: ["me", "unassigned", "1", "2"]
@@ -83,6 +84,7 @@ router.get('/', async (req: AuthRequest, res) => {
       filterEtapa,
       filterPropietario,
     } = req.query;
+    const isMinimal = String(minimal) === 'true';
     
     // Limitar el tamaño máximo de página para evitar sobrecarga
     const maxLimit = 100;
@@ -313,17 +315,19 @@ router.get('/', async (req: AuthRequest, res) => {
       }
     }
 
-    // Configurar includes
+    // Configurar includes (minimal=true excluye email del Owner para listados)
+    const ownerAttrs = isMinimal ? ['id', 'firstName', 'lastName'] : ['id', 'firstName', 'lastName', 'email'];
     const includes: any[] = [
-      { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+      { model: User, as: 'Owner', attributes: ownerAttrs, required: false },
     ];
     
+    const contactAttrs = isMinimal ? ['id', 'firstName', 'lastName'] : ['id', 'firstName', 'lastName', 'email'];
     // Si hay filtro por contacto, hacer el include requerido
     if (filterContacto) {
       includes.push({
         model: Contact,
         as: 'Contact',
-        attributes: ['id', 'firstName', 'lastName', 'email'],
+        attributes: contactAttrs,
         required: true,
         where: {
           [Op.or]: [
@@ -336,7 +340,7 @@ router.get('/', async (req: AuthRequest, res) => {
       includes.push({
         model: Contact,
         as: 'Contact',
-        attributes: ['id', 'firstName', 'lastName', 'email'],
+        attributes: contactAttrs,
         required: false,
       });
     }

@@ -18,7 +18,7 @@ import {
   Avatar,
 } from '@mui/material';
 import { Person, ChevronLeft, ChevronRight, Close, Business, KeyboardArrowDown } from '@mui/icons-material';
-import { Building2 } from 'lucide-react';
+import { Building2, Handshake } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import ReactApexChart from 'react-apexcharts';
 import type { ApexOptions } from 'apexcharts';
@@ -169,6 +169,18 @@ const Reports: React.FC = () => {
   const activitiesChartContainerRef = React.useRef<HTMLDivElement>(null);
   const activitiesClickAnchorRef = React.useRef<HTMLDivElement>(null);
   const activitiesClickPositionRef = React.useRef<{ clientX: number; clientY: number }>({ clientX: 0, clientY: 0 });
+
+  // Popover de negocios por etapa (al hacer clic en el gráfico de donut)
+  const [dealsPopoverAnchor, setDealsPopoverAnchor] = useState<HTMLElement | null>(null);
+  const [dealsAnchorPosition, setDealsAnchorPosition] = useState<{ left: number; top: number } | null>(null);
+  const [dealsModalStage, setDealsModalStage] = useState<string | null>(null);
+  const [dealsModalStageLabel, setDealsModalStageLabel] = useState<string>('');
+  const [dealsModalDeals, setDealsModalDeals] = useState<Array<{ id: number; name: string; amount: number }>>([]);
+  const [dealsModalLoading, setDealsModalLoading] = useState(false);
+  const [dealsModalPage, setDealsModalPage] = useState(1);
+  const [dealsModalTotalPages, setDealsModalTotalPages] = useState(0);
+  const dealsModalLimit = 20;
+  const dealsClickAnchorRef = React.useRef<HTMLDivElement>(null);
 
   // Movimiento semanal de empresas (polar area: avance, nuevo ingreso, retroceso, sin cambios)
   const [weeklyMovementRangeData, setWeeklyMovementRangeData] = useState<Array<{
@@ -380,6 +392,44 @@ const Reports: React.FC = () => {
       setActivitiesPopoverAnchor(activitiesClickAnchorRef.current);
     }
   }, [activitiesAnchorPosition, activitiesModalType]);
+
+  const fetchDealsList = async (stage: string | null, page: number) => {
+    setDealsModalLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (stage) params.set('stage', stage);
+      if (reportsAdvisorFilter != null) params.set('userId', String(reportsAdvisorFilter));
+      if (reportsDateRange) {
+        params.set('fromDate', reportsDateRange.from.toISOString());
+        params.set('toDate', reportsDateRange.to.toISOString());
+      }
+      params.set('page', String(page));
+      params.set('limit', String(dealsModalLimit));
+      const response = await api.get<{ deals: Array<{ id: number; name: string; amount: number }>; total: number; page: number; totalPages: number }>(`/reports/deals-list?${params.toString()}`);
+      setDealsModalDeals(response.data?.deals || []);
+      setDealsModalPage(response.data?.page ?? 1);
+      setDealsModalTotalPages(response.data?.totalPages ?? 0);
+    } catch (err: any) {
+      console.error('Error al cargar negocios por etapa:', err);
+      setDealsModalDeals([]);
+    } finally {
+      setDealsModalLoading(false);
+    }
+  };
+
+  const handleOpenDealsList = (stageKey: string | null, stageLabel: string, clientX: number, clientY: number) => {
+    setDealsModalStage(stageKey);
+    setDealsModalStageLabel(stageLabel);
+    setDealsAnchorPosition({ left: clientX, top: clientY });
+    setDealsModalPage(1);
+    fetchDealsList(stageKey, 1);
+  };
+
+  useEffect(() => {
+    if (dealsAnchorPosition != null && dealsModalStageLabel !== '' && dealsClickAnchorRef.current) {
+      setDealsPopoverAnchor(dealsClickAnchorRef.current);
+    }
+  }, [dealsAnchorPosition, dealsModalStageLabel]);
 
   useEffect(() => {
     fetchActivitiesByType();
@@ -1442,11 +1492,42 @@ const Reports: React.FC = () => {
               const chartSeries = visibleDealsIndices.map((i) => dealsChartData.series[i]);
               const chartAmounts = visibleDealsIndices.map((i) => dealsChartData.amounts[i] ?? 0);
               const chartColors = visibleDealsIndices.map((i) => PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length]);
+              const chartStageKeys = visibleDealsIndices.map((i) => dealsChartData.stageKeys[i] ?? '');
               return (
-            <Box sx={{ width: '100%', maxWidth: 330 }}>
+            <Box sx={{ width: '100%', maxWidth: 330, cursor: 'pointer' }}>
               <ReactApexChart
                 options={{
-                  chart: { type: 'pie', width: 400, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
+                  chart: {
+                    type: 'pie',
+                    width: 400,
+                    toolbar: { show: false },
+                    fontFamily: 'inherit',
+                    background: 'transparent',
+                    events: {
+                      dataPointSelection: (event: MouseEvent, _chartContext: unknown, config: { dataPointIndex: number }) => {
+                        const index = config?.dataPointIndex ?? -1;
+                        if (index >= 0 && index < chartStageKeys.length) {
+                          const stageKey = chartStageKeys[index];
+                          const stageLabel = chartLabels[index];
+                          if (stageKey) {
+                            handleOpenDealsList(stageKey, stageLabel, event.clientX, event.clientY);
+                          }
+                        }
+                      },
+                      click: (event: MouseEvent, _chartContext: unknown, config: { dataPointIndex?: number }) => {
+                        if (config?.dataPointIndex !== undefined) {
+                          const index = config.dataPointIndex;
+                          if (index >= 0 && index < chartStageKeys.length) {
+                            const stageKey = chartStageKeys[index];
+                            const stageLabel = chartLabels[index];
+                            if (stageKey) {
+                              handleOpenDealsList(stageKey, stageLabel, event.clientX, event.clientY);
+                            }
+                          }
+                        }
+                      },
+                    },
+                  },
                   labels: chartLabels,
                   colors: chartColors,
                   fill: { type: 'solid', opacity: 1 },
@@ -1664,6 +1745,166 @@ const Reports: React.FC = () => {
                       size="small"
                       onClick={() => companiesModalStage && fetchCompaniesList(companiesModalStage, companiesModalPage + 1)}
                       disabled={companiesModalPage >= companiesModalTotalPages}
+                    >
+                      <ChevronRight />
+                    </IconButton>
+                  </Box>
+                </Box>
+              )}
+            </>
+          )}
+        </Box>
+      </Popover>
+
+      {/* Ancla invisible para Popover de negocios */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            ref={dealsClickAnchorRef}
+            style={{
+              position: 'fixed',
+              left: dealsAnchorPosition?.left ?? 0,
+              top: dealsAnchorPosition?.top ?? 0,
+              width: 1,
+              height: 1,
+              pointerEvents: 'none',
+              opacity: 0,
+              zIndex: 0,
+            }}
+            aria-hidden="true"
+          />,
+          document.body
+        )}
+      {/* Popover: lista de negocios por etapa al hacer clic en el gráfico de donut */}
+      <Popover
+        open={Boolean(dealsPopoverAnchor)}
+        anchorEl={dealsPopoverAnchor}
+        onClose={() => {
+          setDealsPopoverAnchor(null);
+          setDealsAnchorPosition(null);
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{ zIndex: 1600 }}
+        PaperProps={{
+          sx: {
+            maxHeight: 520,
+            width: 360,
+            maxWidth: '90vw',
+            overflow: 'hidden',
+            mt: 1,
+            backgroundColor: `${theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper} !important`,
+            bgcolor: `${theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper} !important`,
+          },
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+            borderRadius: 'inherit',
+            zIndex: 0,
+            pointerEvents: 'none',
+          }}
+        />
+        <Box sx={{ position: 'relative', zIndex: 1, px: 2, pt: 1.5, pb: 2, bgcolor: 'transparent' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+            <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+              {dealsModalStageLabel}
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => setDealsPopoverAnchor(null)}
+              sx={{ color: theme.palette.error.main }}
+              aria-label="Cerrar"
+            >
+              <Close />
+            </IconButton>
+          </Box>
+          {dealsModalLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={32} />
+            </Box>
+          ) : (
+            <>
+              <Box sx={{ maxHeight: 400, overflow: 'auto', bgcolor: 'transparent' }}>
+                {dealsModalDeals.length === 0 ? (
+                  <Box sx={{ py: 4, textAlign: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      No hay negocios en esta etapa
+                    </Typography>
+                  </Box>
+                ) : (
+                  dealsModalDeals.map((d) => (
+                    <Box
+                      key={d.id}
+                      onClick={() => {
+                        setDealsPopoverAnchor(null);
+                        navigate(`/deals/${d.id}`);
+                      }}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        py: 1,
+                        px: 1,
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
+                      }}
+                    >
+                      <Avatar
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          bgcolor: taxiMonterricoColors.teal,
+                          flexShrink: 0,
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
+                        }}
+                      >
+                        <Handshake size={16} color="white" />
+                      </Avatar>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: theme.palette.text.primary }}>
+                          {d.name || '—'}
+                        </Typography>
+                        <Typography
+                          component="span"
+                          sx={{
+                            display: 'inline-block',
+                            mt: 0.25,
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            color: taxiMonterricoColors.green,
+                          }}
+                        >
+                          {formatCurrencyPE(Number(d.amount))}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))
+                )}
+              </Box>
+              {dealsModalTotalPages > 1 && (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Página {dealsModalPage} de {dealsModalTotalPages}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton
+                      size="small"
+                      onClick={() => dealsModalStage && fetchDealsList(dealsModalStage, dealsModalPage - 1)}
+                      disabled={dealsModalPage <= 1}
+                    >
+                      <ChevronLeft />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => dealsModalStage && fetchDealsList(dealsModalStage, dealsModalPage + 1)}
+                      disabled={dealsModalPage >= dealsModalTotalPages}
                     >
                       <ChevronRight />
                     </IconButton>

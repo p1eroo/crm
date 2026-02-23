@@ -656,7 +656,6 @@ const Deals: React.FC = () => {
   return (
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
-      minHeight: '100vh',
       width: '100%',
       maxWidth: '100%',
         overflow: 'hidden',

@@ -340,29 +340,6 @@ const Emails: React.FC = () => {
     });
   };
 
-  const handleSendEmail = async (emailData: { to: string; subject: string; body: string }) => {
-    try {
-      const emailResponse = await api.post('/emails/send', emailData);
-      
-      // Registrar como actividad
-      try {
-        await api.post('/activities/emails', {
-          subject: emailData.subject,
-          description: emailData.body.replace(/<[^>]*>/g, ''),
-          gmailMessageId: emailResponse.data.messageId,
-          gmailThreadId: emailResponse.data.threadId,
-        });
-      } catch (err) {
-        console.error('Error registrando email como actividad:', err);
-      }
-
-      setComposeOpen(false);
-      handleRefresh();
-    } catch (err: any) {
-      throw err;
-    }
-  };
-
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -1290,14 +1267,15 @@ const Emails: React.FC = () => {
         )}
       </Box>
 
-      {/* Email Composer para correos nuevos */}
+      {/* Email Composer - solo registra actividad (sin envío por Gmail) */}
       <EmailComposer
         open={composeOpen}
-        onClose={() => {
-          setComposeOpen(false);
-        }}
+        onClose={() => setComposeOpen(false)}
         recipientEmail=""
-        onSend={handleSendEmail}
+        registerOnly
+        onSave={() => {
+          handleRefresh();
+        }}
       />
       </Paper>
     </Box>

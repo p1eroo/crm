@@ -149,6 +149,7 @@ router.get('/', async (req: AuthRequest, res) => {
       search, 
       lifecycleStage, 
       ownerId,
+      companyId: companyIdParam, // Filtrar por empresa
       // Nuevos parámetros de filtro
       stages, // Array de etapas: ["lead", "activo"]
       countries, // Array de países: ["Perú", "Chile"]
@@ -179,6 +180,14 @@ router.get('/', async (req: AuthRequest, res) => {
     // ⭐ Aplicar filtro automático según rol del usuario
     const roleFilter = getRoleBasedDataFilter(req.userRole, req.userId);
     Object.assign(where, roleFilter);
+    
+    // Filtro por empresa (contactos vinculados a una empresa)
+    if (companyIdParam != null && companyIdParam !== '') {
+      const companyId = Number(companyIdParam);
+      if (!isNaN(companyId)) {
+        where.companyId = companyId;
+      }
+    }
     
     // Búsqueda general
     if (search) {

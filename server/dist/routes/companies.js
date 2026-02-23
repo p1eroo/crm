@@ -74,17 +74,13 @@ const cleanCompany = (company, includeSensitive = false) => {
         if (companyData.idClienteEmpresa != null)
             cleaned.idClienteEmpresa = companyData.idClienteEmpresa;
     }
-    // Solo incluir relaciones si existen
+    // Solo incluir relaciones si existen (Owner sin email por privacidad)
     if (companyData.Owner) {
         cleaned.Owner = {
             id: companyData.Owner.id,
             firstName: companyData.Owner.firstName || '',
             lastName: companyData.Owner.lastName || '',
         };
-        // Solo incluir email del Owner si se solicita explícitamente
-        if (includeSensitive && companyData.Owner.email) {
-            cleaned.Owner.email = companyData.Owner.email;
-        }
     }
     if (companyData.Contacts && Array.isArray(companyData.Contacts) && companyData.Contacts.length > 0) {
         cleaned.Contacts = companyData.Contacts;
@@ -702,12 +698,41 @@ router.get('/inactive', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-// Obtener una empresa por ID
-router.get('/:id', async (req, res) => {
+// Obtener solo contactos de una empresa (id + nombre) — para selectores, sin cargar empresa/deals/activities
+router.get('/:id/contacts', async (req, res) => {
     try {
         const company = await Company_1.Company.findByPk(req.params.id, {
+            include: [{ model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName'] }],
+        });
+        if (!company) {
+            return res.status(404).json({ error: 'Empresa no encontrada' });
+        }
+        const companyData = company.toJSON();
+        const manyToManyContacts = companyData.Contacts || [];
+        const contactsByCompanyId = await Contact_1.Contact.findAll({
+            where: { companyId: req.params.id },
+            attributes: ['id', 'firstName', 'lastName'],
+        });
+        const contactsMap = new Map();
+        manyToManyContacts.forEach((c) => contactsMap.set(c.id, { id: c.id, firstName: c.firstName ?? '', lastName: c.lastName ?? '' }));
+        contactsByCompanyId.forEach((c) => {
+            const j = c.toJSON ? c.toJSON() : c;
+            contactsMap.set(j.id, { id: j.id, firstName: j.firstName ?? '', lastName: j.lastName ?? '' });
+        });
+        res.json({ contacts: Array.from(contactsMap.values()) });
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// Obtener una empresa por ID
+// Query: contacts=minimal → devuelve solo id, firstName, lastName en Contacts (para selectores/listados)
+router.get('/:id', async (req, res) => {
+    try {
+        const contactsMinimal = req.query.contacts === 'minimal';
+        const company = await Company_1.Company.findByPk(req.params.id, {
             include: [
-                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'] },
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] }, // Contactos asociados muchos-a-muchos
                 { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname', 'ruc'] }, // Empresas relacionadas muchos-a-muchos
             ],
@@ -734,8 +759,16 @@ router.get('/:id', async (req, res) => {
         oneToManyContacts.forEach((contact) => {
             contactsMap.set(contact.id, contact);
         });
-        // Convertir el Map a array
-        companyData.Contacts = Array.from(contactsMap.values());
+        // Convertir el Map a array; si contacts=minimal, solo id y nombre
+        let contactsList = Array.from(contactsMap.values());
+        if (contactsMinimal) {
+            contactsList = contactsList.map((c) => ({
+                id: c.id,
+                firstName: c.firstName ?? '',
+                lastName: c.lastName ?? '',
+            }));
+        }
+        companyData.Contacts = contactsList;
         // Nombre y fecha de cierre del primer negocio (Deal) asociado por companyId para el formulario
         const firstDeal = await Deal_1.Deal.findOne({
             where: { companyId: req.params.id },
@@ -816,7 +849,7 @@ router.post('/', async (req, res) => {
         const company = await Company_1.Company.create(companyData);
         const newCompany = await Company_1.Company.findByPk(company.id, {
             include: [
-                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'] },
             ],
         });
         // Crear negocio (Deal) asociado con la misma etapa, facturación y propietario (empresa y negocio comparten valores)
@@ -894,7 +927,7 @@ router.put('/:id', async (req, res) => {
         await company.update(updateData);
         const updatedCompany = await Company_1.Company.findByPk(company.id, {
             include: [
-                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'] },
             ],
         });
         if (!updatedCompany) {
@@ -967,7 +1000,7 @@ router.post('/:id/logo', async (req, res) => {
         }
         await company.update({ logo: url.trim() });
         const updated = await Company_1.Company.findByPk(company.id, {
-            include: [{ model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] }],
+            include: [{ model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'] }],
         });
         const cleaned = cleanCompany(updated, true);
         await withPresignedLogo(cleaned);
@@ -1034,7 +1067,7 @@ router.post('/:id/contacts', async (req, res) => {
         // Obtener la empresa actualizada con todos sus contactos
         const updatedCompany = await Company_1.Company.findByPk(company.id, {
             include: [
-                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'] },
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
             ],
         });
@@ -1061,7 +1094,7 @@ router.delete('/:id/contacts/:contactId', async (req, res) => {
         // Obtener la empresa actualizada
         const updatedCompany = await Company_1.Company.findByPk(company.id, {
             include: [
-                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'] },
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
             ],
         });
@@ -1099,7 +1132,7 @@ router.post('/:id/deals', async (req, res) => {
         }
         const updatedCompany = await Company_1.Company.findByPk(company.id, {
             include: [
-                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'] },
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
                 { model: Deal_1.Deal, as: 'Deals', attributes: ['id', 'name', 'amount', 'stage', 'closeDate'] },
             ],
@@ -1146,7 +1179,7 @@ router.post('/:id/companies', async (req, res) => {
         // Obtener la empresa actualizada con todas sus empresas relacionadas
         const updatedCompany = await Company_1.Company.findByPk(company.id, {
             include: [
-                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'] },
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
                 { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname', 'ruc'] },
             ],
@@ -1174,7 +1207,7 @@ router.delete('/:id/companies/:companyId', async (req, res) => {
         // Obtener la empresa actualizada
         const updatedCompany = await Company_1.Company.findByPk(company.id, {
             include: [
-                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'] },
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
                 { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname', 'ruc'] },
             ],

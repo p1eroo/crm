@@ -32,6 +32,7 @@ import {
 import { NoteModal, CallModal, TaskModal, MeetingModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
 import type { GeneralInfoCard } from "../components/DetailCards";
 import { useAuth } from "../context/AuthContext";
+import { useTaskCompleteFlow } from "../hooks/useTaskCompleteFlow";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { FormDrawer } from "../components/FormDrawer";
 import { DealFormContent, getInitialDealFormData, stageOptions, type DealFormData } from "../components/DealFormContent";
@@ -100,6 +101,8 @@ const DealDetail: React.FC = () => {
     id: number;
     name: string;
   } | null>(null);
+  const [activityToDelete, setActivityToDelete] = useState<any | null>(null);
+  const [deletingActivity, setDeletingActivity] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
@@ -321,6 +324,11 @@ const DealDetail: React.FC = () => {
         status: task.status,
         priority: task.priority,
         dealId: task.dealId,
+        companyId: task.companyId,
+        contactId: task.contactId,
+        Company: task.Company,
+        Contact: task.Contact,
+        Deal: task.Deal,
       }));
 
       const allActivities = [...filteredActivities, ...tasksAsActivities].sort(
@@ -333,6 +341,16 @@ const DealDetail: React.FC = () => {
 
       // Aplicar deduplicación
       const deduplicatedActivities = deduplicateNotes(allActivities);
+
+      // Inicializar estado de actividades completadas (actividades: completed | tareas: status === 'completed')
+      const initialCompleted: { [key: number]: boolean } = {};
+      allActivities.forEach((activity: any) => {
+        const isCompleted = activity.completed === true || (activity.isTask && activity.status === 'completed');
+        if (isCompleted) {
+          initialCompleted[activity.id] = true;
+        }
+      });
+      setCompletedActivities(initialCompleted);
 
       // Merge inteligente: preservar actividades existentes y agregar nuevas del servidor
       setActivities((prevActivities) => {
@@ -356,6 +374,54 @@ const DealDetail: React.FC = () => {
       console.error("Error fetching activities:", error);
     }
   }, [id, deduplicateNotes]);
+
+  const handleActivityCreatedOptimistic = useCallback((newActivity: any) => {
+    setActivities((prev) => {
+      const exists = prev.some((a: any) => a.id === newActivity.id);
+      if (exists) return prev;
+      return deduplicateNotes([newActivity, ...prev].sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+        const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+        return dateB - dateA;
+      }));
+    });
+  }, [deduplicateNotes]);
+
+  const handleDeleteActivityClick = useCallback((activity: any) => {
+    setActivityToDelete(activity);
+  }, []);
+
+  const handleConfirmDeleteActivity = useCallback(async () => {
+    if (!activityToDelete) return;
+    setDeletingActivity(true);
+    try {
+      const isTask = !!(activityToDelete as any).isTask;
+      if (isTask) {
+        await api.delete(`/tasks/${activityToDelete.id}`);
+      } else {
+        await api.delete(`/activities/${activityToDelete.id}`);
+      }
+      setActivities((prev) => prev.filter((a: any) => a.id !== activityToDelete.id));
+      setCompletedActivities((prev) => {
+        const next = { ...prev };
+        delete next[activityToDelete.id];
+        return next;
+      });
+      setActivityToDelete(null);
+    } catch (err: any) {
+      console.error("Error al eliminar:", err);
+    } finally {
+      setDeletingActivity(false);
+    }
+  }, [activityToDelete]);
+
+  const taskCompleteFlow = useTaskCompleteFlow({
+    user,
+    onRefresh: fetchActivities,
+    onOpenNewTaskLinkedTo: () => setTaskOpen(true),
+    onActivityCreated: handleActivityCreatedOptimistic,
+  });
+  const { handleToggleComplete, CompleteModalJSX, ActivityModalsJSX, LinkPromptJSX } = taskCompleteFlow;
 
   // Funciones helper para los logs
   const getActivityDescription = (activity: any) => {
@@ -611,14 +677,17 @@ const DealDetail: React.FC = () => {
     return "--";
   };
 
-  // En lista: nota/llamada/correo por tipo; meeting/task/todo/other como "Tarea"
+  // En lista: cada tipo muestra su nombre; meeting → Reunión, task/todo/other → Tarea
   const getActivityTypeLabel = (type: string) => {
     const t = type?.toLowerCase() || "";
-    if (["meeting", "task", "todo", "other"].includes(t)) return "Tarea";
     const typeMap: { [key: string]: string } = {
       note: "Nota",
       email: "Correo",
       call: "Llamada",
+      meeting: "Reunión",
+      task: "Tarea",
+      todo: "Tarea",
+      other: "Tarea",
     };
     return typeMap[t] || "Actividad";
   };
@@ -854,22 +923,22 @@ const DealDetail: React.FC = () => {
         const activityButtons = [
           {
             icon: ['fas', 'note-sticky'],
-            tooltip: 'Crear nota',
+            label: 'Nota',
             onClick: () => handleCreateActivity('note'),
           },
           {
             icon: ['fas', 'phone'],
-            tooltip: 'Llamada',
+            label: 'Llamada',
             onClick: () => handleCreateActivity('call'),
           },
           {
             icon: ['fas', 'thumbtack'],
-            tooltip: 'Crear tarea',
+            label: 'Tarea',
             onClick: () => handleCreateActivity('task'),
           },
           {
             icon: ['fas', 'calendar-week'],
-            tooltip: 'Programar reunión',
+            label: 'Reunión',
             onClick: () => handleCreateActivity('meeting'),
           },
         ];
@@ -987,11 +1056,8 @@ const DealDetail: React.FC = () => {
               onSearchChange={setActivitySearch}
               onCreateActivity={handleCreateActivity}
               onActivityClick={setExpandedActivity}
-              onToggleComplete={(activityId, completed) => {
-                setCompletedActivities((prev) => ({
-                  ...prev,
-                  [activityId]: completed,
-                }));
+              onToggleComplete={(activity, completed) => {
+                handleToggleComplete(activity, completed, setCompletedActivities);
               }}
               completedActivities={completedActivities}
               getActivityTypeLabel={getActivityTypeLabel}
@@ -1075,12 +1141,10 @@ const DealDetail: React.FC = () => {
           handleCreateActivity(type as 'note' | 'task' | 'email' | 'call' | 'meeting')
         }
         onActivityClick={setExpandedActivity}
-        onToggleComplete={(activityId, completed) => {
-          setCompletedActivities((prev) => ({
-            ...prev,
-            [activityId]: completed,
-          }));
+        onToggleComplete={(activity, completed) => {
+          handleToggleComplete(activity, completed, setCompletedActivities);
         }}
+        onDelete={handleDeleteActivityClick}
         completedActivities={completedActivities}
         getActivityTypeLabel={getActivityTypeLabel}
         getActivityStatusColor={getActivityStatusColor}
@@ -1487,8 +1551,48 @@ const DealDetail: React.FC = () => {
         open={!!expandedActivity}
         onClose={() => setExpandedActivity(null)}
         getActivityTypeLabel={getActivityTypeLabel}
-                  />
-                </>
+      />
+
+      {/* Dialog para confirmar eliminación de actividad */}
+      <Dialog
+        open={!!activityToDelete}
+        onClose={() => !deletingActivity && setActivityToDelete(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Eliminar actividad
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
+            ¿Estás seguro de que deseas eliminar esta actividad? Esta acción no se puede deshacer.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={pageStyles.dialogActions}>
+          <Button
+            onClick={() => setActivityToDelete(null)}
+            disabled={deletingActivity}
+            sx={pageStyles.cancelButton}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmDeleteActivity}
+            variant="contained"
+            disabled={deletingActivity}
+            sx={pageStyles.deleteButton}
+          >
+            {deletingActivity ? "Eliminando..." : "Eliminar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Flujo de completar tarea */}
+      {CompleteModalJSX}
+      {ActivityModalsJSX}
+      {LinkPromptJSX}
+    </>
   );
 };
 

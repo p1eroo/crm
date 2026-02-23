@@ -670,7 +670,6 @@ const Dashboard: React.FC = () => {
     return (
       <Box sx={{ 
         backgroundColor: theme.palette.background.default, 
-        minHeight: '100vh',
         px: { xs: 0, sm: 0, md: 0.25 },
         pt: { xs: 0.25, sm: 0.5, md: 1 },
         pb: 4,

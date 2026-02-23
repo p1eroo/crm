@@ -42,10 +42,12 @@ const cleanActivity = (activity: any): any => {
 };
 
 // Obtener todas las actividades
+// Query: minimal=true → excluye email del User (para listados, no necesario)
 router.get('/', async (req: AuthRequest, res) => {
   try {
-    const { page = 1, limit = 50, type, contactId, companyId, dealId, userId } = req.query;
+    const { page = 1, limit = 50, type, contactId, companyId, dealId, userId, minimal } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
+    const isMinimal = String(minimal) === 'true';
 
     const where: any = {};
     if (type) {
@@ -64,10 +66,11 @@ router.get('/', async (req: AuthRequest, res) => {
       where.userId = userId;
     }
 
+    const userAttrs = isMinimal ? ['id', 'firstName', 'lastName'] : ['id', 'firstName', 'lastName', 'email'];
     const activities = await Activity.findAndCountAll({
       where,
       include: [
-        { model: User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+        { model: User, as: 'User', attributes: userAttrs, required: false },
         { model: Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName'], required: false },
         { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
         { model: Deal, as: 'Deal', attributes: ['id', 'name'], required: false },

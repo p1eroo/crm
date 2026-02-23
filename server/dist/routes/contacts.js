@@ -160,7 +160,7 @@ router.get('/', async (req, res) => {
     try {
         console.log('📥 Iniciando GET /contacts');
         console.log('📥 Query params:', req.query);
-        const { page = 1, limit: limitParam = 50, search, lifecycleStage, ownerId, 
+        const { page = 1, limit: limitParam = 50, search, lifecycleStage, ownerId, companyId: companyIdParam, // Filtrar por empresa
         // Nuevos parámetros de filtro
         stages, // Array de etapas: ["lead", "activo"]
         countries, // Array de países: ["Perú", "Chile"]
@@ -181,6 +181,13 @@ router.get('/', async (req, res) => {
         // ⭐ Aplicar filtro automático según rol del usuario
         const roleFilter = (0, rolePermissions_1.getRoleBasedDataFilter)(req.userRole, req.userId);
         Object.assign(where, roleFilter);
+        // Filtro por empresa (contactos vinculados a una empresa)
+        if (companyIdParam != null && companyIdParam !== '') {
+            const companyId = Number(companyIdParam);
+            if (!isNaN(companyId)) {
+                where.companyId = companyId;
+            }
+        }
         // Búsqueda general
         if (search) {
             const searchStr = typeof search === 'string' ? search : String(search);

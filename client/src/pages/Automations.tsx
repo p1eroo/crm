@@ -133,7 +133,6 @@ const Automations: React.FC = () => {
   return (
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
-      minHeight: '100vh',
       pb: { xs: 2, sm: 3, md: 4 },
     }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>

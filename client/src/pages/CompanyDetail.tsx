@@ -46,6 +46,7 @@ import type { GeneralInfoCard } from "../components/DetailCards";
 import { FormDrawer } from "../components/FormDrawer";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { useAuth } from "../context/AuthContext";
+import { useTaskCompleteFlow } from "../hooks/useTaskCompleteFlow";
 import { Building2 } from "lucide-react";
 import { log } from "../utils/logger";
 import { CompanyFormContent, getInitialFormData, type CompanyFormData } from "../components/CompanyFormContent";
@@ -167,6 +168,8 @@ const CompanyDetail: React.FC = () => {
     id: number;
     name: string;
   } | null>(null);
+  const [activityToDelete, setActivityToDelete] = useState<any | null>(null);
+  const [deletingActivity, setDeletingActivity] = useState(false);
   
   // Estados para diálogos
   const [addContactOpen, setAddContactOpen] = useState(false);
@@ -312,39 +315,21 @@ const CompanyDetail: React.FC = () => {
 
   const fetchAssociatedRecords = useCallback(async () => {
     try {
-      // Obtener empresa con contactos asociados desde la relación muchos-a-muchos
-      const companyResponse = await api.get(`/companies/${id}`);
-      const contacts =
-        companyResponse.data.Contacts &&
-        Array.isArray(companyResponse.data.Contacts)
-        ? companyResponse.data.Contacts
-        : [];
-      setAssociatedContacts(contacts);
-      
-      // Actualizar empresas relacionadas desde la relación muchos-a-muchos
-      const companies =
-        companyResponse.data.Companies &&
-        Array.isArray(companyResponse.data.Companies)
-        ? companyResponse.data.Companies
-        : [];
-      setAssociatedCompanies(companies);
-
-      // Obtener deals asociados
+      // Contactos y empresas ya vienen de fetchCompany; solo cargar deals, activities y tasks
+      // Obtener deals, actividades y tareas (minimal=true: sin email del propietario ni datos sensibles)
       const dealsResponse = await api.get("/deals", {
-        params: { companyId: id },
+        params: { companyId: id, minimal: true },
       });
       setAssociatedDeals(dealsResponse.data.deals || dealsResponse.data || []);
 
-      // Obtener actividades
       const activitiesResponse = await api.get("/activities", {
-        params: { companyId: id },
+        params: { companyId: id, minimal: true },
       });
       const activitiesData =
         activitiesResponse.data.activities || activitiesResponse.data || [];
 
-      // Obtener tareas asociadas a la empresa
       const tasksResponse = await api.get("/tasks", {
-        params: { companyId: id },
+        params: { companyId: id, minimal: true },
       });
       const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
 
@@ -362,6 +347,12 @@ const CompanyDetail: React.FC = () => {
         isTask: true,
         status: task.status,
         priority: task.priority,
+        companyId: task.companyId,
+        contactId: task.contactId,
+        dealId: task.dealId,
+        Company: task.Company,
+        Contact: task.Contact,
+        Deal: task.Deal,
       }));
 
       // Combinar actividades y tareas, ordenadas por fecha de creación (más recientes primero)
@@ -396,9 +387,11 @@ const CompanyDetail: React.FC = () => {
       });
 
       // Inicializar el estado de actividades completadas desde el backend
+      // Actividades: usar activity.completed | Tareas: usar status === 'completed'
       const initialCompleted: { [key: number]: boolean } = {};
       allActivities.forEach((activity: any) => {
-        if (activity.completed) {
+        const isCompleted = activity.completed === true || (activity.isTask && activity.status === 'completed');
+        if (isCompleted) {
           initialCompleted[activity.id] = true;
         }
       });
@@ -407,6 +400,58 @@ const CompanyDetail: React.FC = () => {
       console.error("Error fetching associated records:", error);
     }
   }, [id, deduplicateNotes]);
+
+  const handleActivityCreatedOptimistic = useCallback((newActivity: any) => {
+    setActivities((prev) => {
+      const exists = prev.some((a: any) => a.id === newActivity.id);
+      if (exists) return prev;
+      return deduplicateNotes([newActivity, ...prev].sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+        const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+        return dateB - dateA;
+      }));
+    });
+  }, [deduplicateNotes]);
+
+  const handleDeleteActivityClick = useCallback((activity: any) => {
+    setActivityToDelete(activity);
+  }, []);
+
+  const handleConfirmDeleteActivity = useCallback(async () => {
+    if (!activityToDelete) return;
+    setDeletingActivity(true);
+    try {
+      const isTask = !!(activityToDelete as any).isTask;
+      if (isTask) {
+        await api.delete(`/tasks/${activityToDelete.id}`);
+      } else {
+        await api.delete(`/activities/${activityToDelete.id}`);
+      }
+      setActivities((prev) => prev.filter((a: any) => a.id !== activityToDelete.id));
+      setCompletedActivities((prev) => {
+        const next = { ...prev };
+        delete next[activityToDelete.id];
+        return next;
+      });
+      setActivityToDelete(null);
+      setSuccessMessage("Actividad eliminada correctamente");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err: any) {
+      console.error("Error al eliminar:", err);
+      setSuccessMessage(err?.response?.data?.error || "Error al eliminar la actividad");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } finally {
+      setDeletingActivity(false);
+    }
+  }, [activityToDelete]);
+
+  const taskCompleteFlow = useTaskCompleteFlow({
+    user,
+    onRefresh: fetchAssociatedRecords,
+    onOpenNewTaskLinkedTo: () => setTaskOpen(true),
+    onActivityCreated: handleActivityCreatedOptimistic,
+  });
+  const { handleToggleComplete, CompleteModalJSX, ActivityModalsJSX, LinkPromptJSX } = taskCompleteFlow;
 
   // Funciones helper para los logs
   const getActivityDescription = (activity: any) => {
@@ -424,14 +469,17 @@ const CompanyDetail: React.FC = () => {
     return type; // Retornar el tipo para renderizar después
   };
 
-  // En lista: nota/llamada/correo por tipo; meeting/task/todo/other como "Tarea"
+  // En lista: cada tipo muestra su nombre; meeting → Reunión, task/todo/other → Tarea
   const getActivityTypeLabel = (type: string) => {
     const t = type?.toLowerCase() || "";
-    if (["meeting", "task", "todo", "other"].includes(t)) return "Tarea";
     const typeMap: { [key: string]: string } = {
       note: "Nota",
       email: "Correo",
       call: "Llamada",
+      meeting: "Reunión",
+      task: "Tarea",
+      todo: "Tarea",
+      other: "Tarea",
     };
     return typeMap[t] || "Actividad";
   };
@@ -476,19 +524,13 @@ const CompanyDetail: React.FC = () => {
     }
   };
 
-  const fetchActivityLogs = useCallback(async () => {
+  const fetchActivityLogs = useCallback(async (companyData?: { updatedAt?: string; createdAt?: string; id?: number; Owner?: any } | null) => {
     if (!id) return;
     setLoadingLogs(true);
     try {
-      // Obtener actividades y cambios de la empresa
-      const [activitiesResponse, companyResponse] = await Promise.all([
-        api.get("/activities", { params: { companyId: id } }),
-        api.get(`/companies/${id}`),
-      ]);
-      
+      const activitiesResponse = await api.get("/activities", { params: { companyId: id, minimal: true } });
       const activities =
         activitiesResponse.data.activities || activitiesResponse.data || [];
-      const companyData = companyResponse.data;
       
       // Crear logs a partir de actividades y cambios
       const logs: any[] = [];
@@ -506,10 +548,10 @@ const CompanyDetail: React.FC = () => {
         });
       });
       
-      // Agregar cambios en la empresa si hay updatedAt
+      // Agregar cambios en la empresa si hay updatedAt (companyData viene de fetchCompany, no se vuelve a pedir)
       if (
-        companyData.updatedAt &&
-        companyData.createdAt !== companyData.updatedAt
+        companyData?.updatedAt &&
+        companyData?.createdAt !== companyData?.updatedAt
       ) {
         logs.push({
           id: `company-update-${companyData.id}`,
@@ -548,10 +590,10 @@ const CompanyDetail: React.FC = () => {
   }, [company, id, fetchAssociatedRecords]);
 
   useEffect(() => {
-    if (id) {
-      fetchActivityLogs();
+    if (id && company) {
+      fetchActivityLogs(company);
     }
-  }, [id, fetchActivityLogs]);
+  }, [id, company, fetchActivityLogs]);
 
   // Manejar tecla ESC para cerrar paneles
   useEffect(() => {
@@ -794,61 +836,6 @@ const CompanyDetail: React.FC = () => {
       setWarningMessage(errorMessage);
       setTimeout(() => setWarningMessage(""), 5000);
       setConnectingEmail(false);
-    }
-  };
-
-  const handleSendEmail = async (emailData: {
-    to: string;
-    subject: string;
-    body: string;
-  }) => {
-    try {
-      // Enviar email a través del backend (el backend obtendrá el token automáticamente)
-      const emailResponse = await api.post("/emails/send", {
-        to: emailData.to,
-        subject: emailData.subject,
-        body: emailData.body,
-      });
-
-      const { messageId, threadId } = emailResponse.data;
-
-      // Registrar como actividad con messageId y threadId
-      const response = await api.post("/activities/emails", {
-        subject: emailData.subject,
-        description: emailData.body.replace(/<[^>]*>/g, ""), // Remover HTML para la descripción
-        companyId: id,
-        gmailMessageId: messageId,
-        gmailThreadId: threadId,
-      });
-      const newActivity = response.data;
-
-      // Actualización optimista: agregar actividad inmediatamente al estado
-      setActivities((prevActivities) => {
-        // Verificar que no esté ya en la lista (evitar duplicados)
-        const exists = prevActivities.some((a: any) => a.id === newActivity.id);
-        if (exists) return prevActivities;
-        
-        // Agregar al inicio de la lista y ordenar por fecha (más reciente primero)
-        const updated = [newActivity, ...prevActivities].sort((a: any, b: any) => {
-          const dateA = new Date(a.createdAt || 0).getTime();
-          const dateB = new Date(b.createdAt || 0).getTime();
-          return dateB - dateA;
-        });
-        
-        // Aplicar deduplicación al resultado final
-        return deduplicateNotes(updated);
-      });
-
-      // Actualizar actividades desde el servidor en segundo plano para consistencia eventual
-      fetchAssociatedRecords();
-    } catch (error: any) {
-      // Si el token expiró o no hay token, mostrar mensaje
-      if (error.response?.status === 401) {
-        throw new Error(
-          "Por favor, conecta tu correo desde Configuración > Perfil > Correo"
-        );
-      }
-      throw error;
     }
   };
 
@@ -1315,7 +1302,7 @@ const detailFields = [
   {
     label: 'Propietario',
     value: company?.Owner
-      ? `${company.Owner.firstName || ''} ${company.Owner.lastName || ''}`.trim() || company.Owner.email || 'Sin nombre'
+      ? `${company.Owner.firstName || ''} ${company.Owner.lastName || ''}`.trim() || 'Sin nombre'
       : '--',
     show: !!company?.Owner,
   },
@@ -1325,27 +1312,27 @@ const detailFields = [
 const activityButtons = [
   {
     icon: ['fas', 'note-sticky'],
-    tooltip: 'Crear nota',
+    label: 'Nota',
     onClick: () => handleCreateActivity('note'),
   },
   {
     icon: faEnvelope,
-    tooltip: 'Enviar correo',
+    label: 'Correo',
     onClick: () => setEmailOpen(true),
   },
   {
     icon: ['fas', 'phone'],
-    tooltip: 'Llamada',
+    label: 'Llamada',
     onClick: () => handleCreateActivity('call'),
   },
   {
     icon: ['fas', 'thumbtack'],
-    tooltip: 'Crear tarea',
+    label: 'Tarea',
     onClick: () => handleCreateActivity('task'),
   },
   {
     icon: ['fas', 'calendar-week'],
-    tooltip: 'Programar reunión',
+    label: 'Reunión',
     onClick: () => handleCreateActivity('meeting'),
   },
 ];
@@ -1398,7 +1385,7 @@ const generalInfoCards: GeneralInfoCard[] = [
         ? `${company.Owner.firstName || ""} ${
             company.Owner.lastName || ""
           }`.trim()
-        : company.Owner.email || "Sin nombre"
+        : "Sin nombre"
       : "No asignado",
     icon: ['far', 'user'],
     iconBgColor: "#daf2ff",
@@ -1430,36 +1417,14 @@ const tab1Content = (
       onSearchChange={setActivitySearch}
       onCreateActivity={(type) => handleCreateActivity(type as string)}
       onActivityClick={setExpandedActivity}
-      onToggleComplete={async (activityId, completed) => {
-        try {
-          setCompletedActivities((prev) => ({
-            ...prev,
-            [activityId]: completed,
-          }));
-          await api.put(`/activities/${activityId}`, {
-            completed: completed,
-          });
-          if (completed) {
-            const activity = activities.find((a: any) => a.id === activityId);
-            const activityName = activity?.subject || activity?.title || 'la actividad';
-            setSuccessMessage(`Se completó ${activityName}`);
-            setTimeout(() => setSuccessMessage(""), 3000);
-            const notificationEvent = new CustomEvent('activityCompleted', {
-              detail: {
-                type: 'activity',
-                title: `Se completó ${activityName}`,
-                activityId: activityId,
-                activityName: activityName,
-                timestamp: new Date().toISOString(),
-              },
-            });
-            window.dispatchEvent(notificationEvent);
-          }
-        } catch (error) {
-          console.error('Error al actualizar el estado de la actividad:', error);
-          setCompletedActivities((prev) => ({
-            ...prev,
-            [activityId]: !completed,
+      onToggleComplete={(activity, completed) => {
+        handleToggleComplete(activity, completed, setCompletedActivities);
+        if (completed && !(activity as any).isTask) {
+          const activityName = activity?.subject || activity?.title || 'la actividad';
+          setSuccessMessage(`Se completó ${activityName}`);
+          setTimeout(() => setSuccessMessage(""), 3000);
+          window.dispatchEvent(new CustomEvent('activityCompleted', {
+            detail: { type: 'activity', title: `Se completó ${activityName}`, activityId: activity.id, activityName, timestamp: new Date().toISOString() },
           }));
         }
       }}
@@ -1562,39 +1527,18 @@ const tab2Content = (
     onSearchChange={setActivitySearch}
     onCreateActivity={(type) => handleCreateActivity(type as string)}
     onActivityClick={setExpandedActivity}
-    onToggleComplete={async (activityId, completed) => {
-      try {
-        setCompletedActivities((prev) => ({
-          ...prev,
-          [activityId]: completed,
-        }));
-        await api.put(`/activities/${activityId}`, {
-          completed: completed,
-        });
-        if (completed) {
-          const activity = activities.find((a: any) => a.id === activityId);
-          const activityName = activity?.subject || activity?.title || 'la actividad';
-          setSuccessMessage(`Se completó ${activityName}`);
-          setTimeout(() => setSuccessMessage(""), 3000);
-          const notificationEvent = new CustomEvent('activityCompleted', {
-            detail: {
-              type: 'activity',
-              title: `Se completó ${activityName}`,
-              activityId: activityId,
-              activityName: activityName,
-              timestamp: new Date().toISOString(),
-            },
-          });
-          window.dispatchEvent(notificationEvent);
-        }
-      } catch (error) {
-        console.error('Error al actualizar el estado de la actividad:', error);
-        setCompletedActivities((prev) => ({
-          ...prev,
-          [activityId]: !completed,
+    onToggleComplete={(activity, completed) => {
+      handleToggleComplete(activity, completed, setCompletedActivities);
+      if (completed && !(activity as any).isTask) {
+        const activityName = activity?.subject || activity?.title || 'la actividad';
+        setSuccessMessage(`Se completó ${activityName}`);
+        setTimeout(() => setSuccessMessage(""), 3000);
+        window.dispatchEvent(new CustomEvent('activityCompleted', {
+          detail: { type: 'activity', title: `Se completó ${activityName}`, activityId: activity.id, activityName, timestamp: new Date().toISOString() },
         }));
       }
     }}
+    onDelete={handleDeleteActivityClick}
     completedActivities={completedActivities}
     getActivityTypeLabel={getActivityTypeLabel}
     getActivityStatusColor={getActivityStatusColor}
@@ -1867,13 +1811,26 @@ const tab2Content = (
         </DialogActions>
       </Dialog>
 
-      {/* Modal de Email con Gmail API */}
+      {/* Modal de Email - solo registra actividad (sin envío por Gmail) */}
       <EmailComposer
         open={emailOpen}
         onClose={() => setEmailOpen(false)}
         recipientEmail={(company as any)?.email || ""}
         recipientName={company?.name || ""}
-        onSend={handleSendEmail}
+        registerOnly
+        companyId={id ? parseInt(id, 10) : undefined}
+        onSave={(newActivity) => {
+          setActivities((prev) => {
+            const exists = prev.some((a: any) => a.id === newActivity.id);
+            if (exists) return prev;
+            return [newActivity, ...prev].sort((a: any, b: any) => {
+              const dateA = new Date(a.createdAt || 0).getTime();
+              const dateB = new Date(b.createdAt || 0).getTime();
+              return dateB - dateA;
+            });
+          });
+          fetchAssociatedRecords();
+        }}
       />
 
       {/* Modal de crear llamada */}
@@ -1907,6 +1864,7 @@ const tab2Content = (
         entityId={id || ""}
         entityName={company?.name || "Sin nombre"}
         user={user}
+        initialCompanyContacts={associatedContacts}
         onSave={(newTask) => {
           const taskAsActivity = {
             id: newTask.id,
@@ -2126,6 +2084,43 @@ const tab2Content = (
         getActivityTypeLabel={getActivityTypeLabel}
       />
 
+      {/* Dialog para confirmar eliminación de actividad */}
+      <Dialog
+        open={!!activityToDelete}
+        onClose={() => !deletingActivity && setActivityToDelete(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2 },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Eliminar actividad
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
+            ¿Estás seguro de que deseas eliminar esta actividad? Esta acción no se puede deshacer.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={pageStyles.dialogActions}>
+          <Button
+            onClick={() => setActivityToDelete(null)}
+            disabled={deletingActivity}
+            sx={pageStyles.cancelButton}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmDeleteActivity}
+            variant="contained"
+            disabled={deletingActivity}
+            sx={pageStyles.deleteButton}
+          >
+            {deletingActivity ? "Eliminando..." : "Eliminar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Dialog para confirmar eliminación de contacto */}
       <Dialog
         open={removeContactDialogOpen}
@@ -2326,6 +2321,11 @@ const tab2Content = (
           </Button>
         </DialogActions>
       </Dialog> */}
+
+      {/* Flujo de completar tarea (modal, actividad, link prompt) */}
+      {CompleteModalJSX}
+      {ActivityModalsJSX}
+      {LinkPromptJSX}
     </>
   );
 };

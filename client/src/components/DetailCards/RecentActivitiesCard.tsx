@@ -22,36 +22,43 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
 }) => {
   const theme = useTheme();
 
-  const getActivityIcon = (type: string) => {
+  const TASK_ORANGE = '#F57C00';
+
+  const getActivityIcon = (type: string, colorOverride?: string) => {
+    const color = colorOverride ?? (type === 'note' ? '#9E9E9E' : type === 'email' ? '#1976D2' : type === 'call' ? '#2E7D32' : type === 'meeting' ? '#7B1FA2' : type === 'task' || type === 'todo' ? TASK_ORANGE : theme.palette.text.secondary);
     switch (type) {
       case 'note':
-        return <Note sx={{ fontSize: 20, color: '#9E9E9E' }} />;
+        return <Note sx={{ fontSize: 20, color }} />;
       case 'email':
-        return <Email sx={{ fontSize: 20, color: '#1976D2' }} />;
+        return <Email sx={{ fontSize: 20, color }} />;
       case 'call':
-        return <Phone sx={{ fontSize: 20, color: '#2E7D32' }} />;
+        return <Phone sx={{ fontSize: 20, color }} />;
       case 'task':
       case 'todo':
-        return <Assignment sx={{ fontSize: 20, color: '#F57C00' }} />;
+        return <Assignment sx={{ fontSize: 20, color }} />;
       case 'meeting':
-        return <Event sx={{ fontSize: 20, color: '#7B1FA2' }} />;
+        return <Event sx={{ fontSize: 20, color }} />;
+      case 'other':
+        return <Assignment sx={{ fontSize: 20, color }} />;
       default:
-        return <Comment sx={{ fontSize: 20, color: theme.palette.text.secondary }} />;
+        return <Comment sx={{ fontSize: 20, color }} />;
     }
   };
 
-  // En lista: nota/llamada/correo por tipo; meeting/task/todo/other como "Tarea"
+  // En lista: cada tipo muestra su nombre; meeting → Reunión, task/todo/other → Tarea
   const getActivityTypeLabel = (type: string) => {
-    switch (type) {
+    const t = type?.toLowerCase() || '';
+    switch (t) {
       case 'note':
         return 'Nota';
       case 'email':
         return 'Correo';
       case 'call':
         return 'Llamada';
+      case 'meeting':
+        return 'Reunión';
       case 'task':
       case 'todo':
-      case 'meeting':
       case 'other':
         return 'Tarea';
       default:
@@ -123,8 +130,11 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
             },
           }}>
             {sortedActivities.map((activity) => {
-              const colors = getActivityColor(activity.type);
-              const activityTitle = activity.subject || activity.title || getActivityTypeLabel(activity.type);
+              const isTask = !!(activity as any).isTask || (activity as any).type === 'task';
+              const typeForIcon = (activity as any).taskSubType || activity.type || 'task';
+              const typeForColor = isTask ? 'task' : typeForIcon;
+              const colors = getActivityColor(typeForColor);
+              const activityTitle = activity.subject || activity.title || getActivityTypeLabel(typeForIcon);
 
               return (
                 <Tooltip 
@@ -159,7 +169,7 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
                       bgcolor: theme.palette.background.paper,
                       mb: 1,
                     }}>
-                      {getActivityIcon(activity.type)}
+                      {getActivityIcon(typeForIcon, isTask ? TASK_ORANGE : undefined)}
                     </Box>
                     <Typography 
                       variant="caption" 
@@ -172,7 +182,7 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
                         mb: 0.5,
                       }}
                     >
-                      {getActivityTypeLabel(activity.type)}
+                      {((activity as any).isTask || (activity as any).type === 'task') ? 'Tarea' : getActivityTypeLabel((activity as any).taskSubType || activity.type || '')}
                     </Typography>
                     <Typography 
                       variant="caption" 

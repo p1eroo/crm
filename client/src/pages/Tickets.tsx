@@ -339,7 +339,6 @@ const Tickets: React.FC = () => {
   return (
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
-      minHeight: '100vh',
       pb: { xs: 2, sm: 3, md: 4 },
     }}>
       {/* Cards de resumen */}

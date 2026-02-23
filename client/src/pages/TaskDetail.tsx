@@ -96,6 +96,7 @@ import {
   ActivitiesTabContent,
 } from "../components/DetailCards";
 import { useAuth } from "../context/AuthContext";
+import { useTaskCompleteFlow } from "../hooks/useTaskCompleteFlow";
 import { formatDatePeru } from "../utils/dateUtils";
 import RichTextEditor from "../components/RichTextEditor";
 
@@ -236,6 +237,8 @@ const TaskDetail: React.FC = () => {
   const [completedActivities, setCompletedActivities] = useState<{
     [key: number]: boolean;
   }>({});
+  const [activityToDelete, setActivityToDelete] = useState<any | null>(null);
+  const [deletingActivity, setDeletingActivity] = useState(false);
   const [contactSortField, setContactSortField] = useState<
     "firstName" | "email" | "phone"
   >("firstName");
@@ -496,6 +499,41 @@ const TaskDetail: React.FC = () => {
       setLoading(false);
     }
   }, [id, user?.id]);
+
+  const taskCompleteFlow = useTaskCompleteFlow({
+    user,
+    onRefresh: fetchTask,
+    onOpenNewTaskLinkedTo: () => setTaskOpen(true),
+  });
+  const { handleToggleComplete, CompleteModalJSX, ActivityModalsJSX, LinkPromptJSX } = taskCompleteFlow;
+
+  const handleDeleteActivityClick = useCallback((activity: any) => {
+    setActivityToDelete(activity);
+  }, []);
+
+  const handleConfirmDeleteActivity = useCallback(async () => {
+    if (!activityToDelete) return;
+    setDeletingActivity(true);
+    try {
+      const isTask = !!(activityToDelete as any).isTask;
+      if (isTask) {
+        await api.delete(`/tasks/${activityToDelete.id}`);
+      } else {
+        await api.delete(`/activities/${activityToDelete.id}`);
+      }
+      setActivities((prev) => prev.filter((a: any) => a.id !== activityToDelete.id));
+      setCompletedActivities((prev) => {
+        const next = { ...prev };
+        delete next[activityToDelete.id];
+        return next;
+      });
+      setActivityToDelete(null);
+    } catch (err: any) {
+      console.error("Error al eliminar:", err);
+    } finally {
+      setDeletingActivity(false);
+    }
+  }, [activityToDelete]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -1238,14 +1276,17 @@ const TaskDetail: React.FC = () => {
     }
   };
 
-  // En lista: nota/llamada/correo por tipo; meeting/task/todo/other como "Tarea"
+  // En lista: cada tipo muestra su nombre; meeting → Reunión, task/todo/other → Tarea
   const getActivityTypeLabel = (type: string) => {
     const t = type?.toLowerCase() || "";
-    if (["meeting", "task", "todo", "other"].includes(t)) return "Tarea";
     const typeMap: { [key: string]: string } = {
       note: "Nota",
       email: "Correo",
       call: "Llamada",
+      meeting: "Reunión",
+      task: "Tarea",
+      todo: "Tarea",
+      other: "Tarea",
     };
     return typeMap[t] || "Actividad";
   };
@@ -1762,7 +1803,6 @@ const TaskDetail: React.FC = () => {
     <Box
       sx={{
         bgcolor: theme.palette.background.default,
-        minHeight: "100vh",
         pb: { xs: 2, sm: 3, md: 4 },
       }}
     >
@@ -2728,11 +2768,8 @@ const TaskDetail: React.FC = () => {
                       onSearchChange={setActivitySearch}
                       onCreateActivity={handleCreateActivity}
                       onActivityClick={setExpandedActivity}
-                      onToggleComplete={(activityId, completed) => {
-                        setCompletedActivities((prev) => ({
-                          ...prev,
-                          [activityId]: completed,
-                        }));
+                      onToggleComplete={(activity, completed) => {
+                        handleToggleComplete(activity, completed, setCompletedActivities);
                       }}
                       completedActivities={completedActivities}
                       getActivityTypeLabel={getActivityTypeLabel}
@@ -2869,12 +2906,10 @@ const TaskDetail: React.FC = () => {
                 onSearchChange={setActivitySearch}
                 onCreateActivity={(type) => handleCreateActivity(type as "note" | "task" | "email" | "call" | "meeting")}
                 onActivityClick={setExpandedActivity}
-                onToggleComplete={(activityId, completed) => {
-                  setCompletedActivities((prev) => ({
-                    ...prev,
-                    [activityId]: completed,
-                  }));
+                onToggleComplete={(activity, completed) => {
+                  handleToggleComplete(activity, completed, setCompletedActivities);
                 }}
+                onDelete={handleDeleteActivityClick}
                 completedActivities={completedActivities}
                 getActivityTypeLabel={getActivityTypeLabel}
                 getActivityStatusColor={getActivityStatusColor}
@@ -7824,6 +7859,46 @@ const TaskDetail: React.FC = () => {
         onClose={() => setExpandedActivity(null)}
         getActivityTypeLabel={getActivityTypeLabel}
       />
+
+      {/* Dialog para confirmar eliminación de actividad */}
+      <Dialog
+        open={!!activityToDelete}
+        onClose={() => !deletingActivity && setActivityToDelete(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Eliminar actividad
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
+            ¿Estás seguro de que deseas eliminar esta actividad? Esta acción no se puede deshacer.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={pageStyles.dialogActions}>
+          <Button
+            onClick={() => setActivityToDelete(null)}
+            disabled={deletingActivity}
+            sx={pageStyles.cancelButton}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmDeleteActivity}
+            variant="contained"
+            disabled={deletingActivity}
+            sx={pageStyles.deleteButton}
+          >
+            {deletingActivity ? "Eliminando..." : "Eliminar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Flujo de completar tarea (modal, actividad, link prompt) */}
+      {CompleteModalJSX}
+      {ActivityModalsJSX}
+      {LinkPromptJSX}
     </Box>
   );
 };

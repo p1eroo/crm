@@ -61,9 +61,10 @@ const cleanTask = (task) => {
 // Obtener todas las tareas
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit: limitParam = 50, status, priority, assignedToId, contactId, companyId, dealId, search, sortBy = 'newest', // newest, oldest, name, nameDesc, dueDate
+        const { page = 1, limit: limitParam = 50, status, priority, assignedToId, contactId, companyId, dealId, search, minimal, sortBy = 'newest', // newest, oldest, name, nameDesc, dueDate
         // Filtros por columna
         filterTitulo, filterEstado, filterPrioridad, filterTipo, filterFechaInicio, filterFechaVencimiento, filterAsignadoA, filterEmpresa, filterContacto, } = req.query;
+        const isMinimal = String(minimal) === 'true';
         // Limitar el tamaño máximo de página para evitar sobrecarga
         const maxLimit = 100;
         const requestedLimit = Number(limitParam);
@@ -207,7 +208,8 @@ router.get('/', async (req, res) => {
         const filterAsignadoAStr = filterAsignadoA ? String(filterAsignadoA).trim() : '';
         const filterEmpresaStr = filterEmpresa ? String(filterEmpresa).trim() : '';
         const filterContactoStr = filterContacto ? String(filterContacto).trim() : '';
-        const includeAssignedTo = { model: User_1.User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false };
+        const userAttrs = isMinimal ? ['id', 'firstName', 'lastName'] : ['id', 'firstName', 'lastName', 'email', 'avatar'];
+        const includeAssignedTo = { model: User_1.User, as: 'AssignedTo', attributes: userAttrs, required: false };
         if (filterAsignadoAStr) {
             includeAssignedTo.required = true;
             includeAssignedTo.where = {
@@ -236,7 +238,7 @@ router.get('/', async (req, res) => {
             where,
             include: [
                 includeAssignedTo,
-                { model: User_1.User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false },
+                { model: User_1.User, as: 'CreatedBy', attributes: userAttrs, required: false },
                 includeContact,
                 includeCompany,
                 { model: Deal_1.Deal, as: 'Deal', attributes: ['id', 'name'], required: false },
@@ -261,7 +263,7 @@ router.get('/', async (req, res) => {
         if (error.message && (error.message.includes('no existe la columna') || error.message.includes('does not exist'))) {
             console.warn('⚠️  Columna faltante detectada, intentando sin filtros de status/priority...');
             try {
-                const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId, dealId: fallbackDealId, page: fallbackPage = 1, limit: fallbackLimit = 50 } = req.query;
+                const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId, dealId: fallbackDealId, page: fallbackPage = 1, limit: fallbackLimit = 50, minimal: fallbackMinimal } = req.query;
                 const fallbackOffset = (Number(fallbackPage) - 1) * Number(fallbackLimit);
                 const simpleWhere = {};
                 if (fallbackAssignedToId)
@@ -272,11 +274,13 @@ router.get('/', async (req, res) => {
                     simpleWhere.companyId = fallbackCompanyId;
                 if (fallbackDealId)
                     simpleWhere.dealId = fallbackDealId;
+                const fallbackIsMinimal = String(fallbackMinimal) === 'true';
+                const fallbackUserAttrs = fallbackIsMinimal ? ['id', 'firstName', 'lastName'] : ['id', 'firstName', 'lastName', 'email'];
                 const tasks = await Task_1.Task.findAndCountAll({
                     where: simpleWhere,
                     include: [
-                        { model: User_1.User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
-                        { model: User_1.User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+                        { model: User_1.User, as: 'AssignedTo', attributes: fallbackUserAttrs, required: false },
+                        { model: User_1.User, as: 'CreatedBy', attributes: fallbackUserAttrs, required: false },
                         { model: Contact_1.Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName'], required: false },
                         { model: Company_1.Company, as: 'Company', attributes: ['id', 'name'], required: false },
                         { model: Deal_1.Deal, as: 'Deal', attributes: ['id', 'name'], required: false },

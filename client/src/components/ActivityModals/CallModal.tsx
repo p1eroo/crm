@@ -40,6 +40,11 @@ interface CallModalProps {
     contactId?: number;
     companyId?: number;
   };
+  // Opcional: valores iniciales al completar tarea desde Tasks
+  initialSubject?: string;
+  initialDate?: string;
+  initialTime?: string;
+  initialDescription?: string;
 }
 
 const CallModal: React.FC<CallModalProps> = ({
@@ -51,6 +56,10 @@ const CallModal: React.FC<CallModalProps> = ({
   user,
   onSave,
   relatedEntityIds = {},
+  initialSubject,
+  initialDate,
+  initialTime,
+  initialDescription,
 }) => {
   const theme = useTheme();
   const [callData, setCallData] = useState({
@@ -66,14 +75,22 @@ const CallModal: React.FC<CallModalProps> = ({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Resetear estados cuando se abre/cierra el modal
+  // Resetear estados cuando se abre/cierra el modal; pre-llenar si hay valores iniciales
   useEffect(() => {
     if (!open) {
       setCallData({ subject: "", description: "", duration: "", date: "", time: "" });
       setDatePickerAnchorEl(null);
       setSelectedDate(null);
+    } else if (initialSubject || initialDate || initialTime || initialDescription) {
+      setCallData({
+        subject: initialSubject || "",
+        description: initialDescription || "",
+        duration: "",
+        date: initialDate || "",
+        time: initialTime || "",
+      });
     }
-  }, [open]);
+  }, [open, initialSubject, initialDate, initialTime, initialDescription]);
 
   const handleSaveCall = useCallback(async () => {
     if (!callData.subject.trim()) {
