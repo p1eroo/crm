@@ -50,7 +50,8 @@ import { FormDrawer } from "../components/FormDrawer";
 import { StageChipWithProgress } from "../components/StageChipWithProgress";
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from "../components/UnifiedTable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserTie, faFileImport, faFileExport, faFilter } from "@fortawesome/free-solid-svg-icons";
+import { faFileImport, faFileExport, faFilter } from "@fortawesome/free-solid-svg-icons";
+import { UserRound } from "lucide-react";
 import EntityPreviewDrawer from "../components/EntityPreviewDrawer";
 import ContactCompanyModal from "../components/ContactCompanyModal";
 import UserAvatar from "../components/UserAvatar";
@@ -1721,7 +1722,7 @@ const Contacts: React.FC = () => {
                   width: "100%",
                   overflow: 'hidden',
                   px: { xs: 1.5, md: 2 },
-                  py: { xs: 1, md: 1.25 },
+                  py: { xs: 1.25, md: 1.5 },
                   borderBottom: `1px solid ${theme.palette.divider}`,
                   '&:hover': {
                     boxShadow: theme.palette.mode === 'dark'
@@ -1766,7 +1767,7 @@ const Contacts: React.FC = () => {
                       }}
                     >
                       {!contact?.avatar && (
-                        <FontAwesomeIcon icon={faUserTie} style={{ fontSize: 24, color: 'white' }} />
+                        <UserRound size={24} color="white" />
                       )}
                     </Avatar>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -1963,7 +1964,7 @@ const Contacts: React.FC = () => {
                 <Box
                   sx={{
                     display: { xs: "none", sm: "flex" },
-                    py: { xs: 0.5, md: 0.75 },
+                    py: 0,
                     px: { sm: 0.75, md: 1 },
                     alignItems: "center",
                   }}
@@ -1991,7 +1992,7 @@ const Contacts: React.FC = () => {
                       }}
                     >
                       {!contact?.avatar && (
-                        <FontAwesomeIcon icon={faUserTie} style={{ fontSize: 20, color: 'white' }} />
+                        <UserRound size={20} color="white" />
                       )}
                     </Avatar>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -2032,7 +2033,7 @@ const Contacts: React.FC = () => {
                   sx={{
                     display: { xs: "none", sm: "flex" },
                     px: { sm: 0.75, md: 1 },
-                    py: { xs: 0.5, md: 0.75 },
+                    py: 0,
                     alignItems: "center",
                     justifyContent: "flex-start",
                     minWidth: 0,
@@ -2071,7 +2072,7 @@ const Contacts: React.FC = () => {
                   sx={{
                     display: { xs: "none", sm: "flex" },
                     px: { sm: 0.75, md: 1 },
-                    py: { xs: 0.5, md: 0.75 },
+                    py: 0,
                     alignItems: "center",
                     justifyContent: "flex-start",
                   }}
@@ -2091,7 +2092,7 @@ const Contacts: React.FC = () => {
                   sx={{
                     display: { xs: "none", sm: "flex" },
                     px: { sm: 0.75, md: 1 },
-                    py: { xs: 0.5, md: 0.75 },
+                    py: 0,
                     alignItems: "center",
                     justifyContent: "flex-start",
                     minWidth: 0,
@@ -2116,7 +2117,7 @@ const Contacts: React.FC = () => {
                   sx={{
                     display: { xs: "none", sm: "flex" },
                     px: { sm: 0.75, md: 1 },
-                    py: { xs: 0.5, md: 0.75 },
+                    py: 0,
                     alignItems: "center",
                     justifyContent: "flex-start",
                   }}
@@ -2136,7 +2137,7 @@ const Contacts: React.FC = () => {
                   sx={{
                     display: { xs: "none", sm: "flex" },
                     px: { xs: 1, md: 1.5 },
-                    py: { xs: 1, md: 1.25 },
+                    py: 0,
                     alignItems: "center",
                     justifyContent: "flex-start",
                   }}
@@ -2223,7 +2224,7 @@ const Contacts: React.FC = () => {
                   sx={{
                     display: { xs: "none", sm: "flex" },
                     px: { sm: 0.75, md: 1 },
-                    py: { xs: 0.5, md: 0.75 },
+                    py: 0,
                     alignItems: "center",
                     justifyContent: "center",
                   }}

@@ -9,6 +9,7 @@ interface Activity {
   subject?: string;
   title?: string;
   createdAt?: string;
+  dueDate?: string;
 }
 
 interface RecentActivitiesCardProps {
@@ -21,11 +22,17 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
   maxItems = 6 
 }) => {
   const theme = useTheme();
-
-  const TASK_ORANGE = '#F57C00';
+  const isDark = theme.palette.mode === 'dark';
+  const typeColors = {
+    note: isDark ? '#BDBDBD' : '#9E9E9E',
+    email: '#09ADB4',
+    call: '#05AE49',
+    meeting: '#A31F9D',
+    task: '#F59E00',
+  };
 
   const getActivityIcon = (type: string, colorOverride?: string) => {
-    const color = colorOverride ?? (type === 'note' ? '#9E9E9E' : type === 'email' ? '#1976D2' : type === 'call' ? '#2E7D32' : type === 'meeting' ? '#7B1FA2' : type === 'task' || type === 'todo' ? TASK_ORANGE : theme.palette.text.secondary);
+    const color = colorOverride ?? (type === 'note' ? typeColors.note : type === 'email' ? typeColors.email : type === 'call' ? typeColors.call : type === 'meeting' ? typeColors.meeting : type === 'task' || type === 'todo' ? typeColors.task : theme.palette.text.secondary);
     switch (type) {
       case 'note':
         return <Note sx={{ fontSize: 20, color }} />;
@@ -71,14 +78,14 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
       case 'note':
         return { bg: 'rgba(158, 158, 158, 0.1)', border: 'rgba(158, 158, 158, 0.3)' };
       case 'email':
-        return { bg: 'rgba(25, 118, 210, 0.1)', border: 'rgba(25, 118, 210, 0.3)' };
+        return { bg: 'rgba(9, 173, 180, 0.1)', border: 'rgba(9, 173, 180, 0.3)' };
       case 'call':
-        return { bg: 'rgba(46, 125, 50, 0.1)', border: 'rgba(46, 125, 50, 0.3)' };
+        return { bg: 'rgba(5, 174, 73, 0.1)', border: 'rgba(5, 174, 73, 0.3)' };
       case 'task':
       case 'todo':
-        return { bg: 'rgba(245, 124, 0, 0.1)', border: 'rgba(245, 124, 0, 0.3)' };
+        return { bg: 'rgba(245, 158, 0, 0.1)', border: 'rgba(245, 158, 0, 0.3)' };
       case 'meeting':
-        return { bg: 'rgba(123, 31, 162, 0.1)', border: 'rgba(123, 31, 162, 0.3)' };
+        return { bg: 'rgba(163, 31, 157, 0.1)', border: 'rgba(163, 31, 157, 0.3)' };
       default:
         return { bg: theme.palette.action.hover, border: theme.palette.divider };
     }
@@ -169,7 +176,7 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
                       bgcolor: theme.palette.background.paper,
                       mb: 1,
                     }}>
-                      {getActivityIcon(typeForIcon, isTask ? TASK_ORANGE : undefined)}
+                      {getActivityIcon(typeForIcon, isTask ? typeColors.task : undefined)}
                     </Box>
                     <Typography 
                       variant="caption" 
@@ -192,7 +199,7 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
                         textAlign: 'center',
                       }}
                     >
-                      {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                      {(activity.dueDate || activity.createdAt) && new Date(activity.dueDate || activity.createdAt!).toLocaleDateString('es-ES', {
                         day: 'numeric',
                         month: 'short',
                       })}

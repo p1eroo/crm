@@ -789,6 +789,89 @@ router.get('/companies-weekly-movement-range', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+// Lista de empresas por semana y tipo de movimiento (para popover al hacer clic en el gráfico)
+// Query: year, week, movementType (nuevoIngreso|avance|retroceso|sinCambios), page, limit, userId
+router.get('/companies-weekly-movement-list', async (req, res) => {
+    try {
+        const now = new Date();
+        const year = req.query.year != null ? Number(req.query.year) : now.getFullYear();
+        const weekParam = req.query.week;
+        const week = weekParam != null ? Number(weekParam) : getWeekNumber(now);
+        const movementType = req.query.movementType;
+        const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
+        const userId = req.query.userId != null ? Number(req.query.userId) : null;
+        const validTypes = ['nuevoIngreso', 'avance', 'retroceso', 'sinCambios'];
+        if (!movementType || !validTypes.includes(movementType)) {
+            return res.status(400).json({ error: 'movementType debe ser uno de: nuevoIngreso, avance, retroceso, sinCambios' });
+        }
+        const { start: weekStart, end: weekEnd } = getWeekRange(year, week);
+        const advanceStages = [
+            'reunion_efectiva', 'propuesta_economica', 'negociacion', 'licitacion',
+            'licitacion_etapa_final', 'firma_contrato', 'activo', 'cierre_ganado',
+        ];
+        const retroStages = ['cierre_perdido', 'cliente_perdido', 'lead_inactivo'];
+        const baseWhere = {};
+        if (userId != null && !Number.isNaN(userId)) {
+            baseWhere.ownerId = userId;
+        }
+        let whereClause = { ...baseWhere };
+        switch (movementType) {
+            case 'nuevoIngreso':
+                whereClause = {
+                    ...baseWhere,
+                    createdAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                };
+                break;
+            case 'avance':
+                whereClause = {
+                    ...baseWhere,
+                    createdAt: { [sequelize_1.Op.lt]: weekStart },
+                    updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                    lifecycleStage: { [sequelize_1.Op.in]: advanceStages },
+                };
+                break;
+            case 'retroceso':
+                whereClause = {
+                    ...baseWhere,
+                    createdAt: { [sequelize_1.Op.lt]: weekStart },
+                    updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                    lifecycleStage: { [sequelize_1.Op.in]: retroStages },
+                };
+                break;
+            case 'sinCambios':
+                whereClause = {
+                    ...baseWhere,
+                    [sequelize_1.Op.or]: [
+                        { createdAt: { [sequelize_1.Op.lt]: weekStart }, updatedAt: { [sequelize_1.Op.lt]: weekStart } },
+                        {
+                            createdAt: { [sequelize_1.Op.lt]: weekStart },
+                            updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                            lifecycleStage: { [sequelize_1.Op.notIn]: [...advanceStages, ...retroStages] },
+                        },
+                    ],
+                };
+                break;
+        }
+        const { count, rows } = await Company_1.Company.findAndCountAll({
+            where: whereClause,
+            attributes: ['id', 'name', 'companyname', 'lifecycleStage', 'ownerId', 'estimatedRevenue'],
+            order: [['name', 'ASC']],
+            limit,
+            offset: (page - 1) * limit,
+        });
+        res.json({
+            companies: rows,
+            total: count,
+            page,
+            totalPages: Math.ceil(count / limit),
+        });
+    }
+    catch (error) {
+        console.error('Error en /reports/companies-weekly-movement-list:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 // Obtener estadísticas por etapa y semana del año para un usuario
 router.get('/user/:userId/stage-stats', async (req, res) => {
     try {

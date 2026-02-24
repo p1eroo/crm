@@ -77,40 +77,40 @@ export function normalizeStageFromExcel(value: unknown): string {
 /**
  * Colores de etapa unificados (más claros) para Contactos, Empresas y Negocios.
  * Retorna { bg, color } con tonos más claros y listos para usar con fontWeight: 600.
+ * En modo claro usa fondos más saturados y texto más oscuro para mejor contraste.
  */
 export function getStageColor(theme: Theme, stage: string): { bg: string; color: string } {
   const dark = theme.palette.mode === 'dark';
-  // Fondos más claros: alpha 40 (~25%) en dark, 28 (~18%) en light
-  const bgAlpha = dark ? '40' : '28';
+  const bgAlpha = dark ? '40' : '4D'; // dark: ~25%, light: ~30% para mayor visibilidad
 
   if (['cierre_ganado', 'firma_contrato', 'activo', 'won', 'closed won'].includes(stage)) {
     return {
-      bg: dark ? `${taxiMonterricoColors.greenLight}${bgAlpha}` : `${taxiMonterricoColors.greenLight}${bgAlpha}`,
-      color: taxiMonterricoColors.greenLight,
+      bg: dark ? `${taxiMonterricoColors.greenLight}${bgAlpha}` : taxiMonterricoColors.successLight,
+      color: dark ? taxiMonterricoColors.greenLight : taxiMonterricoColors.greenDark,
     };
   }
   if (['cierre_perdido', 'cliente_perdido', 'lost', 'closed lost'].includes(stage)) {
     return {
-      bg: dark ? `${theme.palette.error.main}${bgAlpha}` : `${theme.palette.error.main}${bgAlpha}`,
-      color: theme.palette.error.light || theme.palette.error.main,
+      bg: dark ? `${theme.palette.error.main}${bgAlpha}` : taxiMonterricoColors.errorLight,
+      color: dark ? (theme.palette.error.light || theme.palette.error.main) : taxiMonterricoColors.errorDark,
     };
   }
   if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
     return {
-      bg: dark ? `${taxiMonterricoColors.orange}${bgAlpha}` : `${taxiMonterricoColors.orange}${bgAlpha}`,
-      color: taxiMonterricoColors.orangeLight,
+      bg: dark ? `${taxiMonterricoColors.orange}${bgAlpha}` : taxiMonterricoColors.warningMedium,
+      color: dark ? taxiMonterricoColors.orangeLight : taxiMonterricoColors.warningDark,
     };
   }
   if (stage === 'licitacion_etapa_final' || stage === 'licitacion') {
     return {
-      bg: dark ? `${theme.palette.secondary.main}${bgAlpha}` : `${theme.palette.secondary.main}${bgAlpha}`,
-      color: theme.palette.secondary.light || theme.palette.secondary.main,
+      bg: dark ? `${theme.palette.secondary.main}${bgAlpha}` : taxiMonterricoColors.amberLight,
+      color: dark ? (theme.palette.secondary.light || theme.palette.secondary.main) : taxiMonterricoColors.amberDark,
     };
   }
   if (['lead', 'contacto'].includes(stage)) {
     return {
-      bg: dark ? `${theme.palette.primary.main}${bgAlpha}` : `${theme.palette.primary.main}${bgAlpha}`,
-      color: theme.palette.primary.light || theme.palette.primary.main,
+      bg: dark ? `${theme.palette.primary.main}${bgAlpha}` : taxiMonterricoColors.successLight,
+      color: dark ? (theme.palette.primary.light || theme.palette.primary.main) : taxiMonterricoColors.greenDark,
     };
   }
   if (stage === 'lead_inactivo') {
@@ -120,7 +120,7 @@ export function getStageColor(theme: Theme, stage: string): { bg: string; color:
     };
   }
   return {
-    bg: dark ? `${theme.palette.primary.main}${bgAlpha}` : `${theme.palette.primary.main}${bgAlpha}`,
-    color: theme.palette.primary.light || theme.palette.primary.main,
+    bg: dark ? `${theme.palette.primary.main}${bgAlpha}` : taxiMonterricoColors.successLight,
+    color: dark ? (theme.palette.primary.light || theme.palette.primary.main) : taxiMonterricoColors.greenDark,
   };
 }

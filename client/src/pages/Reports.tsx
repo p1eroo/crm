@@ -17,8 +17,8 @@ import {
   Button,
   Avatar,
 } from '@mui/material';
-import { Person, ChevronLeft, ChevronRight, Close, Business, KeyboardArrowDown } from '@mui/icons-material';
-import { Building2, Handshake } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Close, Business, KeyboardArrowDown } from '@mui/icons-material';
+import { Building2, Handshake, UserRound } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import ReactApexChart from 'react-apexcharts';
 import type { ApexOptions } from 'apexcharts';
@@ -97,6 +97,9 @@ const PIE_STAGE_COLORS = [
   '#95A5A6',   // Inactivo - gris
 ];
 
+const WEEKLY_MOVEMENT_LABELS = ['Avance', 'Nuevo ingreso', 'Retroceso', 'Sin cambios'];
+const WEEKLY_MOVEMENT_TYPES = ['avance', 'nuevoIngreso', 'retroceso', 'sinCambios'] as const;
+
 const ACTIVITY_TYPE_ORDER: Array<'call' | 'email' | 'meeting' | 'note' | 'task'> = [
   'call', 'email', 'meeting', 'note', 'task',
 ];
@@ -108,7 +111,7 @@ const ACTIVITY_TYPE_LABELS: Record<string, string> = {
   task: 'Tarea',
 };
 const ACTIVITY_BAR_COLORS = [
-  '#2E7D32', // Verde principal
+  '#13944C', // Verde principal
   '#4CAF50', // Verde claro
   '#0d9394', // Teal
   '#FFA726', // Ámbar (acento)
@@ -139,6 +142,7 @@ const Reports: React.FC = () => {
   const chartContainerRef = React.useRef<HTMLDivElement>(null);
   const clickAnchorRef = React.useRef<HTMLDivElement>(null);
   const [companiesModalStageLabel, setCompaniesModalStageLabel] = useState<string>('');
+  const [companiesModalWeeklyContext, setCompaniesModalWeeklyContext] = useState<{ year: number; week: number; movementType: string } | null>(null);
   const [companiesModalCompanies, setCompaniesModalCompanies] = useState<Array<{ id: number; name: string; companyname?: string | null; lifecycleStage: string; ownerId?: number | null; estimatedRevenue?: number | null }>>([]);
   const [companiesModalLoading, setCompaniesModalLoading] = useState(false);
   const [, setCompaniesModalTotal] = useState(0);
@@ -285,7 +289,32 @@ const Reports: React.FC = () => {
     }
   };
 
+  const fetchCompaniesWeeklyMovementList = useCallback(async (year: number, week: number, movementType: string, page: number) => {
+    setCompaniesModalLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('year', String(year));
+      params.set('week', String(week));
+      params.set('movementType', movementType);
+      if (reportsAdvisorFilter != null) params.set('userId', String(reportsAdvisorFilter));
+      params.set('page', String(page));
+      params.set('limit', String(companiesModalLimit));
+      const response = await api.get<{ companies: Array<{ id: number; name: string; companyname?: string | null; lifecycleStage: string; ownerId?: number | null; estimatedRevenue?: number | null }>; total: number; page: number; totalPages: number }>(`/reports/companies-weekly-movement-list?${params.toString()}`);
+      setCompaniesModalCompanies(response.data?.companies || []);
+      setCompaniesModalTotal(response.data?.total ?? 0);
+      setCompaniesModalPage(response.data?.page ?? 1);
+      setCompaniesModalTotalPages(response.data?.totalPages ?? 0);
+    } catch (err: any) {
+      console.error('Error al cargar empresas por movimiento semanal:', err);
+      setCompaniesModalCompanies([]);
+      setCompaniesModalTotal(0);
+    } finally {
+      setCompaniesModalLoading(false);
+    }
+  }, [reportsAdvisorFilter, companiesModalLimit]);
+
   const handleOpenCompaniesList = (stageKey: string, stageLabel: string, clientX?: number, clientY?: number) => {
+    setCompaniesModalWeeklyContext(null);
     setCompaniesModalStage(stageKey);
     setCompaniesModalStageLabel(stageLabel);
     if (clientX !== undefined && clientY !== undefined) {
@@ -297,6 +326,15 @@ const Reports: React.FC = () => {
     setCompaniesModalPage(1);
     fetchCompaniesList(stageKey, 1);
   };
+
+  const handleOpenWeeklyMovementCompaniesList = useCallback((year: number, week: number, movementType: string, movementLabel: string, clientX: number, clientY: number) => {
+    setCompaniesModalStage('weekly');
+    setCompaniesModalStageLabel(`Semana ${week} - ${movementLabel}`);
+    setCompaniesModalWeeklyContext({ year, week, movementType });
+    setCompaniesAnchorPosition({ left: clientX, top: clientY });
+    setCompaniesModalPage(1);
+    fetchCompaniesWeeklyMovementList(year, week, movementType, 1);
+  }, [fetchCompaniesWeeklyMovementList]);
 
   // Abrir el popover después de que el ancla se haya renderizado con la posición correcta
   useEffect(() => {
@@ -583,6 +621,7 @@ const Reports: React.FC = () => {
         options: {
           chart: { type: 'bar' as const, height: 350, stacked: true, horizontal: true, background: 'transparent' },
           xaxis: { categories: [] as string[] },
+          states: { hover: { filter: { type: 'none' } }, active: { filter: { type: 'none' } } },
         } as ApexOptions,
       };
     }
@@ -596,7 +635,33 @@ const Reports: React.FC = () => {
     return {
       series,
       options: {
-        chart: { type: 'bar' as const, height: 680, stacked: true, background: 'transparent', toolbar: { show: false } },
+        chart: {
+          type: 'bar' as const,
+          height: 680,
+          stacked: true,
+          background: 'transparent',
+          toolbar: { show: false },
+          events: {
+            dataPointSelection: (event: MouseEvent, _chartContext: unknown, config: { dataPointIndex?: number; seriesIndex?: number }) => {
+              const dataPointIndex = config?.dataPointIndex ?? -1;
+              const seriesIndex = config?.seriesIndex ?? -1;
+              if (dataPointIndex >= 0 && seriesIndex >= 0 && dataPointIndex < rows.length && seriesIndex < 4) {
+                const row = rows[dataPointIndex];
+                const value = series[seriesIndex].data[dataPointIndex];
+                if (row && value != null && value > 0) {
+                  handleOpenWeeklyMovementCompaniesList(
+                    row.year,
+                    row.week,
+                    WEEKLY_MOVEMENT_TYPES[seriesIndex],
+                    WEEKLY_MOVEMENT_LABELS[seriesIndex],
+                    event.clientX,
+                    event.clientY
+                  );
+                }
+              }
+            },
+          },
+        },
         plotOptions: {
           bar: {
             horizontal: true as const,
@@ -633,9 +698,13 @@ const Reports: React.FC = () => {
           markers: { shape: 'circle' as const, strokeWidth: 0, size: 8 },
         },
         colors: movementChartColors,
+        states: {
+          hover: { filter: { type: 'none' } },
+          active: { filter: { type: 'none' } },
+        },
       } as ApexOptions,
     };
-  }, [weeklyMovementRangeData, movementChartColors, theme.palette.mode, theme.palette.divider, theme.palette.text.secondary, theme.palette.background.paper]);
+  }, [weeklyMovementRangeData, movementChartColors, theme.palette.mode, theme.palette.divider, theme.palette.text.secondary, theme.palette.background.paper, handleOpenWeeklyMovementCompaniesList]);
 
   if (loading) {
     return (
@@ -1420,6 +1489,7 @@ const Reports: React.FC = () => {
                 width: '100%',
                 minWidth: 0,
                 overflow: 'hidden',
+                cursor: 'pointer',
                 '& > div': { width: '100% !important' },
                 '& .apexcharts-legend-text': { marginLeft: '-10px' },
                 '& .apexcharts-canvas': { width: '100% !important' },
@@ -1620,6 +1690,7 @@ const Reports: React.FC = () => {
         onClose={() => {
           setCompaniesPopoverAnchor(null);
           setCompaniesAnchorPosition(null);
+          setCompaniesModalWeeklyContext(null);
         }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         transformOrigin={{ vertical: 'top', horizontal: 'center' }}
@@ -1736,14 +1807,26 @@ const Reports: React.FC = () => {
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <IconButton
                       size="small"
-                      onClick={() => companiesModalStage && fetchCompaniesList(companiesModalStage, companiesModalPage - 1)}
+                      onClick={() => {
+                        if (companiesModalWeeklyContext) {
+                          fetchCompaniesWeeklyMovementList(companiesModalWeeklyContext.year, companiesModalWeeklyContext.week, companiesModalWeeklyContext.movementType, companiesModalPage - 1);
+                        } else if (companiesModalStage) {
+                          fetchCompaniesList(companiesModalStage, companiesModalPage - 1);
+                        }
+                      }}
                       disabled={companiesModalPage <= 1}
                     >
                       <ChevronLeft />
                     </IconButton>
                     <IconButton
                       size="small"
-                      onClick={() => companiesModalStage && fetchCompaniesList(companiesModalStage, companiesModalPage + 1)}
+                      onClick={() => {
+                        if (companiesModalWeeklyContext) {
+                          fetchCompaniesWeeklyMovementList(companiesModalWeeklyContext.year, companiesModalWeeklyContext.week, companiesModalWeeklyContext.movementType, companiesModalPage + 1);
+                        } else if (companiesModalStage) {
+                          fetchCompaniesList(companiesModalStage, companiesModalPage + 1);
+                        }
+                      }}
                       disabled={companiesModalPage >= companiesModalTotalPages}
                     >
                       <ChevronRight />
@@ -2024,7 +2107,7 @@ const Reports: React.FC = () => {
                         {item.entityType === 'company' ? (
                           <Building2 size={16} color="white" />
                         ) : item.entityType === 'contact' ? (
-                          <Person sx={{ fontSize: 16 }} />
+                          <UserRound size={16} color="white" />
                         ) : (
                           <Business sx={{ fontSize: 16 }} />
                         )}

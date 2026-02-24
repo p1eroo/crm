@@ -1284,7 +1284,7 @@ const Tasks: React.FC = () => {
                   py: { xs: 1.5, md: 1.25 }, 
                   pl: { xs: 1.5, md: 2 }, 
                   pr: { xs: 1.5, md: 2 }, 
-                  width: '9%',
+                  width: '7%',
                   minWidth: 0,
                   bgcolor: 'transparent',
                   verticalAlign: showColumnFilters ? 'top' : 'middle',
@@ -1372,9 +1372,9 @@ const Tasks: React.FC = () => {
                   color: theme.palette.text.primary, 
                   fontSize: { xs: '0.75rem', md: '0.875rem' }, 
                   py: { xs: 1.5, md: 1.25 }, 
-                  pl: { xs: 2, md: 3 }, 
-                  pr: { xs: 2, md: 3 }, 
-                  width: '6%',
+                  pl: { xs: 1.5, md: 2 }, 
+                  pr: { xs: 1.5, md: 2 }, 
+                  width: '8%',
                   minWidth: 0,
                   bgcolor: 'transparent',
                   verticalAlign: showColumnFilters ? 'top' : 'middle',
@@ -1746,7 +1746,7 @@ const Tasks: React.FC = () => {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, width: '9%', minWidth: 0, overflow: 'hidden' }}>
+                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, width: '7%', minWidth: 0, overflow: 'hidden' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
                       {task.AssignedTo ? (
                         <Tooltip 
@@ -1809,7 +1809,7 @@ const Tasks: React.FC = () => {
                       {task.Contact ? `${task.Contact.firstName} ${task.Contact.lastName}`.trim() || '—' : '—'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ pl: { xs: 2, md: 3 }, pr: { xs: 2, md: 3 }, width: '6%', minWidth: 0, overflow: 'hidden' }}>
+                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, width: '8%', minWidth: 0, overflow: 'hidden' }}>
                     <Box
                       onClick={(e) => {
                         e.stopPropagation();

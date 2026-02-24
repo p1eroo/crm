@@ -14,7 +14,6 @@ import {
   InputAdornment,
   Menu,
   MenuItem,
-  Avatar,
   IconButton,
   useTheme,
   TableSortLabel,
@@ -30,6 +29,7 @@ import {
 import { Trash } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { taxiMonterricoColors } from "../../theme/colors";
+import EntityPreviewDrawer from "../EntityPreviewDrawer";
 import { formatCurrencyPE } from "../../utils/currencyUtils";
 
 interface Deal {
@@ -77,6 +77,9 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
   const navigate = useNavigate();
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDealId, setPreviewDealId] = useState<number | null>(null);
+  const [hoveredDealId, setHoveredDealId] = useState<number | null>(null);
   const itemsPerPage = 5;
 
   const filteredDeals = deals.filter(
@@ -414,7 +417,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                       "NOMBRE DEL NEGOCIO"
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 3 }}>
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === "amount"}
@@ -435,7 +438,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                       "VALOR"
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 2 }}>
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === "closeDate"}
@@ -456,7 +459,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                       "FECHA DE CIERRE"
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 2 }}>
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === "stage"}
@@ -478,9 +481,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                     )}
                   </TableCell>
                   {showActions && (
-                    <TableCell align="right" sx={{ width: "80px" }}>
-                      ACCIONES
-                    </TableCell>
+                    <TableCell align="right" sx={{ width: "110px", minWidth: "110px", pr: 4, pl: 2 }} />
                   )}
                 </TableRow>
               </TableHead>
@@ -496,40 +497,27 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                 >
                   <TableCell>
                     <Box
+                      onMouseEnter={() => setHoveredDealId(deal.id)}
+                      onMouseLeave={() => setHoveredDealId(null)}
                       sx={{
                         display: "flex",
                         alignItems: "center",
                         gap: 1,
                       }}
                     >
-                      <Avatar
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          bgcolor: taxiMonterricoColors.green,
-                          fontSize: "0.875rem",
-                          color: 'white',
-                        }}
-                      >
-                        {getInitials
-                          ? getInitials(deal.name || "")
-                          : deal.name
-                          ? deal.name.split(" ").length >= 2
-                            ? `${deal.name.split(" ")[0][0]}${
-                                deal.name.split(" ")[1][0]
-                              }`.toUpperCase()
-                            : deal.name.substring(0, 2).toUpperCase()
-                          : "--"}
-                      </Avatar>
                       <Typography
                         onClick={() => navigate(`/deals/${deal.id}`)}
                         variant="body2"
                         sx={{ 
                           fontWeight: 500, 
-                          color: "#2E7D32",
+                          color: taxiMonterricoColors.green,
                           cursor: 'pointer',
                           textDecoration: 'none',
                           fontSize: '0.875rem',
+                          minWidth: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                           '&:hover': {
                             textDecoration: 'underline',
                           },
@@ -537,16 +525,43 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                       >
                         {deal.name}
                       </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewDealId(deal.id);
+                          setPreviewOpen(true);
+                        }}
+                        sx={{
+                          flexShrink: 0,
+                          fontSize: "0.6875rem",
+                          py: 0.25,
+                          px: 0.75,
+                          minWidth: "auto",
+                          borderColor: theme.palette.divider,
+                          color: theme.palette.text.secondary,
+                          boxShadow: "none",
+                          visibility: hoveredDealId === deal.id ? "visible" : "hidden",
+                          "&:hover": {
+                            borderColor: theme.palette.divider,
+                            bgcolor: "transparent",
+                            boxShadow: "none",
+                          },
+                        }}
+                      >
+                        Vista previa
+                      </Button>
                     </Box>
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontSize: "0.875rem", color: "#2E7D32" }}>
+                  <TableCell sx={{ pl: 3 }}>
+                    <Typography variant="body2" sx={{ fontSize: "0.875rem", color: taxiMonterricoColors.green }}>
                       {deal.amount != null
                         ? formatCurrencyPE(typeof deal.amount === "number" ? deal.amount : parseFloat(String(deal.amount)) || 0)
                         : "--"}
                     </Typography>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 2 }}>
                     <Typography variant="body2" sx={{ fontSize: "0.875rem" }}>
                       {deal.closeDate
                         ? new Date(deal.closeDate).toLocaleDateString("es-ES", {
@@ -560,7 +575,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                         : "--"}
                     </Typography>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 2 }}>
                     <Typography variant="body2" sx={{ fontSize: "0.875rem" }}>
                       {deal.stage
                         ? getStageLabel
@@ -570,7 +585,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                     </Typography>
                   </TableCell>
                   {showActions && onRemove && (
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ pr: 4, pl: 2 }}>
                       <IconButton
                         size="small"
                         onClick={(e) => {
@@ -668,6 +683,16 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
         )}
       </>
       )}
+
+      <EntityPreviewDrawer
+        open={previewOpen}
+        onClose={() => {
+          setPreviewOpen(false);
+          setPreviewDealId(null);
+        }}
+        entityType="deal"
+        entityId={previewDealId}
+      />
     </Card>
   );
 };

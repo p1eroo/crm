@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Box,
   Card,
@@ -8,6 +8,7 @@ import {
   IconButton,
   Tooltip,
 } from "@mui/material";
+import { ChevronLeft, ChevronRight } from "@mui/icons-material";
 import { Assignment } from "@mui/icons-material";
 import { Trash } from "lucide-react";
 import { useTheme } from "@mui/material/styles";
@@ -29,6 +30,8 @@ const TAB_TO_TYPES: Record<string, string[]> = {
   task: ["task", "todo", "other"],
   meeting: ["meeting"],
 };
+
+const ITEMS_PER_PAGE = 5;
 
 interface ActivitiesTabContentProps {
   activities: any[];
@@ -58,7 +61,25 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
   emptyMessage = "No hay actividades registradas. Crea una nueva actividad para comenzar.",
 }) => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+  const getActivityTypeColor = (type: string) => {
+    const t = type?.toLowerCase() || "";
+    const colors = {
+      note: isDark ? "#BDBDBD" : "#9E9E9E",
+      email: "#09ADB4",
+      call: "#05AE49",
+      meeting: "#A31F9D",
+      task: "#F59E00",
+    };
+    if (["task", "todo", "other"].includes(t)) return colors.task;
+    return (colors as Record<string, string>)[t] ?? taxiMonterricoColors.green;
+  };
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedFilter]);
 
   const isTaskActivity = (activity: any) => {
     const t = (activity.type || '').toLowerCase();
@@ -92,6 +113,18 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
       return allowed.includes(t);
     });
   }, [activities, selectedFilter]);
+
+  useEffect(() => {
+    const total = Math.ceil(filteredActivities.length / ITEMS_PER_PAGE) || 1;
+    setCurrentPage((p) => Math.min(p, total));
+  }, [filteredActivities.length]);
+
+  const totalPages = Math.ceil(filteredActivities.length / ITEMS_PER_PAGE) || 1;
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedActivities = useMemo(() => {
+    const start = (safePage - 1) * ITEMS_PER_PAGE;
+    return filteredActivities.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredActivities, safePage]);
 
   return (
     <Card
@@ -267,7 +300,7 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
 
         return (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, px: 1, py: 0 }}>
-            {filteredActivities.map((activity) => (
+            {paginatedActivities.map((activity) => (
               <Paper
                 key={activity.id}
                 onClick={() => onActivityClick(activity)}
@@ -304,7 +337,7 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
                     <Typography
                       variant="caption"
                       sx={{
-                        color: taxiMonterricoColors.green,
+                        color: getActivityTypeColor(((activity as any).isTask || (activity as any).type === 'task') ? 'task' : ((activity as any).taskSubType || activity.type || '')),
                         fontWeight: 600,
                         fontSize: "0.7rem",
                         textTransform: "uppercase",
@@ -340,11 +373,12 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
                       sx={{ fontSize: "0.7rem" }}
                     >
                       Por {activity.User.firstName} {activity.User.lastName}
-                      {activity.createdAt && (
+                      {(activity.dueDate || activity.createdAt) && (
                         <span>
                           {" "}
                           •{" "}
-                          {new Date(activity.createdAt).toLocaleDateString(
+                          {activity.dueDate ? "Vence: " : ""}
+                          {new Date(activity.dueDate || activity.createdAt!).toLocaleDateString(
                             "es-ES",
                             {
                               day: "numeric",
@@ -429,6 +463,41 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
                 )}
               </Paper>
             ))}
+            {totalPages > 1 && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mt: 3,
+                  pt: 2,
+                  borderTop: "1px solid",
+                  borderColor: theme.palette.divider,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Página {safePage} de {totalPages} ({filteredActivities.length} actividad{filteredActivities.length !== 1 ? "es" : ""})
+                </Typography>
+                <Box sx={{ display: "flex", gap: 0.5 }}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1}
+                    sx={{ color: taxiMonterricoColors.green }}
+                  >
+                    <ChevronLeft />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    sx={{ color: taxiMonterricoColors.green }}
+                  >
+                    <ChevronRight />
+                  </IconButton>
+                </Box>
+              </Box>
+            )}
           </Box>
         );
       })()}

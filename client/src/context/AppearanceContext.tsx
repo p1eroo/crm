@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 // Presets de colores
 export const colorPresets = [
-  { id: 'green', name: 'Verde', color: '#2E7D32' },
+  { id: 'green', name: 'Verde', color: '#13944C' },
   { id: 'blue', name: 'Azul', color: '#1976D2' },
   { id: 'purple', name: 'Morado', color: '#7B1FA2' },
   { id: 'orange', name: 'Naranja', color: '#F57C00' },

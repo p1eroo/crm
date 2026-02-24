@@ -13,6 +13,12 @@ import {
   Chip,
   useTheme,
   IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import {
   Search,
@@ -20,6 +26,7 @@ import {
   KeyboardArrowDown,
   Close,
   Comment,
+  Email,
   ChevronLeft,
   ChevronRight,
   Assignment,
@@ -111,15 +118,22 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
     return ['task', 'todo', 'other'].includes(t) || !!(activity as any).isTask;
   };
 
-  const TASK_ORANGE = '#F57C00';
+  const isDark = theme.palette.mode === 'dark';
+  const typeColors = {
+    note: isDark ? '#BDBDBD' : '#9E9E9E',
+    email: '#09ADB4',
+    call: '#05AE49',
+    meeting: '#A31F9D',
+    task: '#F59E00',
+  };
 
   const getActivityIconCompact = (type?: string, colorOverride?: string) => {
-    const color = colorOverride ?? (type === 'note' ? '#9E9E9E' : type === 'email' ? '#1976D2' : type === 'call' ? '#2E7D32' : type === 'meeting' ? '#7B1FA2' : type === 'task' || type === 'todo' ? TASK_ORANGE : theme.palette.text.secondary);
+    const color = colorOverride ?? (type === 'note' ? typeColors.note : type === 'email' ? typeColors.email : type === 'call' ? typeColors.call : type === 'meeting' ? typeColors.meeting : type === 'task' || type === 'todo' ? typeColors.task : theme.palette.text.secondary);
     switch (type) {
       case 'note':
         return <FontAwesomeIcon icon={['fas', 'note-sticky']} style={{ fontSize: 18, color }} />;
       case 'email':
-        return <Comment sx={{ fontSize: 18, color }} />;
+        return <Email sx={{ fontSize: 18, color }} />;
       case 'call':
         return <FontAwesomeIcon icon={['fas', 'phone']} style={{ fontSize: 18, color }} />;
       case 'task':
@@ -137,16 +151,16 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
   const getTypeColor = (type?: string) => {
     switch (type) {
       case 'note':
-        return '#9E9E9E';
+        return typeColors.note;
       case 'email':
-        return '#1976D2';
+        return typeColors.email;
       case 'call':
-        return '#2E7D32';
+        return typeColors.call;
       case 'task':
       case 'todo':
-        return '#F57C00';
+        return typeColors.task;
       case 'meeting':
-        return '#7B1FA2';
+        return typeColors.meeting;
       default:
         return theme.palette.text.secondary;
     }
@@ -543,7 +557,7 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
               },
             }}
           >
-            <Comment
+            <Email
               sx={{
                 marginRight: 2,
                 fontSize: 14,
@@ -871,143 +885,159 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
         </Box>
       ) : (
         <>
-          <Box
+          <TableContainer
             sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 0.5,
+              width: '100%',
+              border: '1px solid',
+              borderColor: theme.palette.divider,
+              borderRadius: 1.5,
+              overflow: 'hidden',
             }}
           >
-            {paginatedActivities.map((activity) => {
-              const isCompleted = completedActivities[activity.id] || false;
-              return (
-                <Box
-                  key={activity.id}
-                  onClick={() => onActivityClick && onActivityClick(activity)}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
-                    py: 1,
-                    px: 1.5,
-                    borderRadius: 1,
-                    cursor: onActivityClick ? 'pointer' : 'default',
-                    transition: 'all 0.15s ease',
-                    borderBottom: `1px solid ${theme.palette.divider}`,
-                    '&:hover': {
-                      bgcolor: theme.palette.action.hover,
-                    },
-                    '&:last-child': {
-                      borderBottom: 'none',
-                    },
-                  }}
-                >
-                  {/* Checkbox: solo para tareas (task, todo, other). Bloqueado cuando ya está completada */}
-                  {onToggleComplete && isTaskActivity(activity) && (
-                    <Checkbox
-                      checked={isCompleted}
-                      disabled={isCompleted}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleToggleComplete(activity, e.target.checked);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      size="small"
+            <Table
+              size="small"
+              sx={{
+                '& .MuiTableCell-root': {
+                  fontSize: '0.75rem',
+                  borderBottom: '1px solid',
+                  borderColor:
+                    theme.palette.mode === 'dark'
+                      ? 'rgba(255,255,255,0.08)'
+                      : 'rgba(0,0,0,0.06)',
+                },
+                '& .MuiTableBody .MuiTableRow:last-child .MuiTableCell-root': {
+                  borderBottom: 'none',
+                },
+                '& .MuiTableHead .MuiTableCell-root': {
+                  fontWeight: 600,
+                  bgcolor:
+                    theme.palette.mode === 'dark'
+                      ? 'rgba(46, 125, 50, 0.18)'
+                      : 'rgba(46, 125, 50, 0.08)',
+                },
+              }}
+            >
+              <TableHead>
+                <TableRow>
+                  <TableCell>ACTIVIDAD</TableCell>
+                  <TableCell>ASIGNADO</TableCell>
+                  <TableCell>FECHA</TableCell>
+                  <TableCell align="right">TIPO</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody key={currentPage}>
+                {paginatedActivities.map((activity) => {
+                  const isCompleted = completedActivities[activity.id] || false;
+                  return (
+                    <TableRow
+                      key={activity.id}
+                      onClick={() => onActivityClick && onActivityClick(activity)}
                       sx={{
-                        p: 0,
-                        '& .MuiSvgIcon-root': {
-                          fontSize: 20,
+                        cursor: onActivityClick ? 'pointer' : 'default',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          backgroundColor: 'rgba(46, 125, 50, 0.04)',
                         },
                       }}
-                    />
-                  )}
-
-                  {/* Icono */}
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {getActivityIconCompact(
-                      (activity as any).taskSubType || activity.type || 'task',
-                      isTaskForDisplay(activity) ? TASK_ORANGE : undefined
-                    )}
-                  </Box>
-
-                  {/* Título */}
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      flex: 1,
-                      fontWeight: 500,
-                      fontSize: '0.875rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      textDecoration: isCompleted ? 'line-through' : 'none',
-                      opacity: isCompleted ? 0.6 : 1,
-                      color: theme.palette.text.primary,
-                    }}
-                  >
-                    {activity.subject || activity.title || 'Sin título'}
-                  </Typography>
-
-                  {/* Usuario */}
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: theme.palette.text.secondary,
-                      fontSize: '0.813rem',
-                      whiteSpace: 'nowrap',
-                      minWidth: 100,
-                      textAlign: 'center',
-                    }}
-                  >
-                    {activity.User
-                      ? `${activity.User.firstName} ${activity.User.lastName}`
-                      : '-'}
-                  </Typography>
-
-                  {/* Fecha */}
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: theme.palette.text.secondary,
-                      fontSize: '0.813rem',
-                      whiteSpace: 'nowrap',
-                      minWidth: 85,
-                      textAlign: 'center',
-                    }}
-                  >
-                    {activity.createdAt
-                      ? new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                      : '-'}
-                  </Typography>
-
-                  {/* Tipo como chip */}
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: getTypeColor(isTaskForDisplay(activity) ? 'task' : ((activity as any).taskSubType || activity.type)),
-                      fontWeight: 600,
-                      fontSize: '0.75rem',
-                      textTransform: 'uppercase',
-                      minWidth: 60,
-                      textAlign: 'right',
-                    }}
-                  >
-                    {getActivityTypeLabelFn(activity, (activity as any).taskSubType || activity.type || '')}
-                  </Typography>
-                </Box>
-              );
-            })}
-          </Box>
+                    >
+                      <TableCell>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                          }}
+                        >
+                          {onToggleComplete && isTaskActivity(activity) && (
+                            <Checkbox
+                              checked={isCompleted}
+                              disabled={isCompleted}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleToggleComplete(activity, e.target.checked);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              size="small"
+                              sx={{
+                                p: 0,
+                                '& .MuiSvgIcon-root': {
+                                  fontSize: 20,
+                                },
+                              }}
+                            />
+                          )}
+                          <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                            {getActivityIconCompact(
+                              (activity as any).taskSubType || activity.type || 'task',
+                              isTaskForDisplay(activity) ? typeColors.task : undefined
+                            )}
+                          </Box>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 500,
+                              fontSize: '0.875rem',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              textDecoration: isCompleted ? 'line-through' : 'none',
+                              opacity: isCompleted ? 0.6 : 1,
+                              color: theme.palette.text.primary,
+                            }}
+                          >
+                            {activity.subject || activity.title || 'Sin título'}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            fontSize: '0.813rem',
+                          }}
+                        >
+                          {activity.User
+                            ? `${activity.User.firstName} ${activity.User.lastName}`
+                            : '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            fontSize: '0.813rem',
+                          }}
+                        >
+                          {(activity.dueDate || activity.createdAt)
+                            ? new Date(activity.dueDate || activity.createdAt!).toLocaleDateString('es-ES', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                              })
+                            : '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: getTypeColor(isTaskForDisplay(activity) ? 'task' : ((activity as any).taskSubType || activity.type)),
+                            fontWeight: 600,
+                            fontSize: '0.75rem',
+                            textTransform: 'uppercase',
+                          }}
+                        >
+                          {getActivityTypeLabelFn(activity, (activity as any).taskSubType || activity.type || '')}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
           {/* Paginación - Solo se muestra si hay más de 5 actividades */}
           {filteredActivities.length > itemsPerPage && (

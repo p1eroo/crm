@@ -20,6 +20,7 @@ import {
 import {
   Email,
   Close,
+  Person,
 } from "@mui/icons-material";
 import api from "../config/api";
 import EmailComposer from "../components/EmailComposer";
@@ -36,11 +37,9 @@ import {
 import { NoteModal, CallModal, TaskModal, MeetingModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { FormDrawer } from "../components/FormDrawer";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { far } from "@fortawesome/free-regular-svg-icons";
 import { fas, faEnvelope } from "@fortawesome/free-solid-svg-icons";
-import { faUserTie } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/AuthContext";
 import { useTaskCompleteFlow } from "../hooks/useTaskCompleteFlow";
 
@@ -1424,7 +1423,7 @@ const ContactDetail: React.FC = () => {
             { label: `${contact?.firstName || ''} ${contact?.lastName || ''}` },
           ]}
           onBack={() => navigate('/contacts')}
-          avatarIcon={<FontAwesomeIcon icon={faUserTie} style={{ fontSize: 60, color: 'white' }} />}
+          avatarIcon={<Person sx={{ fontSize: 60, color: 'white' }} />}
           avatarBgColor="#0d9394"
           entityName={`${contact?.firstName || ''} ${contact?.lastName || ''}`}
           entitySubtitle={contact?.jobTitle || contact?.email || 'Sin información adicional'}

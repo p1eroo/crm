@@ -1,7 +1,7 @@
 // Paleta de colores Taxi Monterrico
 export const taxiMonterricoColors = {
   // Verdes
-  green: '#2E7D32',        // Verde vibrante principal
+  green: '#13944C',        // Verde vibrante principal
   greenLight: '#4CAF50',   // Verde claro
   greenDark: '#1B5E20',    // Verde oscuro
   greenEmerald: '#10B981', // Verde esmeralda (usado en gradientes y efectos)
@@ -21,10 +21,10 @@ export const taxiMonterricoColors = {
   grayBackground: '#FAFAFA',
   
   // Estados
-  success: '#2E7D32',
+  success: '#13944C',
   warning: '#FFA726',
   error: '#D32F2F',
-  info: '#2E7D32',
+  info: '#13944C',
   
   // Colores de fondo para estados (Material Design)
   successLight: '#E8F5E9',  // Verde claro para fondos
@@ -45,7 +45,7 @@ export const crmColors = {
   primary: taxiMonterricoColors.green,
   primaryLight: taxiMonterricoColors.greenLight,
   primaryDark: taxiMonterricoColors.greenDark,
-  primaryGlow: 'rgba(46, 125, 50, 0.3)',
+  primaryGlow: 'rgba(19, 148, 76, 0.3)',
   accent: taxiMonterricoColors.greenEmerald,
   accentMuted: '#059669',
   slate: '#64748B',

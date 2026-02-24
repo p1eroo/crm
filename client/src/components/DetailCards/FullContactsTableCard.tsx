@@ -23,14 +23,13 @@ import {
   ExpandMore,
   Person,
   Add,
-  OpenInNew,
-  ContentCopy,
   ChevronLeft,
   ChevronRight,
 } from '@mui/icons-material';
 import { Trash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { taxiMonterricoColors } from '../../theme/colors';
+import EntityPreviewDrawer from '../EntityPreviewDrawer';
 
 interface Contact {
   id: number;
@@ -75,6 +74,9 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
   const navigate = useNavigate();
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewContactId, setPreviewContactId] = useState<number | null>(null);
+  const [hoveredContactId, setHoveredContactId] = useState<number | null>(null);
   const itemsPerPage = 5;
 
   const filteredContacts = contacts.filter(
@@ -339,6 +341,12 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                       ? 'rgba(255,255,255,0.08)'
                       : 'rgba(0,0,0,0.06)',
                 },
+                '& .MuiTableBody .MuiTableCell-root': {
+                  fontSize: '0.875rem',
+                },
+                '& .MuiTableBody .MuiTableCell-root .MuiTypography-root': {
+                  fontSize: '0.875rem !important',
+                },
                 '& .MuiTableBody .MuiTableRow:last-child .MuiTableCell-root': {
                   borderBottom: 'none',
                 },
@@ -374,7 +382,7 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                       'NOMBRE'
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 3 }}>
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === 'email'}
@@ -395,7 +403,7 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                       'CORREO'
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 2 }}>
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === 'phone'}
@@ -417,9 +425,7 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                     )}
                   </TableCell>
                   {showActions && (
-                    <TableCell align="right" sx={{ width: '80px' }}>
-                      ACCIONES
-                    </TableCell>
+                    <TableCell align="right" sx={{ width: '80px' }} />
                   )}
                 </TableRow>
               </TableHead>
@@ -436,6 +442,8 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                 >
                   <TableCell>
                     <Box
+                      onMouseEnter={() => setHoveredContactId(contact.id)}
+                      onMouseLeave={() => setHoveredContactId(null)}
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
@@ -445,10 +453,15 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                       <Typography
                         onClick={() => navigate(`/contacts/${contact.id}`)}
                         sx={{
+                          fontSize: '0.875rem',
                           color: '#13944C',
                           fontWeight: 500,
                           cursor: 'pointer',
                           textDecoration: 'none',
+                          minWidth: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                           '&:hover': {
                             textDecoration: 'underline',
                           },
@@ -456,9 +469,36 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                       >
                         {contact.firstName} {contact.lastName}
                       </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewContactId(contact.id);
+                          setPreviewOpen(true);
+                        }}
+                        sx={{
+                          flexShrink: 0,
+                          fontSize: '0.6875rem',
+                          py: 0.25,
+                          px: 0.75,
+                          minWidth: 'auto',
+                          borderColor: theme.palette.divider,
+                          color: theme.palette.text.secondary,
+                          boxShadow: 'none',
+                          visibility: hoveredContactId === contact.id ? 'visible' : 'hidden',
+                          '&:hover': {
+                            borderColor: theme.palette.divider,
+                            bgcolor: 'transparent',
+                            boxShadow: 'none',
+                          },
+                        }}
+                      >
+                        Vista previa
+                      </Button>
                     </Box>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 3 }}>
                     <Box
                       sx={{
                         display: 'flex',
@@ -468,50 +508,15 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                     >
                       <Typography
                         sx={{
+                          fontSize: '0.875rem',
                           color: '#13944C',
                         }}
                       >
                         {contact.email || '--'}
                       </Typography>
-                      {contact.email && onCopyToClipboard && (
-                        <>
-                          <IconButton
-                            size="small"
-                            sx={{ p: 0.5 }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(`mailto:${contact.email}`, '_blank');
-                            }}
-                            title="Enviar correo"
-                          >
-                            <OpenInNew
-                              fontSize="small"
-                              sx={{
-                                color: '#13944C',
-                              }}
-                            />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            sx={{ p: 0.5 }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onCopyToClipboard(contact.email || '');
-                            }}
-                            title="Copiar correo"
-                          >
-                            <ContentCopy
-                              fontSize="small"
-                              sx={{
-                                color: '#13944C',
-                              }}
-                            />
-                          </IconButton>
-                        </>
-                      )}
                     </Box>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 2 }}>
                     <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
                       {contact.phone || '--'}
                     </Typography>
@@ -615,6 +620,16 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
         )}
       </>
       )}
+
+      <EntityPreviewDrawer
+        open={previewOpen}
+        onClose={() => {
+          setPreviewOpen(false);
+          setPreviewContactId(null);
+        }}
+        entityType="contact"
+        entityId={previewContactId}
+      />
     </Card>
   );
 };

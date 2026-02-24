@@ -30,6 +30,7 @@ import {
 import { Trash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { taxiMonterricoColors } from '../../theme/colors';
+import EntityPreviewDrawer from '../EntityPreviewDrawer';
 import { companyLabels } from '../../constants/companyLabels';
 
 interface Company {
@@ -78,6 +79,9 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
   const navigate = useNavigate();
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewCompanyId, setPreviewCompanyId] = useState<number | null>(null);
+  const [hoveredCompanyId, setHoveredCompanyId] = useState<number | null>(null);
   const itemsPerPage = 5;
 
   const filteredCompanies = companies.filter(
@@ -409,7 +413,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                       'NOMBRE'
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 3 }}>
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === 'domain'}
@@ -430,7 +434,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                       'DOMINIO'
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 2 }}>
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === 'phone'}
@@ -452,7 +456,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                     )}
                   </TableCell>
                   {showActions && (
-                    <TableCell align="right">ACCIONES</TableCell>
+                    <TableCell align="right" sx={{ width: '110px', minWidth: '110px', pr: 4, pl: 2 }} />
                   )}
                 </TableRow>
               </TableHead>
@@ -468,6 +472,8 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                 >
                   <TableCell>
                     <Box
+                      onMouseEnter={() => setHoveredCompanyId(company.id)}
+                      onMouseLeave={() => setHoveredCompanyId(null)}
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
@@ -483,6 +489,10 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                           cursor: 'pointer',
                           textDecoration: 'none',
                           fontSize: '0.875rem',
+                          minWidth: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                           '&:hover': {
                             textDecoration: 'underline',
                           },
@@ -490,9 +500,36 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                       >
                         {company.name}
                       </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewCompanyId(company.id);
+                          setPreviewOpen(true);
+                        }}
+                        sx={{
+                          flexShrink: 0,
+                          fontSize: '0.6875rem',
+                          py: 0.25,
+                          px: 0.75,
+                          minWidth: 'auto',
+                          borderColor: theme.palette.divider,
+                          color: theme.palette.text.secondary,
+                          boxShadow: 'none',
+                          visibility: hoveredCompanyId === company.id ? 'visible' : 'hidden',
+                          '&:hover': {
+                            borderColor: theme.palette.divider,
+                            bgcolor: 'transparent',
+                            boxShadow: 'none',
+                          },
+                        }}
+                      >
+                        Vista previa
+                      </Button>
                     </Box>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 3 }}>
                     <Box
                       sx={{
                         display: 'flex',
@@ -537,13 +574,13 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                       )}
                     </Box>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ pl: 2 }}>
                     <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
                       {company.phone || '--'}
                     </Typography>
                   </TableCell>
                   {showActions && onRemove && (
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ pr: 4, pl: 2 }}>
                       <IconButton
                         size="small"
                         onClick={(e) => {
@@ -641,6 +678,16 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
         )}
       </>
       )}
+
+      <EntityPreviewDrawer
+        open={previewOpen}
+        onClose={() => {
+          setPreviewOpen(false);
+          setPreviewCompanyId(null);
+        }}
+        entityType="company"
+        entityId={previewCompanyId}
+      />
     </Card>
   );
 };

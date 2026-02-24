@@ -30,8 +30,8 @@ import {
   Category,
 } from '@mui/icons-material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserTie, faHandshake, faSackDollar } from '@fortawesome/free-solid-svg-icons';
-import { Building2 } from 'lucide-react';
+import { faHandshake, faSackDollar } from '@fortawesome/free-solid-svg-icons';
+import { Building2, UserRound } from 'lucide-react';
 import api from '../config/api';
 import { formatCurrencyPE } from '../utils/currencyUtils';
 
@@ -335,7 +335,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
               src={entity.avatar || undefined}
             >
               {!entity.avatar && (
-                <FontAwesomeIcon icon={faUserTie} style={{ fontSize: 24, color: 'white' }} />
+                <UserRound size={24} color="white" />
               )}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -1171,14 +1171,14 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
       case 'note':
         return '#2E7D32';
       case 'email':
-        return '#1976d2';
+        return '#09ADB4';
       case 'call':
-        return '#0288d1';
+        return '#05AE49';
       case 'task':
       case 'todo':
-        return '#f57c00';
+        return '#F59E00';
       case 'meeting':
-        return '#7b1fa2';
+        return '#A31F9D';
       default:
         return '#757575';
     }
