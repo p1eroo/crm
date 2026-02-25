@@ -5,6 +5,7 @@ import { Deal } from '../models/Deal';
 import { Company } from '../models/Company';
 import { Activity } from '../models/Activity';
 import { Task } from '../models/Task';
+import { WeeklyGoal } from '../models/WeeklyGoal';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -788,9 +789,79 @@ router.get('/companies-weekly-movement-range', async (req: AuthRequest, res) => 
       rows.push({ year: y, week: w, nuevoIngreso, avance, retroceso, sinCambios, nuevoIngresoMonto, avanceMonto, retrocesoMonto, sinCambiosMonto });
     }
 
-    res.json({ weeks: rows });
+    // Obtener objetivos semanales (objetivo, facturacionOverride)
+    const goals = await WeeklyGoal.findAll({
+      where: {
+        [Op.or]: rows.map((r) => ({ year: r.year, week: r.week })),
+      },
+    });
+    const goalsMap = new Map<string, { objetivo: number; facturacionOverride: number | null }>();
+    for (const g of goals) {
+      goalsMap.set(`${g.year}-${g.week}`, {
+        objetivo: Number(g.objetivo),
+        facturacionOverride: g.facturacionOverride != null ? Number(g.facturacionOverride) : null,
+      });
+    }
+
+    const weeksWithGoals = rows.map((r) => {
+      const key = `${r.year}-${r.week}`;
+      const goal = goalsMap.get(key);
+      return {
+        ...r,
+        objetivo: goal?.objetivo ?? 0,
+        facturacionOverride: goal?.facturacionOverride ?? null,
+      };
+    });
+
+    res.json({ weeks: weeksWithGoals });
   } catch (error: any) {
     console.error('Error en /reports/companies-weekly-movement-range:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Guardar objetivo y/o facturación semanal (editar meta por semana)
+router.put('/weekly-goal', async (req: AuthRequest, res) => {
+  try {
+    const { year, week, objetivo, facturacionOverride } = req.body;
+
+    if (year === undefined || week === undefined) {
+      return res.status(400).json({ error: 'year y week son requeridos' });
+    }
+
+    const y = parseInt(String(year));
+    const w = parseInt(String(week));
+    if (Number.isNaN(y) || Number.isNaN(w) || w < 1 || w > 53) {
+      return res.status(400).json({ error: 'year y week deben ser válidos (week 1-53)' });
+    }
+
+    const obj = objetivo !== undefined ? parseFloat(String(objetivo)) : 0;
+    const facOverride = facturacionOverride !== undefined && facturacionOverride !== null && facturacionOverride !== ''
+      ? parseFloat(String(facturacionOverride))
+      : null;
+
+    const [goal, created] = await WeeklyGoal.findOrCreate({
+      where: { year: y, week: w },
+      defaults: { year: y, week: w, objetivo: obj, facturacionOverride: facOverride },
+    });
+
+    if (!created) {
+      goal.objetivo = obj;
+      goal.facturacionOverride = facOverride;
+      await goal.save();
+    }
+
+    res.json({
+      success: true,
+      goal: {
+        year: goal.year,
+        week: goal.week,
+        objetivo: Number(goal.objetivo),
+        facturacionOverride: goal.facturacionOverride != null ? Number(goal.facturacionOverride) : null,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error al guardar weekly goal:', error);
     res.status(500).json({ error: error.message });
   }
 });

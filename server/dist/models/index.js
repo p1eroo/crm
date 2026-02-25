@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SystemLog = exports.UserGoogleToken = exports.MonthlyBudget = exports.ContactContact = exports.CompanyCompany = exports.DealDeal = exports.DealCompany = exports.DealContact = exports.ContactCompany = exports.Payment = exports.Subscription = exports.Ticket = exports.Automation = exports.Campaign = exports.Activity = exports.TaskComment = exports.Task = exports.Deal = exports.Company = exports.Contact = exports.Role = exports.User = void 0;
+exports.SystemLog = exports.UserGoogleToken = exports.WeeklyGoal = exports.MonthlyBudget = exports.ContactContact = exports.CompanyCompany = exports.DealDeal = exports.DealCompany = exports.DealContact = exports.ContactCompany = exports.Payment = exports.Subscription = exports.Ticket = exports.Automation = exports.Campaign = exports.Activity = exports.TaskComment = exports.Task = exports.Deal = exports.Company = exports.Contact = exports.Role = exports.User = void 0;
 // Export all models
 var User_1 = require("./User");
 Object.defineProperty(exports, "User", { enumerable: true, get: function () { return User_1.User; } });
@@ -42,6 +42,8 @@ var ContactContact_1 = require("./ContactContact");
 Object.defineProperty(exports, "ContactContact", { enumerable: true, get: function () { return ContactContact_1.ContactContact; } });
 var MonthlyBudget_1 = require("./MonthlyBudget");
 Object.defineProperty(exports, "MonthlyBudget", { enumerable: true, get: function () { return MonthlyBudget_1.MonthlyBudget; } });
+var WeeklyGoal_1 = require("./WeeklyGoal");
+Object.defineProperty(exports, "WeeklyGoal", { enumerable: true, get: function () { return WeeklyGoal_1.WeeklyGoal; } });
 var UserGoogleToken_1 = require("./UserGoogleToken");
 Object.defineProperty(exports, "UserGoogleToken", { enumerable: true, get: function () { return UserGoogleToken_1.UserGoogleToken; } });
 var SystemLog_1 = require("./SystemLog");
@@ -70,6 +72,7 @@ require("./Ticket");
 require("./Subscription");
 require("./Payment");
 require("./MonthlyBudget");
+require("./WeeklyGoal");
 require("./UserGoogleToken");
 require("./SystemLog");
 // Inicializar relaciones muchos-a-muchos después de que todos los modelos estén cargados

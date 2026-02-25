@@ -19,6 +19,7 @@ export { DealDeal } from './DealDeal';
 export { CompanyCompany } from './CompanyCompany';
 export { ContactContact } from './ContactContact';
 export { MonthlyBudget } from './MonthlyBudget';
+export { WeeklyGoal } from './WeeklyGoal';
 export { UserGoogleToken } from './UserGoogleToken';
 export { SystemLog } from './SystemLog';
 
@@ -46,6 +47,7 @@ import './Ticket';
 import './Subscription';
 import './Payment';
 import './MonthlyBudget';
+import './WeeklyGoal';
 import './UserGoogleToken';
 import './SystemLog';
 

@@ -569,7 +569,7 @@ database_1.sequelize.authenticate()
     await Payment.sync({ alter: false });
     await Subscription.sync({ alter: false });
     // Sincronizar el resto de las tablas con alter (excepto Deal que tiene columnas ENUM manuales)
-    const { Deal, User, Role, MonthlyBudget, UserGoogleToken, DealContact, DealCompany, ContactCompany, CompanyCompany, ContactContact, SystemLog, ...rest } = await Promise.resolve().then(() => __importStar(require('./models')));
+    const { Deal, User, Role, MonthlyBudget, WeeklyGoal, UserGoogleToken, DealContact, DealCompany, ContactCompany, CompanyCompany, ContactContact, SystemLog, ...rest } = await Promise.resolve().then(() => __importStar(require('./models')));
     // Sincronizar Deal sin alter para evitar conflictos con ENUMs
     if (Deal && typeof Deal.sync === 'function') {
         await Deal.sync({ alter: false });
@@ -667,7 +667,7 @@ database_1.sequelize.authenticate()
         }
     }
     // Sincronizar el resto de modelos con alter
-    const modelsToSync = [Role, MonthlyBudget, UserGoogleToken, SystemLog].filter(Boolean);
+    const modelsToSync = [Role, MonthlyBudget, WeeklyGoal, UserGoogleToken, SystemLog].filter(Boolean);
     for (const Model of modelsToSync) {
         if (Model && typeof Model.sync === 'function') {
             await Model.sync({ alter: true });
