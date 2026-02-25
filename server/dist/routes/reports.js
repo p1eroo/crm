@@ -743,29 +743,13 @@ router.get('/companies-weekly-movement-range', async (req, res) => {
                 y -= 1;
             }
             const { start: weekStart, end: weekEnd } = getWeekRange(y, w);
-            const [nuevoIngreso, avance, retroceso, sinCambios] = await Promise.all([
-                Company_1.Company.count({
-                    where: {
-                        ...baseWhere,
-                        createdAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
-                    },
-                }),
-                Company_1.Company.count({
-                    where: {
-                        ...baseWhere,
-                        createdAt: { [sequelize_1.Op.lt]: weekStart },
-                        updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
-                        lifecycleStage: { [sequelize_1.Op.in]: advanceStages },
-                    },
-                }),
-                Company_1.Company.count({
-                    where: {
-                        ...baseWhere,
-                        createdAt: { [sequelize_1.Op.lt]: weekStart },
-                        updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
-                        lifecycleStage: { [sequelize_1.Op.in]: retroStages },
-                    },
-                }),
+            const nuevoIngresoWhere = { ...baseWhere, createdAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd } };
+            const avanceWhere = { ...baseWhere, createdAt: { [sequelize_1.Op.lt]: weekStart }, updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd }, lifecycleStage: { [sequelize_1.Op.in]: advanceStages } };
+            const retrocesoWhere = { ...baseWhere, createdAt: { [sequelize_1.Op.lt]: weekStart }, updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd }, lifecycleStage: { [sequelize_1.Op.in]: retroStages } };
+            const [nuevoIngreso, avance, retroceso, sinCambios, nuevoIngresoMonto, avanceMonto, retrocesoMonto, sinCambiosMonto] = await Promise.all([
+                Company_1.Company.count({ where: nuevoIngresoWhere }),
+                Company_1.Company.count({ where: avanceWhere }),
+                Company_1.Company.count({ where: retrocesoWhere }),
                 Company_1.Company.count({
                     where: {
                         ...baseWhere,
@@ -779,8 +763,24 @@ router.get('/companies-weekly-movement-range', async (req, res) => {
                         ],
                     },
                 }),
+                Company_1.Company.sum('estimatedRevenue', { where: nuevoIngresoWhere }).then((v) => Number(v) || 0),
+                Company_1.Company.sum('estimatedRevenue', { where: avanceWhere }).then((v) => Number(v) || 0),
+                Company_1.Company.sum('estimatedRevenue', { where: retrocesoWhere }).then((v) => Number(v) || 0),
+                Company_1.Company.sum('estimatedRevenue', {
+                    where: {
+                        ...baseWhere,
+                        [sequelize_1.Op.or]: [
+                            { createdAt: { [sequelize_1.Op.lt]: weekStart }, updatedAt: { [sequelize_1.Op.lt]: weekStart } },
+                            {
+                                createdAt: { [sequelize_1.Op.lt]: weekStart },
+                                updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                                lifecycleStage: { [sequelize_1.Op.notIn]: [...advanceStages, ...retroStages] },
+                            },
+                        ],
+                    },
+                }).then((v) => Number(v) || 0),
             ]);
-            rows.push({ year: y, week: w, nuevoIngreso, avance, retroceso, sinCambios });
+            rows.push({ year: y, week: w, nuevoIngreso, avance, retroceso, sinCambios, nuevoIngresoMonto, avanceMonto, retrocesoMonto, sinCambiosMonto });
         }
         res.json({ weeks: rows });
     }

@@ -731,7 +731,11 @@ router.get('/companies-weekly-movement-range', async (req: AuthRequest, res) => 
       baseWhere.ownerId = userId;
     }
 
-    const rows: Array<{ year: number; week: number; nuevoIngreso: number; avance: number; retroceso: number; sinCambios: number }> = [];
+    const rows: Array<{
+      year: number; week: number;
+      nuevoIngreso: number; avance: number; retroceso: number; sinCambios: number;
+      nuevoIngresoMonto: number; avanceMonto: number; retrocesoMonto: number; sinCambiosMonto: number;
+    }> = [];
 
     for (let i = numWeeks - 1; i >= 0; i--) {
       let w = currentWeek - i;
@@ -742,29 +746,14 @@ router.get('/companies-weekly-movement-range', async (req: AuthRequest, res) => 
       }
       const { start: weekStart, end: weekEnd } = getWeekRange(y, w);
 
-      const [nuevoIngreso, avance, retroceso, sinCambios] = await Promise.all([
-        Company.count({
-          where: {
-            ...baseWhere,
-            createdAt: { [Op.gte]: weekStart, [Op.lt]: weekEnd },
-          },
-        }),
-        Company.count({
-          where: {
-            ...baseWhere,
-            createdAt: { [Op.lt]: weekStart },
-            updatedAt: { [Op.gte]: weekStart, [Op.lt]: weekEnd },
-            lifecycleStage: { [Op.in]: advanceStages },
-          },
-        }),
-        Company.count({
-          where: {
-            ...baseWhere,
-            createdAt: { [Op.lt]: weekStart },
-            updatedAt: { [Op.gte]: weekStart, [Op.lt]: weekEnd },
-            lifecycleStage: { [Op.in]: retroStages },
-          },
-        }),
+      const nuevoIngresoWhere = { ...baseWhere, createdAt: { [Op.gte]: weekStart, [Op.lt]: weekEnd } };
+      const avanceWhere = { ...baseWhere, createdAt: { [Op.lt]: weekStart }, updatedAt: { [Op.gte]: weekStart, [Op.lt]: weekEnd }, lifecycleStage: { [Op.in]: advanceStages } };
+      const retrocesoWhere = { ...baseWhere, createdAt: { [Op.lt]: weekStart }, updatedAt: { [Op.gte]: weekStart, [Op.lt]: weekEnd }, lifecycleStage: { [Op.in]: retroStages } };
+
+      const [nuevoIngreso, avance, retroceso, sinCambios, nuevoIngresoMonto, avanceMonto, retrocesoMonto, sinCambiosMonto] = await Promise.all([
+        Company.count({ where: nuevoIngresoWhere }),
+        Company.count({ where: avanceWhere }),
+        Company.count({ where: retrocesoWhere }),
         Company.count({
           where: {
             ...baseWhere,
@@ -778,9 +767,25 @@ router.get('/companies-weekly-movement-range', async (req: AuthRequest, res) => 
             ],
           },
         }),
+        Company.sum('estimatedRevenue', { where: nuevoIngresoWhere }).then((v) => Number(v) || 0),
+        Company.sum('estimatedRevenue', { where: avanceWhere }).then((v) => Number(v) || 0),
+        Company.sum('estimatedRevenue', { where: retrocesoWhere }).then((v) => Number(v) || 0),
+        Company.sum('estimatedRevenue', {
+          where: {
+            ...baseWhere,
+            [Op.or]: [
+              { createdAt: { [Op.lt]: weekStart }, updatedAt: { [Op.lt]: weekStart } },
+              {
+                createdAt: { [Op.lt]: weekStart },
+                updatedAt: { [Op.gte]: weekStart, [Op.lt]: weekEnd },
+                lifecycleStage: { [Op.notIn]: [...advanceStages, ...retroStages] },
+              },
+            ],
+          },
+        }).then((v) => Number(v) || 0),
       ]);
 
-      rows.push({ year: y, week: w, nuevoIngreso, avance, retroceso, sinCambios });
+      rows.push({ year: y, week: w, nuevoIngreso, avance, retroceso, sinCambios, nuevoIngresoMonto, avanceMonto, retrocesoMonto, sinCambiosMonto });
     }
 
     res.json({ weeks: rows });

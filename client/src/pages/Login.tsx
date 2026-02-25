@@ -389,12 +389,6 @@ const Login: React.FC = () => {
             mx: 'auto',
             width: '100%',
             p: { xs: 3, sm: 4.5 },
-            borderRadius: { xs: '16px', sm: '24px' },
-            backgroundColor: isDark ? '#11182799' : crmColors.formCardLight,
-            boxShadow: isDark
-              ? '0 4px 6px rgba(0,0,0,0.2), 0 12px 32px rgba(0,0,0,0.15)'
-              : '0 4px 6px rgba(0,0,0,0.04), 0 12px 32px rgba(0,0,0,0.08)',
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}`,
           }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mb: 3 }}>

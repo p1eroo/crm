@@ -16,6 +16,17 @@ import {
   useTheme,
   Button,
   Avatar,
+  Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from '@mui/material';
 import { ChevronLeft, ChevronRight, Close, Business, KeyboardArrowDown } from '@mui/icons-material';
 import { Building2, Handshake, UserRound } from 'lucide-react';
@@ -194,8 +205,16 @@ const Reports: React.FC = () => {
     avance: number;
     retroceso: number;
     sinCambios: number;
+    nuevoIngresoMonto?: number;
+    avanceMonto?: number;
+    retrocesoMonto?: number;
+    sinCambiosMonto?: number;
   }>>([]);
   const [weeklyMovementRangeLoading, setWeeklyMovementRangeLoading] = useState(false);
+  const [weeklyMovementWeekFilter, setWeeklyMovementWeekFilter] = useState<Set<number>>(new Set());
+  const [weeklyFilterPopoverAnchor, setWeeklyFilterPopoverAnchor] = useState<HTMLElement | null>(null);
+  const [weeklyMovementListModalOpen, setWeeklyMovementListModalOpen] = useState(false);
+  const weeklyFilterTableButtonRef = React.useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -614,7 +633,10 @@ const Reports: React.FC = () => {
 
   // Gráfico stacked bar horizontal por semana (números absolutos, no porcentaje)
   const weeklyMovementRangeChart = useMemo(() => {
-    const rows = weeklyMovementRangeData;
+    let rows = weeklyMovementRangeData;
+    if (weeklyMovementWeekFilter.size > 0) {
+      rows = rows.filter((r) => weeklyMovementWeekFilter.has(r.week));
+    }
     if (!rows.length) {
       return {
         series: [] as Array<{ name: string; data: number[] }>,
@@ -690,6 +712,30 @@ const Reports: React.FC = () => {
           },
         },
         dataLabels: { enabled: true, formatter: (val: number) => (val ? String(val) : '') },
+        tooltip: {
+          theme: theme.palette.mode === 'dark' ? 'dark' : 'light',
+          custom: ({ series, dataPointIndex }: { series: number[][]; dataPointIndex: number }) => {
+            const row = rows[dataPointIndex];
+            if (!row) return '';
+            const total = series.reduce((sum, s) => sum + (s[dataPointIndex] ?? 0), 0);
+            const labels = WEEKLY_MOVEMENT_LABELS;
+            const amounts = [row.avanceMonto ?? 0, row.nuevoIngresoMonto ?? 0, row.retrocesoMonto ?? 0, row.sinCambiosMonto ?? 0];
+            let html = `<div style="padding: 8px 12px; font-family: inherit;">`;
+            html += `<div style="font-weight: 600; margin-bottom: 6px; font-size: 14px;">${total}</div>`;
+            for (let i = 0; i < series.length; i++) {
+              const val = series[i]?.[dataPointIndex] ?? 0;
+              if (val > 0) {
+                const monto = amounts[i] ?? 0;
+                const montoStr = monto > 0 ? ` - Monto: ${formatCurrencyPE(monto)}` : '';
+                html += `<div style="display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 12px;">`;
+                html += `<span style="width: 8px; height: 8px; border-radius: 50%; background: ${movementChartColors[i]}; flex-shrink: 0;"></span>`;
+                html += `<span>${labels[i]}: ${val}${montoStr}</span></div>`;
+              }
+            }
+            html += `</div>`;
+            return html;
+          },
+        },
         legend: {
           position: 'bottom' as const,
           horizontalAlign: 'center' as const,
@@ -704,7 +750,7 @@ const Reports: React.FC = () => {
         },
       } as ApexOptions,
     };
-  }, [weeklyMovementRangeData, movementChartColors, theme.palette.mode, theme.palette.divider, theme.palette.text.secondary, theme.palette.background.paper, handleOpenWeeklyMovementCompaniesList]);
+  }, [weeklyMovementRangeData, weeklyMovementWeekFilter, movementChartColors, theme.palette.mode, theme.palette.divider, theme.palette.text.secondary, theme.palette.background.paper, handleOpenWeeklyMovementCompaniesList]);
 
   if (loading) {
     return (
@@ -1459,6 +1505,10 @@ const Reports: React.FC = () => {
             pt: { xs: 3, md: 3.5 },
             pb: { xs: 1.5, md: 0 },
             bgcolor: reportsCardBg,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
           }}
         >
           <Typography
@@ -1471,6 +1521,142 @@ const Reports: React.FC = () => {
           >
             Avance Semanal - Empresas
           </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button
+              variant="text"
+              size="small"
+              onClick={() => setWeeklyMovementListModalOpen(true)}
+              sx={{
+                textTransform: 'none',
+                borderRadius: 1.5,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                border: 'none',
+                color: theme.palette.text.primary,
+                fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                py: 1,
+                px: 1.5,
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                },
+              }}
+            >
+              Ver tabla
+            </Button>
+            <Button
+              variant="text"
+              size="small"
+              endIcon={<KeyboardArrowDown />}
+              onClick={(e) => setWeeklyFilterPopoverAnchor(e.currentTarget)}
+            sx={{
+              textTransform: 'none',
+              borderRadius: 1.5,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+              border: 'none',
+              color: theme.palette.text.primary,
+              fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+              py: 1,
+              px: 1.5,
+              '&:hover': {
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+              },
+            }}
+          >
+            Semana {weeklyMovementWeekFilter.size > 0 ? `(${weeklyMovementWeekFilter.size})` : ''}
+          </Button>
+          </Box>
+          <Popover
+            open={Boolean(weeklyFilterPopoverAnchor)}
+            anchorEl={weeklyFilterPopoverAnchor}
+            onClose={() => setWeeklyFilterPopoverAnchor(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            PaperProps={{
+              sx: {
+                mt: 1.5,
+                minWidth: 200,
+                maxHeight: 320,
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.4)' : '0 8px 24px rgba(0,0,0,0.12)',
+                bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                color: theme.palette.text.primary,
+              },
+            }}
+          >
+            <Box sx={{ p: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, color: theme.palette.text.primary }}>
+                Semana
+              </Typography>
+              <Box
+                component="button"
+                onClick={() => setWeeklyMovementWeekFilter(new Set())}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  width: '100%',
+                  py: 1,
+                  px: 0,
+                  border: 'none',
+                  bgcolor: 'transparent',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  borderRadius: 1,
+                  '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' },
+                }}
+              >
+                <Checkbox
+                  size="small"
+                  checked={weeklyMovementWeekFilter.size === 0}
+                  sx={{ p: 0.5 }}
+                />
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>Todas</Typography>
+              </Box>
+              <Box sx={{ maxHeight: 220, overflowY: 'auto', mt: 0.5 }}>
+                {(() => {
+                  const weeksInData = weeklyMovementRangeData.map((r) => r.week);
+                  const maxWeek = weeksInData.length > 0 ? Math.max(...weeksInData) : 52;
+                  return Array.from({ length: maxWeek }, (_, i) => i + 1);
+                })().map((week) => (
+                  <Box
+                    key={week}
+                    component="button"
+                    onClick={() => {
+                      setWeeklyMovementWeekFilter((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(week)) {
+                          next.delete(week);
+                        } else {
+                          next.add(week);
+                        }
+                        return next;
+                      });
+                    }}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      width: '100%',
+                      py: 0.75,
+                      px: 0,
+                      border: 'none',
+                      bgcolor: 'transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      borderRadius: 1,
+                      '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' },
+                    }}
+                  >
+                    <Checkbox
+                      size="small"
+                      checked={weeklyMovementWeekFilter.has(week)}
+                      sx={{ p: 0.5 }}
+                    />
+                    <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>{week}</Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          </Popover>
         </Box>
         <Box sx={{ px: { xs: 2, md: 3 }, pt: 2, pb: { xs: 1.5, md: 2 }, bgcolor: reportsCardBg }}>
           {weeklyMovementRangeLoading ? (
@@ -1508,6 +1694,89 @@ const Reports: React.FC = () => {
           )}
         </Box>
       </Card>
+
+      {/* Modal: Resumen de prospección por semana */}
+      <Dialog
+        open={weeklyMovementListModalOpen}
+        onClose={() => setWeeklyMovementListModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            bgcolor: theme.palette.primary.main,
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: '1rem',
+            py: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          Resumen de prospección por semana
+          <IconButton size="small" onClick={() => setWeeklyMovementListModalOpen(false)} sx={{ color: '#fff' }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 2 }}>
+          {(() => {
+            let rows = weeklyMovementRangeData;
+            if (weeklyMovementWeekFilter.size > 0) {
+              rows = rows.filter((r) => weeklyMovementWeekFilter.has(r.week));
+            }
+            const avance = rows.reduce((s, r) => s + r.avance, 0);
+            const nuevoIngreso = rows.reduce((s, r) => s + r.nuevoIngreso, 0);
+            const retroceso = rows.reduce((s, r) => s + r.retroceso, 0);
+            const sinCambios = rows.reduce((s, r) => s + r.sinCambios, 0);
+            const avanceMonto = rows.reduce((s, r) => s + (r.avanceMonto ?? 0), 0);
+            const nuevoIngresoMonto = rows.reduce((s, r) => s + (r.nuevoIngresoMonto ?? 0), 0);
+            const retrocesoMonto = rows.reduce((s, r) => s + (r.retrocesoMonto ?? 0), 0);
+            const sinCambiosMonto = rows.reduce((s, r) => s + (r.sinCambiosMonto ?? 0), 0);
+            const totalCantidad = avance + nuevoIngreso + retroceso + sinCambios;
+            const totalMonto = avanceMonto + nuevoIngresoMonto + retrocesoMonto + sinCambiosMonto;
+            const tableRows = [
+              { label: 'Avance', cantidad: avance, monto: avanceMonto },
+              { label: 'Nuevo ingreso', cantidad: nuevoIngreso, monto: nuevoIngresoMonto },
+              { label: 'Retroceso', cantidad: retroceso, monto: retrocesoMonto },
+              { label: 'Sin cambios', cantidad: sinCambios, monto: sinCambiosMonto },
+            ];
+            return (
+              <TableContainer component={Paper} sx={{ boxShadow: 'none', bgcolor: 'transparent' }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600, color: theme.palette.text.secondary, borderColor: theme.palette.divider }}>Movimiento</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600, color: theme.palette.text.secondary, borderColor: theme.palette.divider }}>Cantidad</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600, color: theme.palette.text.secondary, borderColor: theme.palette.divider }}>Monto</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {tableRows.map((row) => (
+                      <TableRow key={row.label} sx={{ '&:last-child td': { border: 0 } }}>
+                        <TableCell sx={{ borderColor: theme.palette.divider, color: theme.palette.text.primary }}>{row.label}</TableCell>
+                        <TableCell align="right" sx={{ borderColor: theme.palette.divider, color: theme.palette.text.primary }}>{row.cantidad}</TableCell>
+                        <TableCell align="right" sx={{ borderColor: theme.palette.divider, color: theme.palette.text.primary }}>{formatCurrencyPE(row.monto)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', '&:last-child td': { border: 0 } }}>
+                      <TableCell sx={{ fontWeight: 700, borderColor: theme.palette.divider, color: theme.palette.text.primary }}>Total</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, borderColor: theme.palette.divider, color: theme.palette.text.primary }}>{totalCantidad}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, borderColor: theme.palette.divider, color: theme.palette.text.primary }}>{formatCurrencyPE(totalMonto)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Card: Conteo por etapa (negocios) - donut con total en el centro, a la derecha de Movimiento por semana */}
       <Card
@@ -1663,6 +1932,126 @@ const Reports: React.FC = () => {
         </Box>
       </Card>
       </Box>
+
+      {/* Card: Resumen de monto por semana (estilo tabla como referencia) */}
+      <Card
+        sx={{
+          mt: 4,
+          mb: 4,
+          borderRadius: 3,
+          boxShadow: 'none',
+          overflow: 'hidden',
+          bgcolor: reportsCardBg,
+          border: 'none',
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <Box
+          sx={{
+            px: { xs: 2, md: 3 },
+            py: 2,
+            bgcolor: theme.palette.primary.main,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 1,
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 700,
+              fontSize: '1rem',
+              color: '#fff',
+              textTransform: 'uppercase',
+              letterSpacing: '0.02em',
+            }}
+          >
+            Resumen de monto por semana
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              ref={weeklyFilterTableButtonRef}
+              variant="outlined"
+              size="small"
+              onClick={() => setWeeklyFilterPopoverAnchor(weeklyFilterTableButtonRef.current)}
+              sx={{
+                textTransform: 'none',
+                borderColor: 'rgba(255,255,255,0.5)',
+                color: '#fff',
+                '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
+              }}
+            >
+              Filtro
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => document.getElementById('resumen-monto-tabla')?.scrollIntoView({ behavior: 'smooth' })}
+              sx={{
+                textTransform: 'none',
+                borderColor: 'rgba(255,255,255,0.5)',
+                color: '#fff',
+                '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
+              }}
+            >
+              Ver tabla
+            </Button>
+          </Box>
+        </Box>
+        <TableContainer id="resumen-monto-tabla" sx={{ overflowX: 'auto' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow
+                sx={{
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                }}
+              >
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, py: 1.5, borderColor: theme.palette.divider }}>Semana</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: theme.palette.text.primary, py: 1.5, borderColor: theme.palette.divider }}>Facturación semanal</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: theme.palette.text.primary, py: 1.5, borderColor: theme.palette.divider }}>Objetivo semanal</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: theme.palette.text.primary, py: 1.5, borderColor: theme.palette.divider }}>% Cumplimiento</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {(() => {
+                let rows = weeklyMovementRangeData;
+                if (weeklyMovementWeekFilter.size > 0) {
+                  rows = rows.filter((r) => weeklyMovementWeekFilter.has(r.week));
+                }
+                const totalFacturacion = rows.reduce((s, r) => s + (r.avanceMonto ?? 0) + (r.nuevoIngresoMonto ?? 0) + (r.retrocesoMonto ?? 0) + (r.sinCambiosMonto ?? 0), 0);
+                const totalObjetivo = 0; // Sin datos de objetivo por ahora
+                return (
+                  <>
+                    {rows.map((row) => {
+                      const facturacion = (row.avanceMonto ?? 0) + (row.nuevoIngresoMonto ?? 0) + (row.retrocesoMonto ?? 0) + (row.sinCambiosMonto ?? 0);
+                      const objetivo = 0;
+                      const cumplimiento = objetivo > 0 ? ((facturacion / objetivo) * 100).toFixed(2) : '—';
+                      return (
+                        <TableRow key={`${row.year}-${row.week}`} sx={{ '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)' } }}>
+                          <TableCell sx={{ borderColor: theme.palette.divider, color: theme.palette.text.primary }}>{row.week}</TableCell>
+                          <TableCell align="right" sx={{ borderColor: theme.palette.divider, color: theme.palette.text.primary }}>{formatCurrencyPE(facturacion)}</TableCell>
+                          <TableCell align="right" sx={{ borderColor: theme.palette.divider, color: theme.palette.text.primary }}>{objetivo > 0 ? formatCurrencyPE(objetivo) : 'S/ 0'}</TableCell>
+                          <TableCell align="right" sx={{ borderColor: theme.palette.divider, color: theme.palette.text.primary }}>{cumplimiento}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', '& td': { fontWeight: 700 } }}>
+                      <TableCell sx={{ borderColor: theme.palette.divider, color: theme.palette.text.primary }}>Total</TableCell>
+                      <TableCell align="right" sx={{ borderColor: theme.palette.divider, color: theme.palette.text.primary }}>{formatCurrencyPE(totalFacturacion)}</TableCell>
+                      <TableCell align="right" sx={{ borderColor: theme.palette.divider, color: theme.palette.text.primary }}>{formatCurrencyPE(totalObjetivo)}</TableCell>
+                      <TableCell align="right" sx={{ borderColor: theme.palette.divider, color: theme.palette.text.primary }}>
+                        {totalObjetivo > 0 ? ((totalFacturacion / totalObjetivo) * 100).toFixed(2) : '—'}
+                      </TableCell>
+                    </TableRow>
+                  </>
+                );
+              })()}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
 
       {/* Ancla invisible para Popover de empresas: en portal a body para que position:fixed sea respecto al viewport */}
       {typeof document !== 'undefined' &&
