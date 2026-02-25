@@ -682,7 +682,7 @@ const Calendar: React.FC = () => {
         mx: "auto",
       }}
     >
-      {/* Barra de título - misma estructura que Deals / Negocios */}
+      {/* Barra de título - mismo diseño que Negocios, Empresas y Contactos */}
       <Box
         sx={{
           display: "flex",
@@ -690,11 +690,10 @@ const Calendar: React.FC = () => {
           alignItems: "center",
           flexWrap: "wrap",
           gap: 2,
-          pt: 0,
-          mx: -1,
-          pb: 2,
-          pl: 1,
-          mb: 0,
+          p: { xs: 2, md: 3 },
+          mb: 4,
+          bgcolor: theme.palette.mode === "light" ? "#fafafa" : "#1c252e",
+          borderRadius: 3,
         }}
       >
         <Typography

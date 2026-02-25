@@ -3,12 +3,6 @@ import {
   Box,
   Typography,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   IconButton,
   TextField,
   Dialog,
@@ -20,15 +14,14 @@ import {
   Card,
   CardContent,
   Divider,
-  FormControl,
   Select,
   Tooltip,
-  Paper,
   useTheme,
   InputAdornment,
   Autocomplete,
+  Chip,
 } from '@mui/material';
-import { Add, Schedule, PendingActions, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday } from '@mui/icons-material';
+import { Add, Schedule, PendingActions, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday, ExpandMore, ExpandLess, FormatListBulleted } from '@mui/icons-material';
 import { PencilLine, Eye, Trash } from 'lucide-react';
 import { RiFileWarningLine } from 'react-icons/ri';
 import { IoMdCheckboxOutline } from 'react-icons/io';
@@ -37,11 +30,12 @@ import { far } from '@fortawesome/free-regular-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFilter } from '@fortawesome/free-solid-svg-icons';
 import api from '../config/api';
-import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
+import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import { FormDrawer } from '../components/FormDrawer';
+import { UnifiedTable } from '../components/UnifiedTable';
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer';
 import { useTaskCompleteFlow } from '../hooks/useTaskCompleteFlow';
 
@@ -122,7 +116,7 @@ const Tasks: React.FC = () => {
   const [linkedTaskLockCompanyContact, setLinkedTaskLockCompanyContact] = useState(false);
   const [linkedTaskContacts, setLinkedTaskContacts] = useState<{ id: number; firstName: string; lastName: string }[]>([]);
   const [contactAutocompleteOpen, setContactAutocompleteOpen] = useState(false);
-  const [showColumnFilters, setShowColumnFilters] = useState(false);
+  const [filterPanelCollapsed, setFilterPanelCollapsed] = useState(false);
   const [columnFilters, setColumnFilters] = useState<{
     titulo: string;
     tipo: string;
@@ -764,11 +758,53 @@ const Tasks: React.FC = () => {
         boxShadow: 'none',
         overflow: 'hidden',
         bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-        border: '1px solid',
-        borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+        border: 'none',
         mb: 2.5,
         transition: 'all 0.3s ease',
       }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2,
+            px: { xs: 2, md: 3 },
+            py: { xs: 1.25, md: 1.5 },
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 400,
+              fontSize: { xs: '1rem', md: '1.1375rem' },
+              color: '#828690',
+            }}
+          >
+            Tareas
+          </Typography>
+          <Button
+            size="small"
+            onClick={() => handleOpen()}
+            startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+            sx={{
+              bgcolor: '#13944C',
+              color: "white",
+              borderRadius: 1.5,
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                bgcolor: '#0f7039',
+              },
+            }}
+          >
+            Nueva tarea
+          </Button>
+        </Box>
+        <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)' }} />
         <CardContent sx={{ 
           px: { xs: 1.5, sm: 2, md: 2 },
           pt: { xs: 1.5, sm: 2, md: 2 },
@@ -818,7 +854,7 @@ const Tasks: React.FC = () => {
               </Box>
             </Box>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.75, display: { xs: 'none', sm: 'block' } }} />
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.75, display: { xs: 'none', sm: 'block' }, borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)' }} />
 
             {/* Vencen hoy */}
             <Box 
@@ -859,7 +895,7 @@ const Tasks: React.FC = () => {
               </Box>
             </Box>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.75, display: { xs: 'none', sm: 'block' } }} />
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.75, display: { xs: 'none', sm: 'block' }, borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)' }} />
 
             {/* Pendientes */}
             <Box 
@@ -900,7 +936,7 @@ const Tasks: React.FC = () => {
               </Box>
             </Box>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.75, display: { xs: 'none', sm: 'block' } }} />
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.75, display: { xs: 'none', sm: 'block' }, borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)' }} />
 
             {/* Completadas */}
             <Box 
@@ -946,1063 +982,682 @@ const Tasks: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Sección de tabla */}
-      <Card sx={{ 
-        borderRadius: 3,
-        boxShadow: 'none',
-        overflow: 'hidden',
-        bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-        border: '1px solid',
-        borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-        transition: 'all 0.3s ease',
-        minWidth: 0,
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
-        <Box sx={{ 
-          px: { xs: 2, md: 3 }, 
-          pt: { xs: 2, md: 1.5 }, 
-          pb: { xs: 1.5, md: 2 },
-          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-          borderBottom: `2px solid ${theme.palette.divider}`,
-        }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0, flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 2, sm: 0 } }}>
-            <Box>
-              <Typography 
-                variant="h5" 
-                sx={{
-                  fontWeight: 600,
-                  fontSize: { xs: '1rem', md: '1.1375rem' },
-                  color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
-                }}
-              >
-                Tareas
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, alignItems: 'center', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-              <Button
-                size="small"
-                onClick={() => setShowColumnFilters(!showColumnFilters)}
-                startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
-                sx={{
-                  border: 'none',
-                  borderRadius: 1.5,
-                  bgcolor: showColumnFilters
-                    ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
-                    : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.12)' : 'rgba(255, 152, 0, 0.08)'),
-                  color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFB74D' : '#E65100'),
-                  px: { xs: 1.25, sm: 1.5 },
-                  py: { xs: 0.75, sm: 0.875 },
-                  order: { xs: 2, sm: 0 },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: 'transparent',
-                    bgcolor: showColumnFilters
-                      ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}33` : `${taxiMonterricoColors.green}1A`)
-                      : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.14)'),
-                    color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFCC80' : '#EF6C00'),
-                  },
-                }}
-              >
-                Filtro
-              </Button>
-              <Button
-                size="small"
-                onClick={() => handleOpen()}
-                startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
-                sx={{
-                  bgcolor: '#13944C',
-                  color: "white",
-                  borderRadius: 1.5,
-                  px: { xs: 1.25, sm: 1.5 },
-                  py: { xs: 0.75, sm: 0.875 },
-                  order: { xs: 3, sm: 0 },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  '&:hover': {
-                    bgcolor: '#0f7039',
-                  },
-                }}
-              >
-                Nueva tarea
-              </Button>
-            </Box>
-          </Box>
-        </Box>
-
-        <TableContainer 
-          component={Paper}
-          sx={{ 
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            maxWidth: '100%',
-            width: '100%',
-            flex: 1,
-            borderRadius: 1.5,
-            border: 'none',
-            boxShadow: 'none',
-            paddingRight: 0,
-            minWidth: 0,
-            '& .MuiPaper-root': {
-              borderRadius: 0,
-              border: 'none',
-              boxShadow: 'none',
-              paddingRight: 0,
-              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-            },
-            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-            '&::-webkit-scrollbar': {
-              height: 8,
-            },
-            '&::-webkit-scrollbar-track': {
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : theme.palette.grey[100],
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : theme.palette.grey[500],
-              borderRadius: 4,
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.grey[600],
-              },
-            },
+      {/* Panel de filtros colapsable */}
+      <Box
+        sx={{
+          mb: 3,
+          bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
+          borderRadius: 2,
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          onClick={() => setFilterPanelCollapsed(!filterPanelCollapsed)}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 2,
+            py: 1.5,
+            cursor: 'pointer',
+            borderBottom: filterPanelCollapsed ? 'none' : `1px solid ${theme.palette.divider}`,
           }}
         >
-          <Table sx={{ width: '100%', tableLayout: 'fixed', minWidth: 0 }}>
-            <TableHead>
-              <TableRow sx={{ 
-                bgcolor: theme.palette.mode === 'dark'
-                  ? '#1c252e'
-                  : hexToRgba(taxiMonterricoColors.greenEmerald, 0.01),
-                borderBottom: `2px solid ${theme.palette.divider}`,
-                '& .MuiTableCell-head': {
-                  borderBottom: 'none',
-                  fontWeight: 600,
-                  bgcolor: 'transparent',
-                },
-              }}>
-                <TableCell sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  py: { xs: 1.5, md: 1.25 }, 
-                  pl: { xs: 2, md: 3 }, 
-                  pr: { xs: 0.5, md: 1 }, 
-                  width: '12%',
-                  minWidth: 0,
-                  bgcolor: 'transparent',
-                  verticalAlign: showColumnFilters ? 'top' : 'middle',
-                }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      Nombre
-                    </Box>
-                    {showColumnFilters && (
-                      <TextField
-                        size="small"
-                        placeholder="Filtrar..."
-                        value={columnFilters.titulo}
-                        onChange={(e) => setColumnFilters(prev => ({ ...prev, titulo: e.target.value }))}
-                        sx={{
-                          width: '100%',
-                          '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.75rem', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper },
-                        }}
-                      />
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  py: { xs: 1.5, md: 1.25 }, 
-                  pl: { xs: 1, md: 1.5 }, 
-                  pr: { xs: 1.5, md: 2 }, 
-                  width: '9%',
-                  minWidth: 0,
-                  bgcolor: 'transparent',
-                  verticalAlign: showColumnFilters ? 'top' : 'middle',
-                }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      Tipo
-                    </Box>
-                    {showColumnFilters && (
-                      <FormControl size="small" fullWidth>
-                        <Select
-                          value={columnFilters.tipo || 'todos'}
-                          onChange={(e) => {
-                            const value = e.target.value === 'todos' ? '' : e.target.value;
-                            setColumnFilters(prev => ({ ...prev, tipo: value }));
-                          }}
-                          displayEmpty
-                          sx={{
-                            height: 28,
-                            fontSize: '0.75rem',
-                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-                            '& .MuiSelect-select': { py: 0.5 },
-                          }}
-                        >
-                          <MenuItem value="todos">Todos</MenuItem>
-                          <MenuItem value="Correo">Correo</MenuItem>
-                          <MenuItem value="Reunión">Reunión</MenuItem>
-                          <MenuItem value="Llamada">Llamada</MenuItem>
-                          <MenuItem value="Nota">Nota</MenuItem>
-                          <MenuItem value="Tarea">Tarea</MenuItem>
-                          <MenuItem value="Otro">Otro</MenuItem>
-                        </Select>
-                      </FormControl>
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  py: { xs: 1.5, md: 1.25 }, 
-                  pl: { xs: 1, md: 1.5 }, 
-                  pr: { xs: 1.5, md: 2 }, 
-                  width: '10%',
-                  minWidth: 0,
-                  bgcolor: 'transparent',
-                  verticalAlign: showColumnFilters ? 'top' : 'middle',
-                }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      Estado
-                    </Box>
-                    {showColumnFilters && (
-                      <FormControl size="small" fullWidth>
-                        <Select
-                          value={columnFilters.estado || 'todos'}
-                          onChange={(e) => {
-                            const value = e.target.value === 'todos' ? '' : e.target.value;
-                            setColumnFilters(prev => ({ ...prev, estado: value }));
-                            if (value) {
-                              setActiveFilter(null);
-                            }
-                          }}
-                          displayEmpty
-                          sx={{
-                            height: 28,
-                            fontSize: '0.75rem',
-                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-                            '& .MuiSelect-select': {
-                              py: 0.5,
-                            },
-                          }}
-                        >
-                          <MenuItem value="todos">Todos</MenuItem>
-                          <MenuItem value="Pendiente">Pendiente</MenuItem>
-                          <MenuItem value="En Progreso">En Progreso</MenuItem>
-                          <MenuItem value="Completada">Completada</MenuItem>
-                          <MenuItem value="Cancelada">Cancelada</MenuItem>
-                        </Select>
-                      </FormControl>
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  py: { xs: 1.5, md: 1.25 }, 
-                  px: { xs: 1.5, md: 2 }, 
-                  width: '10%',
-                  minWidth: 0,
-                  bgcolor: 'transparent',
-                  verticalAlign: showColumnFilters ? 'top' : 'middle',
-                }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      Fecha de inicio
-                    </Box>
-                    {showColumnFilters && (
-                      <TextField
-                        size="small"
-                        type="date"
-                        value={columnFilters.fechaInicio}
-                        onChange={(e) => setColumnFilters(prev => ({ ...prev, fechaInicio: e.target.value }))}
-                        InputLabelProps={{ shrink: true }}
-                        sx={{
-                          width: '100%',
-                          '& .MuiOutlinedInput-root': {
-                            height: 28,
-                            fontSize: '0.75rem',
-                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-                            '& input::-webkit-calendar-picker-indicator': {
-                              filter: theme.palette.mode === 'dark' ? 'invert(1)' : 'none',
-                            },
-                          },
-                        }}
-                      />
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  py: { xs: 1.5, md: 1.25 }, 
-                  pl: { xs: 1.5, md: 2 }, 
-                  pr: { xs: 1.5, md: 2 }, 
-                  width: '12%',
-                  minWidth: 0,
-                  bgcolor: 'transparent',
-                  verticalAlign: showColumnFilters ? 'top' : 'middle',
-                }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      Fecha de Vencimiento
-                    </Box>
-                    {showColumnFilters && (
-                      <TextField
-                        size="small"
-                        type="date"
-                        value={columnFilters.fechaVencimiento}
-                        onChange={(e) => setColumnFilters(prev => ({ ...prev, fechaVencimiento: e.target.value }))}
-                        InputLabelProps={{ shrink: true }}
-                        sx={{
-                          width: '100%',
-                          '& .MuiOutlinedInput-root': {
-                            height: 28,
-                            fontSize: '0.75rem',
-                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-                            '& input::-webkit-calendar-picker-indicator': {
-                              filter: theme.palette.mode === 'dark' ? 'invert(1)' : 'none',
-                            },
-                          },
-                        }}
-                      />
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  py: { xs: 1.5, md: 1.25 }, 
-                  pl: { xs: 1.5, md: 2 }, 
-                  pr: { xs: 1.5, md: 2 }, 
-                  width: '7%',
-                  minWidth: 0,
-                  bgcolor: 'transparent',
-                  verticalAlign: showColumnFilters ? 'top' : 'middle',
-                }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      Asignado a
-                    </Box>
-                    {showColumnFilters && (
-                      <TextField
-                        size="small"
-                        placeholder="Filtrar..."
-                        value={columnFilters.asignadoA}
-                        onChange={(e) => setColumnFilters(prev => ({ ...prev, asignadoA: e.target.value }))}
-                        sx={{
-                          width: '100%',
-                          '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.75rem', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper },
-                        }}
-                      />
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  py: { xs: 1.5, md: 1.25 }, 
-                  pl: { xs: 1.5, md: 2 }, 
-                  pr: { xs: 1.5, md: 2 }, 
-                  width: '12%',
-                  minWidth: 0,
-                  bgcolor: 'transparent',
-                  verticalAlign: showColumnFilters ? 'top' : 'middle',
-                }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      Empresa
-                    </Box>
-                    {showColumnFilters && (
-                      <TextField
-                        size="small"
-                        placeholder="Filtrar..."
-                        value={columnFilters.empresa}
-                        onChange={(e) => setColumnFilters(prev => ({ ...prev, empresa: e.target.value }))}
-                        sx={{
-                          width: '100%',
-                          '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.75rem', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper },
-                        }}
-                      />
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  py: { xs: 1.5, md: 1.25 }, 
-                  pl: { xs: 1.5, md: 2 }, 
-                  pr: { xs: 1.5, md: 2 }, 
-                  width: '11%',
-                  minWidth: 0,
-                  bgcolor: 'transparent',
-                  verticalAlign: showColumnFilters ? 'top' : 'middle',
-                }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      Contacto
-                    </Box>
-                    {showColumnFilters && (
-                      <TextField
-                        size="small"
-                        placeholder="Filtrar..."
-                        value={columnFilters.contacto}
-                        onChange={(e) => setColumnFilters(prev => ({ ...prev, contacto: e.target.value }))}
-                        sx={{
-                          width: '100%',
-                          '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.75rem', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper },
-                        }}
-                      />
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  py: { xs: 1.5, md: 1.25 }, 
-                  pl: { xs: 1.5, md: 2 }, 
-                  pr: { xs: 1.5, md: 2 }, 
-                  width: '8%',
-                  minWidth: 0,
-                  bgcolor: 'transparent',
-                  verticalAlign: showColumnFilters ? 'top' : 'middle',
-                }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      Prioridad
-                    </Box>
-                    {showColumnFilters && (
-                      <FormControl size="small" fullWidth>
-                        <Select
-                          value={columnFilters.prioridad || 'todos'}
-                          onChange={(e) => {
-                            const value = e.target.value === 'todos' ? '' : e.target.value;
-                            setColumnFilters(prev => ({ ...prev, prioridad: value }));
-                          }}
-                          displayEmpty
-                          sx={{
-                            height: 28,
-                            fontSize: '0.75rem',
-                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-                            '& .MuiSelect-select': { py: 0.5 },
-                          }}
-                        >
-                          <MenuItem value="todos">Todos</MenuItem>
-                          <MenuItem value="Baja">Baja</MenuItem>
-                          <MenuItem value="Media">Media</MenuItem>
-                          <MenuItem value="Alta">Alta</MenuItem>
-                          <MenuItem value="Urgente">Urgente</MenuItem>
-                        </Select>
-                      </FormControl>
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  py: { xs: 1.5, md: 1.25 }, 
-                  pl: { xs: 2, md: 3 },
-                  pr: { xs: 2, md: 3 },
-                  width: '8%',
-                  minWidth: 0,
-                  bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : hexToRgba(taxiMonterricoColors.greenEmerald, 0.01),
-                  textAlign: 'center',
-                }}>
-                  Acciones
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {tasks.length === 0 ? (
-                <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa' }}>
-                  <TableCell colSpan={10} sx={{ py: 8, textAlign: 'center', border: 'none', bgcolor: 'transparent' }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                      <Box
-                        sx={{
-                          width: 120,
-                          height: 120,
-                          borderRadius: '50%',
-                          bgcolor: theme.palette.mode === 'dark' 
-                            ? 'rgba(255, 255, 255, 0.05)' 
-                            : theme.palette.grey[100],
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          lineHeight: 1,
-                        }}
-                      >
-                        <PendingActions sx={{ fontSize: 64, color: theme.palette.text.secondary }} />
-                      </Box>
-                      <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
-                        <Typography
-                          variant="h6"
-                          sx={{
-                            fontWeight: 700,
-                            mb: 1,
-                            color: theme.palette.text.secondary,
-                            fontSize: { xs: '1.25rem', md: '1.5rem' },
-                          }}
-                        >
-                          No hay tareas registradas
-                        </Typography>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: theme.palette.text.secondary,
-                            lineHeight: 1.6,
-                            fontSize: { xs: '0.875rem', md: '0.9375rem' },
-                          }}
-                        >
-                          {tasks.length === 0 && !loading
-                            ? 'Crea tu primera tarea para comenzar a organizar tu trabajo de manera eficiente.'
-                            : 'No se encontraron tareas que coincidan con tu búsqueda.'}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                tasks.map((task, index) => (
-                <TableRow 
-                  key={task.id}
-                  onClick={() => setTaskDetailDrawerTaskId(task.id)}
-                  sx={{ 
-                    cursor: 'pointer',
-                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-                    borderBottom: theme.palette.mode === 'light' 
-                      ? '1px solid rgba(0, 0, 0, 0.08)' 
-                      : '1px solid rgba(255, 255, 255, 0.08)',
-                    '& .MuiTableCell-root': {
-                      borderBottom: 'none',
-                    },
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      boxShadow: theme.palette.mode === 'dark'
-                        ? 'inset 0 0 0 9999px rgba(255, 255, 255, 0.015)'
-                        : 'inset 0 0 0 9999px rgba(0, 0, 0, 0.012)',
-                    },
-                    '&.Mui-selected': {
-                      bgcolor: 'transparent !important',
-                    },
-                    '&.Mui-selected:hover': {
-                      boxShadow: theme.palette.mode === 'dark'
-                        ? 'inset 0 0 0 9999px rgba(255, 255, 255, 0.015)'
-                        : 'inset 0 0 0 9999px rgba(0, 0, 0, 0.012)',
-                    },
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FontAwesomeIcon icon={faFilter} style={{ fontSize: 18, color: theme.palette.text.secondary }} />
+            <Typography sx={{ fontWeight: 600, fontSize: '0.9375rem', color: theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.primary }}>
+              Filtro
+            </Typography>
+          </Box>
+          <IconButton size="small" sx={{ p: 0.5, '&:hover': { bgcolor: 'transparent' } }} disableRipple>
+            {filterPanelCollapsed ? <ExpandMore /> : <ExpandLess />}
+          </IconButton>
+        </Box>
+        {!filterPanelCollapsed && (
+        <Box sx={{ px: 2, py: 2 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end', mb: 2 }}>
+            <Box sx={{ minWidth: 140, flex: '1 1 120px' }}>
+              <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>Nombre</Typography>
+              <TextField
+                size="small"
+                placeholder="Nombre"
+                value={columnFilters.titulo}
+                onChange={(e) => setColumnFilters(prev => ({ ...prev, titulo: e.target.value }))}
+                fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'transparent', fontSize: '0.875rem', borderRadius: 2, '&:hover': { bgcolor: 'transparent' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)', borderWidth: '1px' }, '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } } }}
+              />
+            </Box>
+            <Box sx={{ minWidth: 120, flex: '1 1 100px' }}>
+              <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>Tipo</Typography>
+              <Select
+                size="small"
+                displayEmpty
+                value={columnFilters.tipo || ''}
+                onChange={(e) => setColumnFilters(prev => ({ ...prev, tipo: e.target.value }))}
+                fullWidth
+                sx={{ bgcolor: 'transparent', fontSize: '0.875rem', borderRadius: 2, '& .MuiSelect-select': { py: 1 }, '&:hover': { bgcolor: 'transparent' }, '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
+                renderValue={(v) => v || 'Todos'}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="Correo">Correo</MenuItem>
+                <MenuItem value="Reunión">Reunión</MenuItem>
+                <MenuItem value="Llamada">Llamada</MenuItem>
+                <MenuItem value="Nota">Nota</MenuItem>
+                <MenuItem value="Tarea">Tarea</MenuItem>
+                <MenuItem value="Otro">Otro</MenuItem>
+              </Select>
+            </Box>
+            <Box sx={{ minWidth: 120, flex: '1 1 100px' }}>
+              <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>Estado</Typography>
+              <Select
+                size="small"
+                displayEmpty
+                value={columnFilters.estado || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setColumnFilters(prev => ({ ...prev, estado: value }));
+                  if (value) setActiveFilter(null);
+                }}
+                fullWidth
+                sx={{ bgcolor: 'transparent', fontSize: '0.875rem', borderRadius: 2, '& .MuiSelect-select': { py: 1 }, '&:hover': { bgcolor: 'transparent' }, '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
+                renderValue={(v) => v || 'Todos'}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="Pendiente">Pendiente</MenuItem>
+                <MenuItem value="En Progreso">En Progreso</MenuItem>
+                <MenuItem value="Completada">Completada</MenuItem>
+                <MenuItem value="Cancelada">Cancelada</MenuItem>
+              </Select>
+            </Box>
+            <Box sx={{ minWidth: 140, flex: '1 1 120px' }}>
+              <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>Fecha de inicio</Typography>
+              <TextField
+                size="small"
+                type="date"
+                value={columnFilters.fechaInicio}
+                onChange={(e) => setColumnFilters(prev => ({ ...prev, fechaInicio: e.target.value }))}
+                fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'transparent', fontSize: '0.875rem', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 }, '& input::-webkit-calendar-picker-indicator': { filter: theme.palette.mode === 'dark' ? 'invert(1)' : 'none' } } }}
+              />
+            </Box>
+            <Box sx={{ minWidth: 140, flex: '1 1 120px' }}>
+              <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>Fecha de vencimiento</Typography>
+              <TextField
+                size="small"
+                type="date"
+                value={columnFilters.fechaVencimiento}
+                onChange={(e) => setColumnFilters(prev => ({ ...prev, fechaVencimiento: e.target.value }))}
+                fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'transparent', fontSize: '0.875rem', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 }, '& input::-webkit-calendar-picker-indicator': { filter: theme.palette.mode === 'dark' ? 'invert(1)' : 'none' } } }}
+              />
+            </Box>
+            <Box sx={{ minWidth: 140, flex: '1 1 120px' }}>
+              <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>Asignado a</Typography>
+              <TextField
+                size="small"
+                placeholder="Asignado a"
+                value={columnFilters.asignadoA}
+                onChange={(e) => setColumnFilters(prev => ({ ...prev, asignadoA: e.target.value }))}
+                fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'transparent', fontSize: '0.875rem', borderRadius: 2, '&:hover': { bgcolor: 'transparent' }, '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } } }}
+              />
+            </Box>
+            <Box sx={{ minWidth: 120, flex: '1 1 100px' }}>
+              <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>Prioridad</Typography>
+              <Select
+                size="small"
+                displayEmpty
+                value={columnFilters.prioridad || ''}
+                onChange={(e) => setColumnFilters(prev => ({ ...prev, prioridad: e.target.value }))}
+                fullWidth
+                sx={{ bgcolor: 'transparent', fontSize: '0.875rem', borderRadius: 2, '& .MuiSelect-select': { py: 1 }, '&:hover': { bgcolor: 'transparent' }, '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 } }}
+                renderValue={(v) => v || 'Todos'}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="Baja">Baja</MenuItem>
+                <MenuItem value="Media">Media</MenuItem>
+                <MenuItem value="Alta">Alta</MenuItem>
+                <MenuItem value="Urgente">Urgente</MenuItem>
+              </Select>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end' }}>
+            <Button
+              size="small"
+              startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
+              sx={{ bgcolor: '#1976D2', color: 'white', borderRadius: 1.5, px: 2, py: 1, textTransform: 'none', fontWeight: 600, '&:hover': { bgcolor: '#1976D2' } }}
+            >
+              Filtrar
+            </Button>
+            <Button
+              size="small"
+              onClick={() => { setColumnFilters({ titulo: '', tipo: '', estado: '', fechaInicio: '', fechaVencimiento: '', asignadoA: '', empresa: '', contacto: '', prioridad: '' }); setActiveFilter(null); }}
+              sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.12)', color: theme.palette.mode === 'dark' ? '#EF5350' : '#D32F2F', borderRadius: 1.5, px: 2, py: 1, textTransform: 'none', fontWeight: 600, '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.12)' } }}
+            >
+              Limpiar filtros
+            </Button>
+          </Box>
+        </Box>
+        )}
+      </Box>
+
+      {/* Sección de tabla */}
+      <UnifiedTable
+        title="Lista de tareas"
+        titleIcon={<FormatListBulleted sx={{ fontSize: 20 }} />}
+        collapsible
+        header={
+          <Box sx={{ width: '100%', px: { xs: 2.5, md: 3 } }}>
+            <Box
+              component="div"
+              sx={{
+                bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
+                overflow: 'hidden',
+                display: 'grid',
+                gridTemplateColumns: { xs: 'repeat(10, minmax(0, 1fr))', md: '1.5fr 0.8fr 1fr 1fr 1.2fr 0.7fr 1fr 1fr 0.8fr 0.8fr' },
+                columnGap: { xs: 0.5, md: 1 },
+                minWidth: 900,
+                maxWidth: '100%',
+                width: '100%',
+                py: { xs: 1.25, md: 1.5 },
+                borderBottom: `1px solid ${theme.palette.divider}`,
+              }}
+            >
+              <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Nombre</Typography>
+              </Box>
+              <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Tipo</Typography>
+              </Box>
+              <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Estado</Typography>
+              </Box>
+              <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Fecha de inicio</Typography>
+              </Box>
+              <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Fecha de Vencimiento</Typography>
+              </Box>
+              <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Propietario</Typography>
+              </Box>
+              <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Empresa</Typography>
+              </Box>
+              <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Contacto</Typography>
+              </Box>
+              <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Prioridad</Typography>
+              </Box>
+              <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5 }}>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' }, textAlign: 'center' }}>Acciones</Typography>
+              </Box>
+            </Box>
+          </Box>
+        }
+        emptyState={
+          tasks.length === 0 ? (
+            <Box sx={{ py: 8, textAlign: 'center', bgcolor: 'transparent' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <Box
+                  sx={{
+                    width: 120,
+                    height: 120,
+                    borderRadius: '50%',
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.05)' 
+                      : theme.palette.grey[100],
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1,
                   }}
                 >
-                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: { xs: 0.5, md: 1 }, width: '12%', minWidth: 0, overflow: 'hidden' }}>
-                    <Typography 
-                      variant="body2" 
+                  <PendingActions sx={{ fontSize: 64, color: theme.palette.text.secondary }} />
+                </Box>
+                <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 700,
+                      mb: 1,
+                      color: theme.palette.text.secondary,
+                      fontSize: { xs: '1.25rem', md: '1.5rem' },
+                    }}
+                  >
+                    No hay tareas registradas
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.secondary,
+                      lineHeight: 1.6,
+                      fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                    }}
+                  >
+                    {!loading
+                      ? 'Crea tu primera tarea para comenzar a organizar tu trabajo de manera eficiente.'
+                      : 'No se encontraron tareas que coincidan con tu búsqueda.'}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          ) : undefined
+        }
+        rows={
+          <>
+          {tasks.map((task) => (
+            <Box key={task.id} sx={{ width: '100%', px: { xs: 2.5, md: 3 } }}>
+              <Box
+                component="div"
+                onClick={() => setTaskDetailDrawerTaskId(task.id)}
+                sx={{
+                  bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'grid',
+                  gridTemplateColumns: { xs: 'repeat(10, minmax(0, 1fr))', md: '1.5fr 0.8fr 1fr 1fr 1.2fr 0.7fr 1fr 1fr 0.8fr 0.8fr' },
+                  columnGap: { xs: 0.5, md: 1 },
+                  minWidth: 900,
+                  maxWidth: '100%',
+                  width: '100%',
+                  overflow: 'hidden',
+                  py: { xs: 1.25, md: 1.5 },
+                  borderBottom: `1px solid ${theme.palette.divider}`,
+                  '&:hover': {
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? 'inset 0 0 0 9999px rgba(255, 255, 255, 0.015)'
+                      : 'inset 0 0 0 9999px rgba(0, 0, 0, 0.012)',
+                  },
+                }}
+              >
+                {/* Nombre */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontWeight: 500, 
+                      color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                      fontSize: { xs: '0.8125rem', md: '0.9375rem' },
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      '&:hover': {
+                        color: taxiMonterricoColors.green,
+                        textDecoration: 'underline',
+                      },
+                    }}
+                  >
+                    {task.title || task.subject}
+                  </Typography>
+                </Box>
+                {/* Tipo */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.8125rem', md: '0.9375rem' }, fontWeight: 600, color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.secondary }}>
+                    {getTypeLabel((task as any).type)}
+                  </Typography>
+                </Box>
+                {/* Estado */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
+                  <Box
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (task.status !== 'completed') {
+                        setStatusMenuAnchor({ el: e.currentTarget, taskId: task.id });
+                      }
+                    }}
+                    sx={{ 
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.25,
+                      cursor: task.status === 'completed' ? 'default' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 2.5,
+                      bgcolor: task.status === 'completed'
+                        ? 'rgba(16, 185, 129, 0.15)'
+                        : task.status === 'in progress'
+                        ? 'rgba(139, 92, 246, 0.15)'
+                        : task.status === 'pending'
+                        ? 'rgba(239, 68, 68, 0.15)'
+                        : task.status === 'cancelled'
+                        ? theme.palette.mode === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.08)'
+                          : 'rgba(0, 0, 0, 0.05)'
+                        : 'rgba(245, 158, 11, 0.15)',
+                      '&:hover': { opacity: 0.8 },
+                    }}
+                  >
+                    <Typography
                       sx={{ 
-                        fontWeight: 500, 
-                        color: theme.palette.text.primary,
-                        fontSize: { xs: '0.75rem', md: '0.875rem' },
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        '&:hover': {
-                          color: taxiMonterricoColors.green,
-                          textDecoration: 'underline',
-                        },
-                      }}
-                    >
-                      {task.title || task.subject}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ pl: { xs: 1, md: 1.5 }, pr: { xs: 1.5, md: 2 }, width: '9%', minWidth: 0, overflow: 'hidden' }}>
-                    <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.84rem' }, fontWeight: 600, color: theme.palette.text.secondary }}>
-                      {getTypeLabel((task as any).type)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ pl: { xs: 1, md: 1.5 }, pr: { xs: 1.5, md: 2 }, width: '10%', minWidth: 0, overflow: 'hidden' }}>
-                    <Box
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (task.status !== 'completed') {
-                          setStatusMenuAnchor({ el: e.currentTarget, taskId: task.id });
-                        }
-                      }}
-                      sx={{ 
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 0.25,
-                        cursor: task.status === 'completed' ? 'default' : 'pointer',
-                        transition: 'all 0.2s ease',
-                        px: 1,
-                        py: 0.5,
-                        borderRadius: 2.5,
-                        bgcolor: task.status === 'completed'
-                          ? 'rgba(16, 185, 129, 0.15)'
+                        fontWeight: 500,
+                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                        color: task.status === 'completed'
+                          ? '#10B981'
                           : task.status === 'in progress'
-                          ? 'rgba(139, 92, 246, 0.15)'
+                          ? '#8B5CF6'
                           : task.status === 'pending'
-                          ? 'rgba(239, 68, 68, 0.15)'
+                          ? '#EF4444'
                           : task.status === 'cancelled'
-                          ? theme.palette.mode === 'dark' 
-                            ? 'rgba(255, 255, 255, 0.08)'
-                            : 'rgba(0, 0, 0, 0.05)'
-                          : 'rgba(245, 158, 11, 0.15)',
-                        '&:hover': {
-                          opacity: 0.8,
-                        },
+                          ? theme.palette.text.secondary
+                          : theme.palette.warning.main,
                       }}
                     >
-                      <Typography
+                      {getStatusLabel(task.status)}
+                    </Typography>
+                    {task.status !== 'completed' && (
+                      <ArrowDropDown 
                         sx={{ 
-                          fontWeight: 500,
-                          fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                          color: task.status === 'completed'
-                            ? '#10B981'
-                            : task.status === 'in progress'
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                          color: task.status === 'in progress'
                             ? '#8B5CF6'
                             : task.status === 'pending'
                             ? '#EF4444'
                             : task.status === 'cancelled'
                             ? theme.palette.text.secondary
                             : theme.palette.warning.main,
-                        }}
-                      >
-                        {getStatusLabel(task.status)}
-                      </Typography>
-                      {task.status !== 'completed' && (
-                        <ArrowDropDown 
-                          sx={{ 
-                            fontSize: { xs: '0.875rem', md: '1rem' },
-                            color: task.status === 'in progress'
-                              ? '#8B5CF6'
-                              : task.status === 'pending'
-                              ? '#EF4444'
-                              : task.status === 'cancelled'
-                              ? theme.palette.text.secondary
-                              : theme.palette.warning.main,
-                          }} 
-                        />
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1.5, md: 2 }, width: '10%', minWidth: 0, overflow: 'hidden' }}>
-                    {task.status === 'completed' ? (() => {
-                      const taskDescription = (task as any).description || '';
-                      const { date: completedDate } = getCompletedDateAndTime(taskDescription);
-                      if (completedDate) {
-                        return (
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: theme.palette.text.primary, 
-                              fontSize: { xs: '0.75rem', md: '0.875rem' },
-                              fontWeight: 500,
-                            }}
-                          >
-                            {completedDate.toLocaleDateString('es-ES', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            })}
-                          </Typography>
-                        );
-                      }
-                      return (
-                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                          Sin fecha
-                        </Typography>
-                      );
-                    })() : task.startDate ? (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: theme.palette.text.primary, 
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
-                          fontWeight: 500,
-                        }}
-                      >
-                        {new Date(task.startDate).toLocaleDateString('es-ES', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </Typography>
-                    ) : task.createdAt ? (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: theme.palette.text.primary, 
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
-                          fontWeight: 500,
-                        }}
-                      >
-                        {new Date(task.createdAt).toLocaleDateString('es-ES', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </Typography>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        Sin fecha
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, width: '12%', minWidth: 0, overflow: 'hidden' }}>
-                    {task.status === 'completed' ? (() => {
-                      const taskDescription = (task as any).description || '';
-                      const { date: completedDate } = getCompletedDateAndTime(taskDescription);
-                      if (completedDate) {
-                        return (
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: theme.palette.text.primary, 
-                              fontSize: { xs: '0.75rem', md: '0.875rem' },
-                              fontWeight: 500,
-                            }}
-                          >
-                            {completedDate.toLocaleDateString('es-ES', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            })}
-                          </Typography>
-                        );
-                      }
-                      return (
-                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                          Sin fecha
-                        </Typography>
-                      );
-                    })() : task.dueDate ? (
-                      <Box>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: theme.palette.text.primary, 
-                            fontSize: { xs: '0.75rem', md: '0.875rem' },
-                            fontWeight: 500,
-                          }}
-                        >
-                          {new Date(task.dueDate).toLocaleDateString('es-ES', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </Typography>
-                        {task.dueDate && typeof task.dueDate === 'string' && task.dueDate.includes('T') && (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25 }}>
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                color: theme.palette.text.secondary,
-                                fontSize: '0.7rem',
-                              }}
-                            >
-                              {new Date(task.dueDate).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                            </Typography>
-                            {new Date(task.dueDate) < new Date() && task.status !== 'completed' && (
-                              <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                  color: theme.palette.error.main,
-                                  fontSize: '0.7rem',
-                                  fontWeight: 500,
-                                }}
-                              >
-                                Vencida
-                              </Typography>
-                            )}
-                          </Box>
-                        )}
-                        {task.dueDate && (!(typeof task.dueDate === 'string' && task.dueDate.includes('T'))) && new Date(task.dueDate) < new Date() && task.status !== 'completed' && (
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              color: theme.palette.error.main,
-                              fontSize: '0.7rem',
-                              fontWeight: 500,
-                              display: 'block',
-                              mt: 0.25
-                            }}
-                          >
-                            Vencida
-                          </Typography>
-                        )}
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        Sin fecha
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, width: '7%', minWidth: 0, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
-                      {task.AssignedTo ? (
-                        <Tooltip 
-                          title={`${task.AssignedTo.firstName} ${task.AssignedTo.lastName}`}
-                          arrow
-                        >
-                          <Box sx={{ display: 'inline-block' }}>
-                            <UserAvatar
-                              firstName={task.AssignedTo.firstName}
-                              lastName={task.AssignedTo.lastName}
-                              avatar={task.AssignedTo.avatar}
-                              sx={{
-                                width: { xs: 28, md: 32 },
-                                height: { xs: 28, md: 32 },
-                                fontSize: { xs: '0.7rem', md: '0.75rem' },
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                                flexShrink: 0,
-                                cursor: 'pointer',
-                                border: 'none',
-                              }}
-                            />
-                          </Box>
-                        </Tooltip>
-                      ) : task.User ? (
-                        <Tooltip 
-                          title={`${task.User.firstName} ${task.User.lastName}`}
-                          arrow
-                        >
-                          <Box sx={{ display: 'inline-block' }}>
-                            <UserAvatar
-                              firstName={task.User.firstName}
-                              lastName={task.User.lastName}
-                              avatar={task.User.avatar}
-                              sx={{
-                                width: { xs: 28, md: 32 },
-                                height: { xs: 28, md: 32 },
-                                fontSize: { xs: '0.7rem', md: '0.75rem' },
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                                flexShrink: 0,
-                                cursor: 'pointer',
-                                border: 'none',
-                              }}
-                            />
-                          </Box>
-                        </Tooltip>
-                      ) : (
-                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                          --
-                        </Typography>
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, width: '9%', minWidth: 0, overflow: 'hidden' }}>
-                    <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' }, color: task.Company?.name ? theme.palette.text.primary : theme.palette.text.disabled, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={task.Company?.name || ''}>
-                      {task.Company?.name || '—'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, width: '11%', minWidth: 0, overflow: 'hidden' }}>
-                    <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' }, color: task.Contact ? theme.palette.text.primary : theme.palette.text.disabled, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={task.Contact ? `${task.Contact.firstName} ${task.Contact.lastName}`.trim() : ''}>
-                      {task.Contact ? `${task.Contact.firstName} ${task.Contact.lastName}`.trim() || '—' : '—'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, width: '8%', minWidth: 0, overflow: 'hidden' }}>
-                    <Box
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPriorityMenuAnchor({ el: e.currentTarget, taskId: task.id });
-                      }}
-                      sx={{ 
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 0.25,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          opacity: 0.8,
-                        },
-                      }}
-                    >
-                      <Typography
-                        sx={{ 
-                          fontWeight: 500,
-                          fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                          color: task.priority === 'high'
-                            ? '#ff5252' // Rojo claro vibrante
-                            : task.priority === 'medium'
-                            ? '#ff9800' // Naranja claro vibrante
-                            : '#4caf50', // Verde claro vibrante
-                        }}
-                      >
-                        {getPriorityLabel(task.priority)}
-                      </Typography>
-                      <ArrowDropDown 
-                        sx={{ 
-                          fontSize: { xs: '0.875rem', md: '1rem' },
-                          color: task.priority === 'high'
-                            ? '#ff5252' // Rojo claro vibrante
-                            : task.priority === 'medium'
-                            ? '#ff9800' // Naranja claro vibrante
-                            : '#4caf50', // Verde claro vibrante
                         }} 
                       />
+                    )}
+                  </Box>
+                </Box>
+                {/* Fecha de inicio */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
+                  {task.status === 'completed' ? (() => {
+                    const taskDescription = (task as any).description || '';
+                    const { date: completedDate } = getCompletedDateAndTime(taskDescription);
+                    if (completedDate) {
+                      return (
+                        <Typography variant="body2" sx={{ color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary, fontSize: { xs: '0.8125rem', md: '0.9375rem' }, fontWeight: 500 }}>
+                          {completedDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </Typography>
+                      );
+                    }
+                    return <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.8125rem', md: '0.9375rem' } }}>Sin fecha</Typography>;
+                  })() : task.startDate ? (
+                    <Typography variant="body2" sx={{ color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary, fontSize: { xs: '0.8125rem', md: '0.9375rem' }, fontWeight: 500 }}>
+                      {new Date(task.startDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </Typography>
+                  ) : task.createdAt ? (
+                    <Typography variant="body2" sx={{ color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary, fontSize: { xs: '0.8125rem', md: '0.9375rem' }, fontWeight: 500 }}>
+                      {new Date(task.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.8125rem', md: '0.9375rem' } }}>Sin fecha</Typography>
+                  )}
+                </Box>
+                {/* Fecha de Vencimiento */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
+                  {task.status === 'completed' ? (() => {
+                    const taskDescription = (task as any).description || '';
+                    const { date: completedDate } = getCompletedDateAndTime(taskDescription);
+                    if (completedDate) {
+                      return (
+                        <Typography variant="body2" sx={{ color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary, fontSize: { xs: '0.8125rem', md: '0.9375rem' }, fontWeight: 500 }}>
+                          {completedDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </Typography>
+                      );
+                    }
+                    return <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.8125rem', md: '0.9375rem' } }}>Sin fecha</Typography>;
+                  })() : task.dueDate ? (
+                    <Box>
+                      <Typography variant="body2" sx={{ color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary, fontSize: { xs: '0.8125rem', md: '0.9375rem' }, fontWeight: 500 }}>
+                        {new Date(task.dueDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </Typography>
+                      {task.dueDate && typeof task.dueDate === 'string' && task.dueDate.includes('T') && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25 }}>
+                          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.7rem' }}>
+                            {new Date(task.dueDate).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          </Typography>
+                          {new Date(task.dueDate) < new Date() && task.status !== 'completed' && (
+                            <Typography variant="caption" sx={{ color: theme.palette.error.main, fontSize: '0.7rem', fontWeight: 500 }}>Vencida</Typography>
+                          )}
+                        </Box>
+                      )}
+                      {task.dueDate && (!(typeof task.dueDate === 'string' && task.dueDate.includes('T'))) && new Date(task.dueDate) < new Date() && task.status !== 'completed' && (
+                        <Typography variant="caption" sx={{ color: theme.palette.error.main, fontSize: '0.7rem', fontWeight: 500, display: 'block', mt: 0.25 }}>Vencida</Typography>
+                      )}
                     </Box>
-                  </TableCell>
-                  <TableCell sx={{ 
-                    pl: { xs: 2, md: 3 }, 
-                    pr: { xs: 2, md: 3 }, 
-                    width: '9%',
-                    minWidth: 0,
-                    textAlign: 'center',
-                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-                  }}>
-                    <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', justifyContent: 'center' }}>
-                      <Tooltip title="Editar">
+                  ) : (
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.8125rem', md: '0.9375rem' } }}>Sin fecha</Typography>
+                  )}
+                </Box>
+                {/* Asignado a */}
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                  {task.AssignedTo ? (
+                    <Tooltip title={`${task.AssignedTo.firstName} ${task.AssignedTo.lastName}`} arrow>
+                      <Box sx={{ display: 'inline-block' }}>
+                        <UserAvatar
+                          firstName={task.AssignedTo.firstName}
+                          lastName={task.AssignedTo.lastName}
+                          avatar={task.AssignedTo.avatar}
+                          sx={{ width: { xs: 28, md: 32 }, height: { xs: 28, md: 32 }, fontSize: { xs: '0.7rem', md: '0.75rem' }, boxShadow: '0 1px 3px rgba(0,0,0,0.12)', flexShrink: 0, cursor: 'pointer', border: 'none' }}
+                        />
+                      </Box>
+                    </Tooltip>
+                  ) : task.User ? (
+                    <Tooltip title={`${task.User.firstName} ${task.User.lastName}`} arrow>
+                      <Box sx={{ display: 'inline-block' }}>
+                        <UserAvatar
+                          firstName={task.User.firstName}
+                          lastName={task.User.lastName}
+                          avatar={task.User.avatar}
+                          sx={{ width: { xs: 28, md: 32 }, height: { xs: 28, md: 32 }, fontSize: { xs: '0.7rem', md: '0.75rem' }, boxShadow: '0 1px 3px rgba(0,0,0,0.12)', flexShrink: 0, cursor: 'pointer', border: 'none' }}
+                        />
+                      </Box>
+                    </Tooltip>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>--</Typography>
+                  )}
+                </Box>
+                {/* Empresa */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.8125rem', md: '0.9375rem' }, color: task.Company?.name ? (theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary) : theme.palette.text.disabled, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={task.Company?.name || ''}>
+                    {task.Company?.name || '—'}
+                  </Typography>
+                </Box>
+                {/* Contacto */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.8125rem', md: '0.9375rem' }, color: task.Contact ? (theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary) : theme.palette.text.disabled, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={task.Contact ? `${task.Contact.firstName} ${task.Contact.lastName}`.trim() : ''}>
+                    {task.Contact ? `${task.Contact.firstName} ${task.Contact.lastName}`.trim() || '—' : '—'}
+                  </Typography>
+                </Box>
+                {/* Prioridad */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
+                  <Box
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPriorityMenuAnchor({ el: e.currentTarget, taskId: task.id });
+                    }}
+                    sx={{ 
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.25,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': { opacity: 0.8 },
+                    }}
+                  >
+                    <Typography
+                      sx={{ 
+                        fontWeight: 500,
+                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                        color: task.priority === 'high' ? '#ff5252' : task.priority === 'medium' ? '#ff9800' : '#4caf50',
+                      }}
+                    >
+                      {getPriorityLabel(task.priority)}
+                    </Typography>
+                    <ArrowDropDown 
+                      sx={{ 
+                        fontSize: { xs: '0.875rem', md: '1rem' },
+                        color: task.priority === 'high' ? '#ff5252' : task.priority === 'medium' ? '#ff9800' : '#4caf50',
+                      }} 
+                    />
+                  </Box>
+                </Box>
+                {/* Acciones */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', justifyContent: 'center' }}>
+                    <Tooltip title="Editar">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpen(task);
+                        }}
+                        sx={pageStyles.actionButtonEdit(theme)}
+                      >
+                        <PencilLine size={18} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={task.status === 'completed' ? 'Ver información de completada' : 'Disponible cuando la tarea esté completada'}>
+                      <span>
                         <IconButton
                           size="small"
+                          disabled={task.status !== 'completed'}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleOpen(task);
+                            openCompleteModalView(task);
                           }}
-                          sx={pageStyles.actionButtonEdit(theme)}
-                        >
-                          <PencilLine size={18} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={task.status === 'completed' ? 'Ver información de completada' : 'Disponible cuando la tarea esté completada'}>
-                        <span>
-                          <IconButton
-                            size="small"
-                            disabled={task.status !== 'completed'}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openCompleteModalView(task);
-                            }}
-                            sx={{
-                              ...(pageStyles.actionButtonView(theme) as object),
-                              '&.Mui-disabled': {
-                                borderColor: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.35)' : 'rgba(54, 130, 248, 0.4)',
-                                color: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.45)' : 'rgba(54, 130, 248, 0.5)',
-                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-                              },
-                            }}
-                          >
-                            <Eye size={18} />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                      <Tooltip title="Eliminar">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(task.id, task.isActivity);
+                          sx={{
+                            ...(pageStyles.actionButtonView(theme) as object),
+                            '&.Mui-disabled': {
+                              borderColor: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.35)' : 'rgba(54, 130, 248, 0.4)',
+                              color: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.45)' : 'rgba(54, 130, 248, 0.5)',
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                            },
                           }}
-                          sx={pageStyles.actionButtonDelete(theme)}
                         >
-                          <Trash size={18} />
+                          <Eye size={18} />
                         </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {/* Paginación */}
-        {totalTasks > 0 && (
-          <Box
-            sx={{
-              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-              borderRadius: '0 0 6px 6px',
-              boxShadow: 'none',
-              borderTop: 'none',
-              px: { xs: 2, md: 3 },
-              py: { xs: 1, md: 1.5 },
-              display: 'flex',
-              flexDirection: { xs: 'column', md: 'row' },
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: { xs: 1.5, md: 2 },
-            }}
-          >
-            {/* Rows per page selector */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-                Filas por página:
-              </Typography>
-              <Select
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                size="small"
-                sx={{
-                  fontSize: '0.8125rem',
-                  height: '32px',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.divider,
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.text.secondary,
-                  },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: taxiMonterricoColors.green,
-                  },
-                }}
-              >
-                <MenuItem value={5}>5</MenuItem>
-                <MenuItem value={7}>7</MenuItem>
-                <MenuItem value={10}>10</MenuItem>
-                <MenuItem value={20}>20</MenuItem>
-                <MenuItem value={50}>50</MenuItem>
-              </Select>
-            </Box>
-
-            {/* Información de paginación y navegación */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-                {startIndex + 1}-{endIndex} de {totalTasks}
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <IconButton
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  size="small"
-                  sx={{
-                    color: currentPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
-                    '&:hover': {
-                      bgcolor: currentPage === 1 ? 'transparent' : theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  <ChevronLeft />
-                </IconButton>
-                <IconButton
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  size="small"
-                  sx={{
-                    color: currentPage === totalPages ? theme.palette.action.disabled : theme.palette.text.secondary,
-                    '&:hover': {
-                      bgcolor: currentPage === totalPages ? 'transparent' : theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  <ChevronRight />
-                </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(task.id, task.isActivity);
+                        }}
+                        sx={pageStyles.actionButtonDelete(theme)}
+                      >
+                        <Trash size={18} />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Box>
               </Box>
             </Box>
-          </Box>
-        )}
-      </Card>
+          ))}
+          </>
+        }
+        pagination={
+          totalTasks > 0 ? (
+            <Box
+              sx={{
+                bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                boxShadow: 'none',
+                borderTop: 'none',
+                px: { xs: 2, md: 3 },
+                py: { xs: 1, md: 1.5 },
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: { xs: 1.5, md: 2 },
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                  Filas por página:
+                </Typography>
+                <Select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  size="small"
+                  sx={{
+                    fontSize: '0.8125rem',
+                    height: '32px',
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.divider },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.text.secondary },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: taxiMonterricoColors.green },
+                  }}
+                >
+                  <MenuItem value={5}>5</MenuItem>
+                  <MenuItem value={7}>7</MenuItem>
+                  <MenuItem value={10}>10</MenuItem>
+                  <MenuItem value={20}>20</MenuItem>
+                  <MenuItem value={50}>50</MenuItem>
+                </Select>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                  {startIndex + 1}-{endIndex} de {totalTasks}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <IconButton
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    size="small"
+                    sx={{ color: currentPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary, '&:hover': { bgcolor: currentPage === 1 ? 'transparent' : theme.palette.action.hover } }}
+                  >
+                    <ChevronLeft />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    size="small"
+                    sx={{ color: currentPage === totalPages ? theme.palette.action.disabled : theme.palette.text.secondary, '&:hover': { bgcolor: currentPage === totalPages ? 'transparent' : theme.palette.action.hover } }}
+                  >
+                    <ChevronRight />
+                  </IconButton>
+                </Box>
+              </Box>
+            </Box>
+          ) : undefined
+        }
+      />
+
+      {/* Filtros activos */}
+      {Object.values(columnFilters).some(v => v !== '') && (
+        <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', mr: 0.5 }}>
+            Filtros activos:
+          </Typography>
+          {columnFilters.titulo && (
+            <Chip label={`Nombre: ${columnFilters.titulo}`} size="small" onDelete={() => setColumnFilters(prev => ({ ...prev, titulo: '' }))} sx={{ fontSize: '0.75rem' }} />
+          )}
+          {columnFilters.tipo && (
+            <Chip label={`Tipo: ${columnFilters.tipo}`} size="small" onDelete={() => setColumnFilters(prev => ({ ...prev, tipo: '' }))} sx={{ fontSize: '0.75rem' }} />
+          )}
+          {columnFilters.estado && (
+            <Chip label={`Estado: ${columnFilters.estado}`} size="small" onDelete={() => setColumnFilters(prev => ({ ...prev, estado: '' }))} sx={{ fontSize: '0.75rem' }} />
+          )}
+          {columnFilters.fechaInicio && (
+            <Chip label={`Fecha inicio: ${columnFilters.fechaInicio}`} size="small" onDelete={() => setColumnFilters(prev => ({ ...prev, fechaInicio: '' }))} sx={{ fontSize: '0.75rem' }} />
+          )}
+          {columnFilters.fechaVencimiento && (
+            <Chip label={`Fecha vencimiento: ${columnFilters.fechaVencimiento}`} size="small" onDelete={() => setColumnFilters(prev => ({ ...prev, fechaVencimiento: '' }))} sx={{ fontSize: '0.75rem' }} />
+          )}
+          {columnFilters.asignadoA && (
+            <Chip label={`Asignado a: ${columnFilters.asignadoA}`} size="small" onDelete={() => setColumnFilters(prev => ({ ...prev, asignadoA: '' }))} sx={{ fontSize: '0.75rem' }} />
+          )}
+          {columnFilters.empresa && (
+            <Chip label={`Empresa: ${columnFilters.empresa}`} size="small" onDelete={() => setColumnFilters(prev => ({ ...prev, empresa: '' }))} sx={{ fontSize: '0.75rem' }} />
+          )}
+          {columnFilters.contacto && (
+            <Chip label={`Contacto: ${columnFilters.contacto}`} size="small" onDelete={() => setColumnFilters(prev => ({ ...prev, contacto: '' }))} sx={{ fontSize: '0.75rem' }} />
+          )}
+          {columnFilters.prioridad && (
+            <Chip label={`Prioridad: ${columnFilters.prioridad}`} size="small" onDelete={() => setColumnFilters(prev => ({ ...prev, prioridad: '' }))} sx={{ fontSize: '0.75rem' }} />
+          )}
+        </Box>
+      )}
 
       {/* Panel deslizable para Nueva/Editar Tarea */}
       <FormDrawer

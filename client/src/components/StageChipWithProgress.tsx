@@ -10,6 +10,8 @@ interface StageChipWithProgressProps extends Omit<ChipProps, 'label'> {
   chipBg?: string;
   /** Color de texto del chip (de getStageColor) */
   chipColor?: string;
+  /** Color sólido de la barra de progreso (de getStageColor.progressBar), igual en modo claro/oscuro */
+  progressBarColor?: string;
   /** Ancho de la barra de progreso (por defecto 100% del contenedor) */
   barWidth?: number | string;
 }
@@ -23,6 +25,7 @@ export const StageChipWithProgress: React.FC<StageChipWithProgressProps> = ({
   label,
   chipBg,
   chipColor,
+  progressBarColor,
   barWidth = '100%',
   sx,
   ...chipProps
@@ -33,22 +36,34 @@ export const StageChipWithProgress: React.FC<StageChipWithProgressProps> = ({
   const isNegative = progress < 0;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, width: barWidth, alignItems: 'flex-start', ...sx }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, width: barWidth, maxWidth: '100%', overflow: 'hidden', alignItems: 'flex-start', ...sx }}>
       <Chip
         label={label}
         size="small"
         sx={{
           fontWeight: 600,
-          fontSize: { xs: '0.6875rem', md: '0.8125rem' },
+          fontSize: { xs: '0.8125rem', md: '0.9375rem' },
           height: { xs: 20, md: 24 },
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
           cursor: chipProps.onClick ? 'pointer' : 'default',
-          bgcolor: chipBg,
+          bgcolor: 'transparent',
           color: chipColor,
+          boxShadow: 'none',
+          border: 'none',
+          justifyContent: 'flex-start',
           '&:hover': chipProps.onClick ? { opacity: 0.8 } : undefined,
+          '& .MuiChip-label': {
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            display: 'block',
+          },
         }}
         {...chipProps}
       />
-      <Box sx={{ position: 'relative', width: '100%', height: 14, borderRadius: 4, overflow: 'hidden', bgcolor: theme.palette.action.hover }}>
+      <Box sx={{ position: 'relative', width: '100%', height: 18, borderRadius: 4, overflow: 'hidden', bgcolor: theme.palette.action.hover }}>
         <LinearProgress
           variant="determinate"
           value={showValue}
@@ -57,7 +72,7 @@ export const StageChipWithProgress: React.FC<StageChipWithProgressProps> = ({
             borderRadius: 4,
             bgcolor: theme.palette.action.hover,
             '& .MuiLinearProgress-bar': {
-              bgcolor: isNegative ? theme.palette.text.disabled : theme.palette.primary.main,
+              bgcolor: isNegative ? theme.palette.text.disabled : (progressBarColor || chipColor || chipBg || theme.palette.primary.main),
             },
           }}
         />
@@ -68,7 +83,7 @@ export const StageChipWithProgress: React.FC<StageChipWithProgressProps> = ({
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            fontSize: '0.625rem',
+            fontSize: '0.75rem',
             fontWeight: 600,
             color: showValue > 40 ? theme.palette.common.white : theme.palette.text.primary,
             pointerEvents: 'none',

@@ -860,7 +860,7 @@ const Reports: React.FC = () => {
     );
   }
 
-  const reportsCardBg = theme.palette.mode === 'light' ? '#fafafa' : '#1c252ea6';
+  const reportsCardBg = theme.palette.mode === 'light' ? '#fafafa' : '#1c252e';
 
   return (
     <Box sx={{ bgcolor: theme.palette.mode === 'light' ? '#f2f2f2' : undefined, minHeight: '100%', py: 2 }}>
@@ -872,17 +872,20 @@ const Reports: React.FC = () => {
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 2,
-          p: 0,
+          px: { xs: 2, md: 3 },
+          py: { xs: 1.25, md: 1.5 },
           mt: 0,
           mb: 4,
+          bgcolor: reportsCardBg,
+          borderRadius: 3,
         }}
       >
         <Typography
           variant="h5"
           sx={{
-            fontWeight: 900,
+            fontWeight: 400,
             fontSize: { xs: '1rem', md: '1.1375rem' },
-            color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
+            color: '#828690',
           }}
         >
           Reportes
@@ -896,11 +899,10 @@ const Reports: React.FC = () => {
               disabled={isRoleUser}
               sx={{
                 borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                bgcolor: 'transparent',
                 fontSize: '0.875rem',
-                border: 'none',
                 color: theme.palette.text.primary,
-                '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                '& .MuiOutlinedInput-notchedOutline': { border: `1px solid ${theme.palette.divider}` },
                 '& .MuiSelect-select': { py: 1, fontStyle: 'normal' },
               }}
               MenuProps={{
@@ -933,10 +935,10 @@ const Reports: React.FC = () => {
             onClick={(e) => setChartEtapaFilterAnchorEl(e.currentTarget)}
             sx={{
               borderRadius: 1.5,
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+              bgcolor: 'transparent',
               fontSize: '0.875rem',
               fontWeight: 400,
-              border: 'none',
+              border: `1px solid ${theme.palette.divider}`,
               color: theme.palette.text.primary,
               minWidth: 160,
               height: 40,
@@ -945,7 +947,7 @@ const Reports: React.FC = () => {
               textTransform: 'none',
               justifyContent: 'space-between',
               '& .MuiButton-endIcon': { ml: 0.5 },
-              '&:hover': { border: 'none', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' },
+              '&:hover': { border: `1px solid ${theme.palette.divider}`, bgcolor: 'transparent' },
             }}
             endIcon={<KeyboardArrowDown sx={{ color: theme.palette.action.disabled, fontSize: 20 }} />}
           >
@@ -1036,10 +1038,10 @@ const Reports: React.FC = () => {
             onClick={(e) => setPeriodPopoverAnchor(e.currentTarget)}
             sx={{
               borderRadius: 1.5,
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+              bgcolor: 'transparent',
               fontSize: '0.875rem',
               fontWeight: 400,
-              border: 'none',
+              border: `1px solid ${theme.palette.divider}`,
               color: theme.palette.text.primary,
               minWidth: 160,
               height: 40,
@@ -1048,7 +1050,7 @@ const Reports: React.FC = () => {
               textTransform: 'none',
               justifyContent: 'space-between',
               '& .MuiButton-endIcon': { ml: 0.5 },
-              '&:hover': { border: 'none', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' },
+              '&:hover': { border: `1px solid ${theme.palette.divider}`, bgcolor: 'transparent' },
             }}
             endIcon={<KeyboardArrowDown sx={{ color: theme.palette.action.disabled, fontSize: 20 }} />}
           >
@@ -1189,7 +1191,7 @@ const Reports: React.FC = () => {
           boxShadow: 'none',
           overflow: 'hidden',
           bgcolor: reportsCardBg,
-          border: 'none',
+          border: `1px solid ${theme.palette.divider}`,
           transition: 'all 0.3s ease',
           '&:hover': {
             boxShadow: 'none',
@@ -1460,7 +1462,7 @@ const Reports: React.FC = () => {
           boxShadow: 'none',
           overflow: 'hidden',
           bgcolor: reportsCardBg,
-          border: 'none',
+          border: `1px solid ${theme.palette.divider}`,
           transition: 'all 0.3s ease',
           '&:hover': {
             boxShadow: 'none',
@@ -1584,7 +1586,7 @@ const Reports: React.FC = () => {
           boxShadow: 'none',
           overflow: 'hidden',
           bgcolor: reportsCardBg,
-          border: 'none',
+          border: `1px solid ${theme.palette.divider}`,
           transition: 'all 0.3s ease',
           '&:hover': {
             boxShadow: 'none',
@@ -1883,7 +1885,7 @@ const Reports: React.FC = () => {
           boxShadow: 'none',
           overflow: 'hidden',
           bgcolor: reportsCardBg,
-          border: 'none',
+          border: `1px solid ${theme.palette.divider}`,
           transition: 'all 0.3s ease',
           '&:hover': {
             boxShadow: 'none',
@@ -2108,7 +2110,7 @@ const Reports: React.FC = () => {
           boxShadow: 'none',
           overflow: 'hidden',
           bgcolor: reportsCardBg,
-          border: 'none',
+          border: `1px solid ${theme.palette.divider}`,
           transition: 'all 0.3s ease',
           display: 'flex',
           flexDirection: 'column',
@@ -2258,7 +2260,7 @@ const Reports: React.FC = () => {
           boxShadow: 'none',
           overflow: 'hidden',
           bgcolor: reportsCardBg,
-          border: 'none',
+          border: `1px solid ${theme.palette.divider}`,
           transition: 'all 0.3s ease',
           display: 'flex',
           flexDirection: 'column',

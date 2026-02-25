@@ -20,13 +20,13 @@ import {
   Menu,
   useTheme,
   Collapse,
-  LinearProgress,
 } from '@mui/material';
-import { Add, AttachMoney, ViewList, AccountTree, CalendarToday, Close, FilterList, ExpandMore, Remove, Bolt, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Add, AttachMoney, ViewList, AccountTree, CalendarToday, Close, ExpandMore, ExpandLess, FormatListBulleted, Remove, Bolt, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { PencilLine, Eye, Trash } from 'lucide-react';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { getStageColor as getStageColorUtil, getStageProgress } from '../utils/stageColors';
+import { StageChipWithProgress } from '../components/StageChipWithProgress';
 import { pageStyles } from '../theme/styles';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -115,7 +115,7 @@ const Deals: React.FC = () => {
     propietario: '',
   });
   const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
-  const [showColumnFilters, setShowColumnFilters] = useState(false);
+  const [filterPanelCollapsed, setFilterPanelCollapsed] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDeal, setPreviewDeal] = useState<Deal | null>(null);
   
@@ -661,8 +661,7 @@ const Deals: React.FC = () => {
         overflow: 'hidden',
       }}>
 
-      {/* Indicador de filtros por columna activos */}
-      {/* Barra de herramientas compartida - se muestra siempre */}
+      {/* Barra de título y acciones - mismo diseño que Contactos/Empresas */}
       <Box
         sx={{
           display: 'flex',
@@ -670,16 +669,19 @@ const Deals: React.FC = () => {
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 2,
-          p: 2,
-          mb: 0,
+          px: { xs: 2, md: 3 },
+          py: { xs: 1.25, md: 1.5 },
+          mb: 4,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
+          borderRadius: 3,
         }}
       >
         <Typography 
           variant="h5" 
           sx={{ 
-            fontWeight: 600,
+            fontWeight: 400,
             fontSize: { xs: '1rem', md: '1.1375rem' },
-            color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary,
+            color: '#828690',
           }}
         >
           Negocios
@@ -716,34 +718,6 @@ const Deals: React.FC = () => {
               Exportar
             </Button>
           </Box>
-          
-          <Button
-            size="small"
-            startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
-            onClick={() => setShowColumnFilters(!showColumnFilters)}
-            sx={{
-              border: 'none',
-              borderRadius: 1.5,
-              bgcolor: showColumnFilters 
-                ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
-                : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.12)' : 'rgba(255, 152, 0, 0.08)'),
-              color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFB74D' : '#E65100'),
-              px: { xs: 1.25, sm: 1.5 },
-              py: { xs: 0.75, sm: 0.875 },
-              order: { xs: 5, sm: 0 },
-              textTransform: 'none',
-              fontWeight: 600,
-              '&:hover': {
-                borderColor: showColumnFilters ? taxiMonterricoColors.green : '#FF9800',
-                bgcolor: showColumnFilters 
-                  ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}33` : `${taxiMonterricoColors.green}1A`)
-                  : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.14)'),
-                color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFCC80' : '#EF6C00'),
-              },
-            }}
-          >
-            Filtro
-          </Button>
           
           <Box sx={{ 
             display: 'flex', 
@@ -838,20 +812,188 @@ const Deals: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Panel de filtros - visible solo en modo lista */}
+      {viewMode === 'list' && (
+      <Box
+        sx={{
+          mb: 3,
+          bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
+          borderRadius: 2,
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          onClick={() => setFilterPanelCollapsed(!filterPanelCollapsed)}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 2,
+            py: 1.5,
+            cursor: 'pointer',
+            borderBottom: filterPanelCollapsed ? 'none' : `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FontAwesomeIcon icon={faFilter} style={{ fontSize: 18, color: theme.palette.text.secondary }} />
+            <Typography sx={{ fontWeight: 600, fontSize: '0.9375rem', color: theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.primary }}>
+              Filtro
+            </Typography>
+          </Box>
+          <IconButton size="small" sx={{ p: 0.5, '&:hover': { bgcolor: 'transparent' } }} disableRipple>
+            {filterPanelCollapsed ? <ExpandMore /> : <ExpandLess />}
+          </IconButton>
+        </Box>
+        {!filterPanelCollapsed && (
+        <Box sx={{ px: 2, py: 2 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end', mb: 2 }}>
+            <Box sx={{ minWidth: 140, flex: '1 1 120px' }}>
+              <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>Nombre</Typography>
+              <TextField
+                size="small"
+                placeholder="Nombre"
+                value={columnFilters.nombre}
+                onChange={(e) => setColumnFilters(prev => ({ ...prev, nombre: e.target.value }))}
+                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'transparent',
+                    fontSize: '0.875rem',
+                    borderRadius: 2,
+                    '&:hover': { bgcolor: 'transparent' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)', borderWidth: '1px' },
+                    '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                  },
+                }}
+              />
+            </Box>
+            <Box sx={{ minWidth: 120, flex: '1 1 100px' }}>
+              <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>Monto</Typography>
+              <TextField
+                size="small"
+                placeholder="Monto"
+                value={columnFilters.monto}
+                onChange={(e) => setColumnFilters(prev => ({ ...prev, monto: e.target.value }))}
+                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'transparent',
+                    fontSize: '0.875rem',
+                    borderRadius: 2,
+                    '&:hover': { bgcolor: 'transparent' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)', borderWidth: '1px' },
+                    '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                  },
+                }}
+              />
+            </Box>
+            <Box sx={{ minWidth: 160, flex: '1 1 140px' }}>
+              <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>Etapa</Typography>
+              <Select
+                size="small"
+                displayEmpty
+                value={columnFilters.etapa}
+                onChange={(e) => setColumnFilters(prev => ({ ...prev, etapa: e.target.value }))}
+                fullWidth
+                sx={{
+                  bgcolor: 'transparent',
+                  fontSize: '0.875rem',
+                  borderRadius: 2,
+                  '& .MuiSelect-select': { py: 1 },
+                  '&:hover': { bgcolor: 'transparent' },
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)', borderWidth: '1px' },
+                  '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                }}
+                renderValue={(v) => v ? getStageLabel(v) : 'Seleccionar etapa'}
+              >
+                <MenuItem value="">Todas</MenuItem>
+                {stageOptions.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                ))}
+              </Select>
+            </Box>
+            <Box sx={{ minWidth: 160, flex: '1 1 140px' }}>
+              <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>Propietario</Typography>
+              <Select
+                size="small"
+                displayEmpty
+                value={columnFilters.propietario}
+                onChange={(e) => setColumnFilters(prev => ({ ...prev, propietario: e.target.value }))}
+                fullWidth
+                sx={{
+                  bgcolor: 'transparent',
+                  fontSize: '0.875rem',
+                  borderRadius: 2,
+                  '& .MuiSelect-select': { py: 1 },
+                  '&:hover': { bgcolor: 'transparent' },
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)', borderWidth: '1px' },
+                  '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                }}
+                MenuProps={{ sx: { zIndex: 1700 } }}
+                renderValue={(v) => {
+                  if (!v) return 'Todos';
+                  if (v === 'unassigned') return 'Sin asignar';
+                  if (v === 'me') return 'Yo';
+                  const u = users.find((x: any) => String(x.id) === v);
+                  return u ? `${u.firstName} ${u.lastName}` : String(v);
+                }}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="unassigned">Sin asignar</MenuItem>
+                <MenuItem value="me">Yo</MenuItem>
+                {users.filter((u: any) => u.role === 'user').map((u: any) => (
+                  <MenuItem key={u.id} value={String(u.id)}>{u.firstName} {u.lastName}</MenuItem>
+                ))}
+              </Select>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end' }}>
+            <Button
+              size="small"
+              startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
+              sx={{ bgcolor: '#1976D2', color: 'white', borderRadius: 1.5, px: 2, py: 1, textTransform: 'none', fontWeight: 600, '&:hover': { bgcolor: '#1976D2' } }}
+            >
+              Filtrar
+            </Button>
+            <Button
+              size="small"
+              onClick={() => setColumnFilters({ nombre: '', monto: '', etapa: '', propietario: '' })}
+              sx={{
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.12)',
+                color: theme.palette.mode === 'dark' ? '#EF5350' : '#D32F2F',
+                borderRadius: 1.5,
+                px: 2,
+                py: 1,
+                textTransform: 'none',
+                fontWeight: 600,
+                '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.12)' },
+              }}
+            >
+              Limpiar filtros
+            </Button>
+          </Box>
+        </Box>
+        )}
+      </Box>
+      )}
+
       {/* Contenedor principal con layout flex para tabla y panel de filtros */}
       {viewMode === 'list' && (
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
         {/* Contenido principal usando UnifiedTable */}
         <UnifiedTable
-          title=""
+          title="Lista de negocios"
+          titleIcon={<FormatListBulleted />}
+          collapsible
           actions={null}
           header={
+            <Box sx={{ width: '100%', px: { xs: 2.5, md: 3 } }}>
             <Box
               component="div"
               sx={{ 
                 bgcolor: theme.palette.mode === 'dark'
-                  ? '#1c252e'
-                  : `${taxiMonterricoColors.green}03`,
+                  ? theme.palette.background.paper
+                  : '#fafafa',
                 overflow: 'hidden',
                 display: 'grid',
                 gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 0.8fr 1fr 0.9fr 0.9fr 0.7fr' },
@@ -859,120 +1001,27 @@ const Deals: React.FC = () => {
                 minWidth: { xs: 600, md: 'auto' },
                 maxWidth: '100%',
                 width: '100%',
-                px: { xs: 1, md: 1.5 },
-                py: { xs: 1.5, md: 2 },
-                borderBottom: `2px solid ${theme.palette.divider}`,
+                py: { xs: 1.25, md: 1.5 },
+                borderBottom: `1px solid ${theme.palette.divider}`,
               }}
             >
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, pl: { xs: 0.75, md: 1 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Nombre</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))} sx={{ p: 0.25, opacity: columnFilters.nombre ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.nombre}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, nombre: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Nombre</Typography>
             </Box>
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, pl: { xs: 0.75, md: 1 } }}>
-              <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Fecha de Cierre</Typography>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Fecha de Cierre</Typography>
             </Box>
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, pl: { xs: 0.5, md: 0.75 }, pr: { xs: 0.5, md: 0.75 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Propietario</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, propietario: '' }))} sx={{ p: 0.25, opacity: columnFilters.propietario ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.propietario}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, propietario: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Propietario</Typography>
             </Box>
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, pl: { xs: 0.75, md: 1 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Etapa</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))} sx={{ p: 0.25, opacity: columnFilters.etapa ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.etapa}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, etapa: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Etapa</Typography>
             </Box>
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, pl: { xs: 0.5, md: 0.75 } }}>
-              <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Empresa</Typography>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Empresa</Typography>
             </Box>
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, pl: { xs: 0.75, md: 1 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Monto</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, monto: '' }))} sx={{ p: 0.25, opacity: columnFilters.monto ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.monto}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, monto: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Monto</Typography>
             </Box>
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
@@ -980,38 +1029,35 @@ const Deals: React.FC = () => {
               pr: { xs: 0.75, md: 1 },
               justifyContent: 'center'
             }}>
-                  Acciones
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' }, textAlign: 'center' }}>Acciones</Typography>
             </Box>
+          </Box>
           </Box>
           }
           rows={
             <>
             {deals.map((deal, index) => (
+              <Box sx={{ width: '100%', px: { xs: 2.5, md: 3 } }} key={deal.id}>
               <Box
-                  key={deal.id}
                 component="div"
                 onClick={() => navigate(`/deals/${deal.id}`)}
-                  sx={{ 
+                sx={{ 
                   bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                   cursor: 'pointer',
+                  transition: 'all 0.2s ease',
                   display: 'grid',
                   gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 0.8fr 1fr 0.9fr 0.9fr 0.7fr' },
                   columnGap: { xs: 1, md: 1.5 },
                   minWidth: { xs: 600, md: 'auto' },
                   maxWidth: '100%',
                   width: '100%',
-                  borderRadius: 0,
-                  border: 'none',
-                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
-                  px: { xs: 1, md: 1.5 },
-                  py: { xs: 0.5, md: 0.75 },
-                  borderBottom: index < deals.length - 1
-                    ? (theme.palette.mode === 'light' 
-                      ? '1px solid rgba(0, 0, 0, 0.08)' 
-                      : '1px solid rgba(255, 255, 255, 0.1)')
-                    : 'none',
+                  overflow: 'hidden',
+                  py: { xs: 1.25, md: 1.5 },
+                  borderBottom: `1px solid ${theme.palette.divider}`,
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? 'inset 0 0 0 9999px rgba(255, 255, 255, 0.015)'
+                      : 'inset 0 0 0 9999px rgba(0, 0, 0, 0.012)',
                   },
                 }}
               >
@@ -1036,8 +1082,8 @@ const Deals: React.FC = () => {
                         variant="body2" 
                         sx={{ 
                           fontWeight: 500, 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '0.8125rem', md: '0.875rem' },
+                          color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                          fontSize: { xs: '0.8125rem', md: '0.9375rem' },
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -1088,7 +1134,7 @@ const Deals: React.FC = () => {
                   </Box>
                 </Box>
                 <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', md: '0.8125rem' }, color: theme.palette.text.secondary }}>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.8125rem', md: '0.9375rem' }, color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary }}>
                     {deal.closeDate ? new Date(deal.closeDate).toLocaleDateString('es-ES') : '--'}
                   </Typography>
                 </Box>
@@ -1107,7 +1153,7 @@ const Deals: React.FC = () => {
                       variant="body2" 
                       sx={{ 
                         color: theme.palette.text.disabled,
-                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                        fontSize: { xs: '0.8125rem', md: '0.9375rem' },
                         fontWeight: 400,
                       }}
                     >
@@ -1125,77 +1171,24 @@ const Deals: React.FC = () => {
                     justifyContent: 'flex-start',
                     gap: 0.5,
                     minWidth: 0,
+                    overflow: 'hidden',
                   }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleStageMenuOpen(e, deal.id);
-                  }}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <Box
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 0.25,
-                      cursor: updatingStage[deal.id] ? 'wait' : 'pointer',
-                      '&:hover': { opacity: 0.9 },
-                      bgcolor: getStageColor(deal.stage).bg,
-                      color: getStageColor(deal.stage).color,
-                      borderRadius: 3,
-                      px: 1,
-                      py: 0.375,
+                  <StageChipWithProgress
+                    stage={deal.stage || 'lead'}
+                    label={getStageLabel(deal.stage || 'lead')}
+                    chipBg={getStageColor(deal.stage || 'lead').bg}
+                    chipColor={getStageColor(deal.stage || 'lead').color}
+                    progressBarColor={getStageColor(deal.stage || 'lead').progressBar}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleStageMenuOpen(e, deal.id);
                     }}
-                  >
-                    <Typography
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                        color: 'inherit',
-                      }}
-                    >
-                      {getStageLabel(deal.stage)}
-                    </Typography>
-                    <ExpandMore
-                      sx={{
-                        fontSize: { xs: '0.875rem', md: '1rem' },
-                        color: 'inherit',
-                      }}
-                    />
-                  </Box>
-                  {(() => {
-                    const prog = getStageProgress(deal.stage);
-                    const showVal = Math.max(0, Math.min(100, prog));
-                    return (
-                  <Box sx={{ position: 'relative', width: 120, height: 14, borderRadius: 4, overflow: 'hidden', bgcolor: theme.palette.action.hover }}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={showVal}
-                      sx={{
-                        height: '100%',
-                        borderRadius: 4,
-                        bgcolor: theme.palette.action.hover,
-                        '& .MuiLinearProgress-bar': {
-                          bgcolor: getStageProgress(deal.stage) < 0 ? theme.palette.text.disabled : theme.palette.primary.main,
-                        },
-                      }}
-                    />
-                    <Typography
-                      component="span"
-                      sx={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        fontSize: '0.625rem',
-                        fontWeight: 600,
-                        color: showVal > 40 ? theme.palette.common.white : theme.palette.text.primary,
-                        pointerEvents: 'none',
-                      }}
-                    >
-                      {prog < 0 ? `${prog}%` : `${showVal}%`}
-                    </Typography>
-                  </Box>
-                    );
-                  })()}
+                    disabled={updatingStage[deal.id]}
+                    barWidth="100%"
+                  />
                     <Menu
                       anchorEl={stageMenuAnchor[deal.id]}
                       open={Boolean(stageMenuAnchor[deal.id])}
@@ -1245,8 +1238,8 @@ const Deals: React.FC = () => {
                   <Typography
                     variant="body2"
                     sx={{
-                      color: theme.palette.text.primary,
-                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                      color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                      fontSize: { xs: '0.8125rem', md: '0.9375rem' },
                       fontWeight: 400,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -1261,8 +1254,8 @@ const Deals: React.FC = () => {
                     <Typography 
                       variant="body2" 
                       sx={{ 
-                        color: deal.amount != null ? (theme.palette.mode === 'dark' ? '#4ade80' : '#15803d') : theme.palette.text.primary,
-                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                        color: deal.amount != null ? (theme.palette.mode === 'dark' ? '#4ade80' : '#15803d') : (theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary),
+                        fontSize: { xs: '0.8125rem', md: '0.9375rem' },
                         fontWeight: 500,
                       }}
                     >
@@ -1309,6 +1302,7 @@ const Deals: React.FC = () => {
                       </Tooltip>
                     </Box>
                 </Box>
+              </Box>
               </Box>
             ))}
             </>
@@ -1440,6 +1434,52 @@ const Deals: React.FC = () => {
             ) : null
           }
         />
+
+      {/* Indicador de filtros activos */}
+      {Object.values(columnFilters).some(v => v) && (
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          flexWrap: 'wrap', 
+          mb: 2,
+          alignItems: 'center',
+          width: '100%',
+          flexBasis: '100%',
+        }}>
+          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
+            Filtros activos:
+          </Typography>
+          {Object.entries(columnFilters).map(([key, value]) => {
+            if (!value) return null;
+            let label: string;
+            if (key === 'propietario') {
+              if (value === 'me') label = 'Propietario: Yo';
+              else if (value === 'unassigned') label = 'Propietario: Sin asignar';
+              else {
+                const u = users.find((x: any) => String(x.id) === value) as any;
+                label = u ? `Propietario: ${u.firstName} ${u.lastName}` : `Propietario: ${value}`;
+              }
+            } else {
+              const keyLabel: { [key: string]: string } = {
+                nombre: 'Nombre',
+                monto: 'Monto',
+                etapa: 'Etapa',
+                propietario: 'Propietario',
+              };
+              label = `${keyLabel[key] || key}: ${key === 'etapa' && value ? getStageLabel(value) : value}`;
+            }
+            return (
+              <Chip
+                key={key}
+                label={label}
+                size="small"
+                onDelete={() => setColumnFilters(prev => ({ ...prev, [key]: '' }))}
+                sx={{ fontSize: '0.6875rem', height: 20 }}
+              />
+            );
+          })}
+        </Box>
+      )}
 
         {/* Panel de Filtros Lateral */}
         {filterDrawerOpen && (
@@ -1762,8 +1802,8 @@ const Deals: React.FC = () => {
               maxWidth: '100%',
               overflow: 'hidden',
               position: 'relative',
-              height: 'calc(100vh - 200px)',
-              maxHeight: 'calc(100vh - 200px)',
+              height: 'calc(100vh - 280px)',
+              maxHeight: 'calc(100vh - 280px)',
             }}
           >
               <Box
@@ -1827,8 +1867,8 @@ const Deals: React.FC = () => {
                     width: 300,
                     display: 'flex',
                     flexDirection: 'column',
-                    height: 'calc(100vh - 200px)',
-                    maxHeight: 'calc(100vh - 200px)',
+                    height: 'calc(100vh - 280px)',
+                    maxHeight: 'calc(100vh - 280px)',
                     overflow: 'hidden',
                     borderRadius: 2,
                     bgcolor: getStageCardColor(stage.id),

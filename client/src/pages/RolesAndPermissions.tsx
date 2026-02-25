@@ -94,13 +94,7 @@ const RolesAndPermissions: React.FC = () => {
   }
 
   return (
-    <Box sx={{ 
-      p: 3,
-      '@keyframes shimmer': {
-        '0%': { transform: 'translateX(-100%)' },
-        '100%': { transform: 'translateX(100%)' },
-      },
-    }}>
+    <Box sx={{ p: 3 }}>
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress sx={{ color: taxiMonterricoColors.green }} />
@@ -148,30 +142,6 @@ const RolesAndPermissions: React.FC = () => {
                   : '0 4px 12px rgba(46, 125, 50, 0.08)',
                 bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                 border: `1px solid ${theme.palette.divider}`,
-                transition: 'all 0.3s ease',
-                position: 'relative',
-                overflow: 'hidden',
-                '&:hover': {
-                  boxShadow: theme.palette.mode === 'dark' 
-                    ? '0 6px 16px rgba(0,0,0,0.4)' 
-                    : '0 6px 16px rgba(46, 125, 50, 0.12)',
-                  transform: 'translateY(-2px)',
-                  borderColor: `${taxiMonterricoColors.green}40`,
-                },
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 3,
-                  background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-                  opacity: 0,
-                  transition: 'opacity 0.3s ease',
-                },
-                '&:hover::before': {
-                  opacity: 1,
-                },
               }}
             >
               <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -210,11 +180,6 @@ const RolesAndPermissions: React.FC = () => {
                       fontWeight: 600,
                       fontSize: { xs: '0.7rem', md: '0.75rem' },
                       height: { xs: 24, md: 28 },
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        transform: 'scale(1.05)',
-                        boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
-                      },
                     }}
                     variant="outlined"
                   />
@@ -250,17 +215,7 @@ const RolesAndPermissions: React.FC = () => {
                     </TableHead>
                     <TableBody>
                       {role.permissions.map((permission) => (
-                        <TableRow 
-                          key={permission.key}
-                          sx={{
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: theme.palette.mode === 'dark' 
-                                ? 'rgba(91, 228, 155, 0.05)' 
-                                : 'rgba(91, 228, 155, 0.03)',
-                            },
-                          }}
-                        >
+                        <TableRow key={permission.key}>
                           <TableCell sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1, md: 1.5 } }}>
                             {permission.name}
                           </TableCell>
@@ -277,11 +232,6 @@ const RolesAndPermissions: React.FC = () => {
                                   fontWeight: 600,
                                   fontSize: { xs: '0.7rem', md: '0.75rem' },
                                   height: { xs: 24, md: 28 },
-                                  transition: 'all 0.3s ease',
-                                  '&:hover': {
-                                    transform: 'scale(1.1)',
-                                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
-                                  },
                                 }}
                                 variant="outlined"
                               />
@@ -299,7 +249,6 @@ const RolesAndPermissions: React.FC = () => {
                                   fontWeight: 600,
                                   fontSize: { xs: '0.7rem', md: '0.75rem' },
                                   height: { xs: 24, md: 28 },
-                                  transition: 'all 0.2s ease',
                                 }}
                                 variant="outlined"
                               />

@@ -31,7 +31,7 @@ import {
   Description as DescriptionIcon,
   Security as SecurityIcon,
 } from '@mui/icons-material';
-import { TextAlignStart, Settings, Sun, Moon, Tag } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Settings, Tag, Menu as MenuIcon, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
@@ -47,7 +47,7 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
-  const { mode, toggleTheme } = useThemeContext();
+  const { mode, setMode } = useThemeContext();
   const { open: sidebarOpen, collapsed: sidebarCollapsed, toggleSidebar, toggleCollapsed, layoutMode } = useSidebar();
   
   const isHorizontal = layoutMode === 'horizontal';
@@ -191,9 +191,9 @@ const Header: React.FC = () => {
           xs: '100vw',
           sm: '100%' // El contenedor en MainLayout ya maneja el ancho
         },
-        bgcolor: isScrolled
-          ? alpha(theme.palette.background.default, 0.88)
-          : theme.palette.background.default,
+        bgcolor: theme.palette.mode === 'dark'
+          ? (isScrolled ? alpha('#1c252e', 0.88) : '#1c252e')
+          : (isScrolled ? alpha(theme.palette.background.default, 0.88) : theme.palette.background.default),
         backdropFilter: isScrolled ? 'blur(12px)' : 'none',
         WebkitBackdropFilter: isScrolled ? 'blur(12px)' : 'none',
         pl: { xs: 1, sm: 1.5 },
@@ -205,8 +205,8 @@ const Header: React.FC = () => {
         alignItems: isHorizontal ? 'stretch' : 'center',
         justifyContent: 'flex-start',
         gap: isHorizontal ? 1 : 0,
-        height: isHorizontal ? 'auto' : { xs: 56, sm: 67 },
-        minHeight: isHorizontal ? 'auto' : { xs: 56, sm: 64 },
+        height: isHorizontal ? 'auto' : 78,
+        minHeight: isHorizontal ? 'auto' : 78,
         position: { xs: 'fixed', sm: 'sticky' },
         top: 0,
         left: { 
@@ -216,9 +216,7 @@ const Header: React.FC = () => {
         zIndex: { xs: 1400, sm: 1300 },
         marginLeft: 0,
         marginRight: 0,
-        borderBottom: theme.palette.mode === 'light'
-          ? '0.5px solid rgba(0, 0, 0, 0.06)'
-          : '0.5px solid rgba(255, 255, 255, 0.06)',
+        borderBottom: `1px solid ${theme.palette.divider}`,
         transition: 'all 0.3s ease', // Transición suave para todos los cambios
       }}
     >
@@ -265,31 +263,31 @@ const Header: React.FC = () => {
                 size="small"
                 onClick={() => navigate('/tickets')}
                 sx={{
-                  bgcolor: 'transparent',
-                  width: 40,
-                  height: 40,
+                  width: 48,
+                  height: 48,
+                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+                borderRadius: 2.5,
+                bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
                 }}
               >
-                <Tag size={24} color={theme.palette.text.secondary} />
+                <Tag size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />
               </IconButton>
             </Tooltip>
 
-            {/* Modo oscuro */}
-            <Tooltip title={mode === 'light' ? 'Modo oscuro' : 'Modo claro'}>
-              <IconButton 
+            {/* Toggle tema - icono único */}
+            <Tooltip title={mode === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}>
+              <IconButton
                 size="small"
-                onClick={toggleTheme}
-                sx={{ 
-                  bgcolor: 'transparent',
-                  width: 40,
-                  height: 40,
+                onClick={() => setMode(mode === 'light' ? 'dark' : 'light')}
+                sx={{
+                  width: 48,
+                  height: 48,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+                  borderRadius: 2.5,
+                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
                 }}
               >
-                {mode === 'light' ? (
-                  <Moon size={24} color={theme.palette.text.secondary} />
-                ) : (
-                  <Sun size={24} color={theme.palette.text.secondary} />
-                )}
+                {mode === 'light' ? <Moon size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} /> : <Sun size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />}
               </IconButton>
             </Tooltip>
 
@@ -302,24 +300,61 @@ const Header: React.FC = () => {
                 size="small"
                 onClick={() => setSettingsDrawerOpen(true)}
                 sx={{ 
-                  bgcolor: 'transparent',
-                  width: 40,
-                  height: 40,
+                  width: 48,
+                  height: 48,
+                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+                borderRadius: 2.5,
+                bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
                 }}
               >
-                <Settings size={24} color={theme.palette.text.secondary} />
+                <Settings size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />
               </IconButton>
             </Tooltip>
 
-            {/* Avatar */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', ml: 1, mr:-3 }} onClick={handleMenu}>
+            {/* Avatar - diseño pill */}
+            <Box
+              onClick={handleMenu}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                px: 1.25,
+                py: 0.75,
+                cursor: 'pointer',
+                ml: 1,
+                mr: -3,
+                borderRadius: 3,
+                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+                bgcolor: theme.palette.mode === 'dark' ? '#ffffff' : '#272A34',
+                transition: 'all 0.2s ease',
+              }}
+            >
               <UserAvatar
                 firstName={user?.firstName}
                 lastName={user?.lastName}
                 avatar={user?.avatar}
-                size="medium"
+                size="small"
                 variant="header"
+                sx={{ width: 36, height: 36, borderRadius: 2, transform: 'scale(1.35)', border: 'none', boxShadow: 'none' }}
               />
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                  color: theme.palette.mode === 'dark' ? '#717579' : '#ffffff',
+                  fontSize: '0.875rem',
+                  maxWidth: 120,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  ml: 0.5,
+                }}
+              >
+                {user?.firstName && user?.lastName
+                  ? `${user.firstName} ${user.lastName[0]}.`
+                  : user?.email?.split('@')[0] || 'Usuario'}
+              </Typography>
+              <MenuIcon size={18} color={theme.palette.mode === 'dark' ? '#717579' : '#999CA1'} strokeWidth={2.5} />
             </Box>
           </Box>
         </Box>
@@ -421,12 +456,12 @@ const Header: React.FC = () => {
         </>
       )}
 
-      {/* Botón de menú - Solo visible en móviles o cuando no es horizontal */}
+      {/* Botón de menú + Tema - Solo visible en móviles o cuando no es horizontal */}
       {!isHorizontal && (
         <Box sx={{ 
           display: { xs: 'flex', sm: 'none' }, // Oculto en desktop, visible en móviles
           alignItems: 'center', 
-          gap: { xs: 1, sm: 1 }, 
+          gap: 3, 
           flexShrink: 0,
         }}>
           {/* Icono de menú para toggle del sidebar */}
@@ -446,54 +481,52 @@ const Header: React.FC = () => {
               width: 36,
               height: 36,
               flexShrink: 0,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
             }}
           >
-            <TextAlignStart size={24} color={theme.palette.text.secondary} />
+            {sidebarOpen && !sidebarCollapsed ? (
+              <ArrowLeft size={24} color={theme.palette.mode === 'dark' ? '#ffffff' : taxiMonterricoColors.green} strokeWidth={1} />
+            ) : (
+              <ArrowRight size={24} color={theme.palette.mode === 'dark' ? '#ffffff' : taxiMonterricoColors.green} strokeWidth={1} />
+            )}
           </IconButton>
         </Box>
       )}
       
-      {/* Botón expandir/contraer sidebar + Búsqueda - Desktop (solo cuando no es horizontal) */}
+      {/* Botón expandir/contraer sidebar - Desktop (solo cuando no es horizontal) */}
       {!isHorizontal && (
         <Box
           sx={{
             flex: 1,
             position: 'relative',
-            maxWidth: sidebarOpen ? '400px' : '400px',
+            maxWidth: '400px',
             marginLeft: { xs: 0, sm: 2 },
             display: { xs: 'none', sm: 'flex' },
             alignItems: 'center',
-            gap: 1,
+            gap: 3,
           }}
         >
-          <Tooltip title={sidebarOpen && !sidebarCollapsed ? 'Contraer menú' : 'Expandir menú'}>
-            <IconButton
-              onClick={() => {
-                if (sidebarOpen) {
-                  toggleCollapsed();
-                } else {
-                  toggleSidebar();
-                }
-              }}
-              size="small"
-              sx={{
-                flexShrink: 0,
-                width: 44,
-                height: 44,
-                bgcolor: 'transparent',
-                '&:hover': {
-                  bgcolor: theme.palette.mode === 'dark'
-                    ? 'rgba(255, 255, 255, 0.08)'
-                    : 'rgba(0, 0, 0, 0.06)',
-                },
-              }}
-            >
-              <TextAlignStart size={32} color={theme.palette.text.secondary} />
-            </IconButton>
-          </Tooltip>
+          <IconButton
+            onClick={() => {
+              if (sidebarOpen) {
+                toggleCollapsed();
+              } else {
+                toggleSidebar();
+              }
+            }}
+            size="small"
+            sx={{
+              flexShrink: 0,
+              width: 44,
+              height: 44,
+              bgcolor: 'transparent',
+            }}
+          >
+            {sidebarOpen && !sidebarCollapsed ? (
+              <ArrowLeft size={32} color={theme.palette.mode === 'dark' ? '#ffffff' : taxiMonterricoColors.green} strokeWidth={1} />
+            ) : (
+              <ArrowRight size={32} color={theme.palette.mode === 'dark' ? '#ffffff' : taxiMonterricoColors.green} strokeWidth={1} />
+            )}
+          </IconButton>
         </Box>
       )}
 
@@ -506,31 +539,31 @@ const Header: React.FC = () => {
             size="small"
             onClick={() => navigate('/tickets')}
             sx={{
-              bgcolor: 'transparent',
-              width: 40,
-              height: 40,
+              width: 48,
+              height: 48,
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+              borderRadius: 2.5,
+              bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
             }}
           >
-            <Tag size={24} color={theme.palette.text.secondary} />
+            <Tag size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />
           </IconButton>
         </Tooltip>
 
-        {/* Modo oscuro */}
-        <Tooltip title={mode === 'light' ? 'Modo oscuro' : 'Modo claro'}>
-          <IconButton 
+        {/* Toggle tema - icono único a la izquierda de notificaciones */}
+        <Tooltip title={mode === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}>
+          <IconButton
             size="small"
-            onClick={toggleTheme}
-            sx={{ 
-              bgcolor: 'transparent',
-              width: 40,
-              height: 40,
+            onClick={() => setMode(mode === 'light' ? 'dark' : 'light')}
+            sx={{
+              width: 48,
+              height: 48,
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+              borderRadius: 2.5,
+              bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
             }}
           >
-            {mode === 'light' ? (
-              <Moon size={24} color={theme.palette.text.secondary} />
-            ) : (
-              <Sun size={24} color={theme.palette.text.secondary} />
-            )}
+            {mode === 'light' ? <Moon size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} /> : <Sun size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />}
           </IconButton>
         </Tooltip>
 
@@ -543,24 +576,62 @@ const Header: React.FC = () => {
             size="small"
             onClick={() => setSettingsDrawerOpen(true)}
             sx={{ 
-              bgcolor: 'transparent',
-              width: 40,
-              height: 40,
+              width: 48,
+              height: 48,
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+              borderRadius: 2.5,
+              bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
             }}
           >
-            <Settings size={24} color={theme.palette.text.secondary} />
+            <Settings size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />
           </IconButton>
         </Tooltip>
 
-        {/* Avatar con dropdown */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', ml: 1 }} onClick={handleMenu}>
-          <UserAvatar
-            firstName={user?.firstName}
-            lastName={user?.lastName}
-            avatar={user?.avatar}
-            size="medium"
-            variant="header"
-          />
+        {/* Avatar con dropdown - diseño pill como referencia */}
+        <Box
+          onClick={handleMenu}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            px: 1.25,
+            py: 0.75,
+            cursor: 'pointer',
+            ml: 1,
+            borderRadius: 2,
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+            bgcolor: theme.palette.mode === 'dark' ? '#ffffff' : '#272A34',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <Box sx={{ width: 36, height: 37, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'visible' }}>
+            <UserAvatar
+              firstName={user?.firstName}
+              lastName={user?.lastName}
+              avatar={user?.avatar}
+              size="small"
+              variant="header"
+              sx={{ width: 36, height: 34, borderRadius: 2, transform: 'scale(1.25)', border: 'none', boxShadow: 'none' }}
+            />
+          </Box>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              color: theme.palette.mode === 'dark' ? '#717579' : '#ffffff',
+              fontSize: '0.875rem',
+              maxWidth: 120,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              ml: 0.5,
+            }}
+          >
+            {user?.firstName && user?.lastName
+              ? `${user.firstName} ${user.lastName[0]}.`
+              : user?.email?.split('@')[0] || 'Usuario'}
+          </Typography>
+          <MenuIcon size={18} color={theme.palette.mode === 'dark' ? '#717579' : '#999CA1'} strokeWidth={2.5} />
         </Box>
         </Box>
       )}

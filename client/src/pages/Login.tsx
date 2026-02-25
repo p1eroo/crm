@@ -17,14 +17,13 @@ import {
   Lock,
   Visibility,
   VisibilityOff,
-  LightMode,
-  DarkMode,
   Monitor,
   Contacts,
   TrendingUp,
   BarChart,
   Login as LoginIcon,
 } from '@mui/icons-material';
+import { Moon, Sun } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import logoImage from '../assets/tm_login.png';
@@ -347,7 +346,7 @@ const Login: React.FC = () => {
             }}
             aria-label="Modo claro"
           >
-            <LightMode sx={{ fontSize: 20 }} />
+            <Sun size={20} color="currentColor" />
           </IconButton>
           <IconButton
             onClick={() => setMode('dark')}
@@ -363,7 +362,7 @@ const Login: React.FC = () => {
             }}
             aria-label="Modo oscuro"
           >
-            <DarkMode sx={{ fontSize: 20 }} />
+            <Moon size={20} color="currentColor" />
           </IconButton>
           <IconButton
             onClick={() => setMode('system')}

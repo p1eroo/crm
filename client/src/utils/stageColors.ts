@@ -76,10 +76,11 @@ export function normalizeStageFromExcel(value: unknown): string {
 
 /**
  * Colores de etapa unificados (más claros) para Contactos, Empresas y Negocios.
- * Retorna { bg, color } con tonos más claros y listos para usar con fontWeight: 600.
+ * Retorna { bg, color, progressBar } con tonos más claros y listos para usar con fontWeight: 600.
  * En modo claro usa fondos más saturados y texto más oscuro para mejor contraste.
+ * progressBar: color sólido idéntico en modo claro y oscuro para la barra de progreso.
  */
-export function getStageColor(theme: Theme, stage: string): { bg: string; color: string } {
+export function getStageColor(theme: Theme, stage: string): { bg: string; color: string; progressBar: string } {
   const dark = theme.palette.mode === 'dark';
   const bgAlpha = dark ? '40' : '4D'; // dark: ~25%, light: ~30% para mayor visibilidad
 
@@ -87,40 +88,47 @@ export function getStageColor(theme: Theme, stage: string): { bg: string; color:
     return {
       bg: dark ? `${taxiMonterricoColors.greenLight}${bgAlpha}` : taxiMonterricoColors.successLight,
       color: dark ? taxiMonterricoColors.greenLight : taxiMonterricoColors.greenDark,
+      progressBar: taxiMonterricoColors.greenLight,
     };
   }
   if (['cierre_perdido', 'cliente_perdido', 'lost', 'closed lost'].includes(stage)) {
     return {
       bg: dark ? `${theme.palette.error.main}${bgAlpha}` : taxiMonterricoColors.errorLight,
       color: dark ? (theme.palette.error.light || theme.palette.error.main) : taxiMonterricoColors.errorDark,
+      progressBar: theme.palette.error.main,
     };
   }
   if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
     return {
       bg: dark ? `${taxiMonterricoColors.orange}${bgAlpha}` : taxiMonterricoColors.warningMedium,
       color: dark ? taxiMonterricoColors.orangeLight : taxiMonterricoColors.warningDark,
+      progressBar: taxiMonterricoColors.orangeLight,
     };
   }
   if (stage === 'licitacion_etapa_final' || stage === 'licitacion') {
     return {
       bg: dark ? `${theme.palette.secondary.main}${bgAlpha}` : taxiMonterricoColors.amberLight,
       color: dark ? (theme.palette.secondary.light || theme.palette.secondary.main) : taxiMonterricoColors.amberDark,
+      progressBar: theme.palette.secondary.main,
     };
   }
   if (['lead', 'contacto'].includes(stage)) {
     return {
       bg: dark ? `${theme.palette.primary.main}${bgAlpha}` : taxiMonterricoColors.successLight,
       color: dark ? (theme.palette.primary.light || theme.palette.primary.main) : taxiMonterricoColors.greenDark,
+      progressBar: taxiMonterricoColors.greenLight,
     };
   }
   if (stage === 'lead_inactivo') {
     return {
       bg: theme.palette.action.hover,
       color: theme.palette.text.secondary,
+      progressBar: theme.palette.text.disabled,
     };
   }
   return {
     bg: dark ? `${theme.palette.primary.main}${bgAlpha}` : taxiMonterricoColors.successLight,
     color: dark ? (theme.palette.primary.light || theme.palette.primary.main) : taxiMonterricoColors.greenDark,
+    progressBar: taxiMonterricoColors.greenLight,
   };
 }

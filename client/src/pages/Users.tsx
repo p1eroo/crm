@@ -27,10 +27,9 @@ import {
   TextField,
   InputAdornment,
   useTheme,
+  Pagination,
 } from '@mui/material';
 import {
-  CheckCircle,
-  Cancel,
   Add,
   Search,
   Sync,
@@ -86,9 +85,26 @@ const Users: React.FC = () => {
   const [loadingDni, setLoadingDni] = useState(false);
   const [dniError, setDniError] = useState('');
 
+  // Estados para paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 7;
+
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // Ajustar página actual si excede el total (ej. tras eliminar usuarios)
+  const totalUsers = users.length;
+  const totalPages = Math.max(1, Math.ceil(totalUsers / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalUsers);
+  const paginatedUsers = users.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const fetchUsers = async () => {
     try {
@@ -133,23 +149,22 @@ const Users: React.FC = () => {
   };
 
   const handleStatusChange = async (userId: number, isActive: boolean) => {
+    const previousUsers = users;
+    setUsers(users.map(u => u.id === userId ? { ...u, isActive } : u));
+    setMessage({ 
+      type: 'success', 
+      text: `Usuario ${isActive ? 'activado' : 'desactivado'} correctamente` 
+    });
+    setTimeout(() => setMessage(null), 3000);
     try {
-      setUpdating(userId);
       await api.put(`/users/${userId}/status`, { isActive });
-      setUsers(users.map(u => u.id === userId ? { ...u, isActive } : u));
-      setMessage({ 
-        type: 'success', 
-        text: `Usuario ${isActive ? 'activado' : 'desactivado'} correctamente` 
-      });
-      setTimeout(() => setMessage(null), 3000);
     } catch (error: any) {
+      setUsers(previousUsers);
       setMessage({ 
         type: 'error', 
         text: error.response?.data?.error || 'Error al actualizar el estado' 
       });
       setTimeout(() => setMessage(null), 5000);
-    } finally {
-      setUpdating(null);
     }
   };
 
@@ -466,62 +481,34 @@ const Users: React.FC = () => {
           </Box>
         }
         header={
-          <Box sx={{ width: '100%', overflow: 'hidden', position: 'relative' }}>
-            <TableContainer sx={{ 
-              width: '100%', 
-              px: 0, 
-              pb: 0,
-              position: 'relative',
-              '& .MuiTable-root': {
-                width: '100%',
-              },
-            }}>
-              <Table sx={{ width: '100%', tableLayout: 'auto' }}>
+          <Box sx={{ width: '100%', overflow: 'hidden' }}>
+            <TableContainer sx={{ width: '100%', px: 0 }}>
+              <Table sx={{ 
+                width: '100%', 
+                tableLayout: 'fixed',
+                '& .MuiTableCell-body': {
+                  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'}`,
+                },
+              }}>
                 <TableHead>
                   <TableRow sx={{ 
                     bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
-                    background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined,
-                    borderBottom: `2px solid ${taxiMonterricoColors.greenLight}`,
-                    width: '100%',
-                    display: 'table-row',
                     '& .MuiTableCell-head': {
-                      borderBottom: 'none',
+                      borderBottom: `2px solid ${theme.palette.divider}`,
                       fontWeight: 700,
                       bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent',
-                      background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined,
                     },
                     '& .MuiTableCell-head:last-of-type': {
                       pr: 0,
                     },
                   }}>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined }}>Usuario</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined }}>Email</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined }}>Rol</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined }}>Estado</TableCell>
-                    <TableCell sx={{ 
-                      fontWeight: 600, 
-                      color: theme.palette.text.primary, 
-                      fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                      py: { xs: 1.5, md: 2 }, 
-                      pl: 1, 
-                      pr: 0, 
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', 
-                      background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined,
-                    }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', pr: { xs: 2, md: 3 } }}>
-                        Acciones
-                      </Box>
-                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, width: '25%', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent' }}>Usuario</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, width: '25%', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent' }}>Email</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, width: '18%', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent' }}>Rol</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, width: '17%', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent' }}>Estado</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, width: '15%', pl: 1, pr: { xs: 2, md: 3 }, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent' }}>Acciones</TableCell>
                   </TableRow>
                 </TableHead>
-                </Table>
-              </TableContainer>
-            </Box>
-        }
-        rows={
-          <Box sx={{ width: '100%', overflow: 'hidden' }}>
-            <TableContainer sx={{ width: '100%', px: 0 }}>
-              <Table sx={{ width: '100%', tableLayout: 'auto' }}>
                 <TableBody>
                   {users.length === 0 ? (
               <TableRow>
@@ -571,43 +558,15 @@ const Users: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((userItem) => (
+              paginatedUsers.map((userItem) => (
                 <TableRow 
                   key={userItem.id}
-                  hover
                   sx={{ 
-                    '&:hover': { 
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(91, 228, 155, 0.08)' 
-                        : 'rgba(91, 228, 155, 0.05)',
-                      transform: 'scale(1.001)',
-                      boxShadow: `inset 0 0 0 1px ${taxiMonterricoColors.green}20`,
-                      '& .MuiTableCell-root': {
-                        '& .MuiTypography-root': {
-                          color: `${taxiMonterricoColors.green} !important`,
-                        },
-                      },
-                    },
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    position: 'relative',
                     '&:last-child td': { border: 0 },
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: 0,
-                      bgcolor: taxiMonterricoColors.green,
-                      transition: 'width 0.3s ease',
-                    },
-                    '&:hover::before': {
-                      width: 4,
-                    },
                   }}
                 >
-                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 } }}>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, width: '25%' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <UserAvatar
                         firstName={userItem.firstName}
@@ -624,7 +583,6 @@ const Users: React.FC = () => {
                             fontWeight: 600, 
                             color: theme.palette.text.primary, 
                             fontSize: { xs: '0.75rem', md: '0.875rem' },
-                            transition: 'color 0.2s ease',
                           }}
                         >
                           {userItem.firstName} {userItem.lastName}
@@ -634,7 +592,6 @@ const Users: React.FC = () => {
                           sx={{ 
                             color: theme.palette.text.secondary, 
                             fontSize: { xs: '0.7rem', md: '0.75rem' },
-                            transition: 'color 0.2s ease',
                           }}
                         >
                           @{userItem.usuario}
@@ -642,19 +599,18 @@ const Users: React.FC = () => {
                       </Box>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ py: { xs: 1.5, md: 2 } }}>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, width: '25%' }}>
                     <Typography 
                       variant="body2" 
                       sx={{ 
                         color: theme.palette.text.primary, 
                         fontSize: { xs: '0.75rem', md: '0.875rem' },
-                        transition: 'color 0.2s ease',
                       }}
                     >
                       {userItem.email}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ py: { xs: 1.5, md: 2 } }}>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, width: '18%' }}>
                     {updating === userItem.id ? (
                       <CircularProgress size={20} sx={{ color: taxiMonterricoColors.green }} />
                     ) : (
@@ -674,7 +630,6 @@ const Users: React.FC = () => {
                             color: theme.palette.text.primary,
                             borderRadius: 1.5,
                             border: `1px solid ${theme.palette.divider}`,
-                            transition: 'all 0.3s ease',
                             '& .MuiSelect-select': {
                               py: 0.5,
                               px: 1.5,
@@ -683,13 +638,6 @@ const Users: React.FC = () => {
                             },
                             '& .MuiOutlinedInput-notchedOutline': {
                               border: 'none',
-                            },
-                            '&:hover': {
-                              borderColor: taxiMonterricoColors.green,
-                              boxShadow: `0 0 0 2px ${taxiMonterricoColors.green}20`,
-                              bgcolor: theme.palette.mode === 'dark' 
-                                ? 'rgba(91, 228, 155, 0.05)' 
-                                : 'rgba(91, 228, 155, 0.03)',
                             },
                             '&.Mui-focused': {
                               borderColor: taxiMonterricoColors.green,
@@ -708,16 +656,10 @@ const Users: React.FC = () => {
                             sx={{ 
                               color: theme.palette.text.primary, 
                               fontSize: { xs: '0.75rem', md: '0.875rem' },
-                              '&:hover': {
-                                bgcolor: `${taxiMonterricoColors.green}15`,
-                              },
                               '&.Mui-selected': {
                                 bgcolor: `${taxiMonterricoColors.green}20`,
                                 color: taxiMonterricoColors.green,
                                 fontWeight: 600,
-                                '&:hover': {
-                                  bgcolor: `${taxiMonterricoColors.green}25`,
-                                },
                               },
                             }}
                           >
@@ -728,16 +670,10 @@ const Users: React.FC = () => {
                             sx={{ 
                               color: theme.palette.text.primary, 
                               fontSize: { xs: '0.75rem', md: '0.875rem' },
-                              '&:hover': {
-                                bgcolor: `${taxiMonterricoColors.green}15`,
-                              },
                               '&.Mui-selected': {
                                 bgcolor: `${taxiMonterricoColors.green}20`,
                                 color: taxiMonterricoColors.green,
                                 fontWeight: 600,
-                                '&:hover': {
-                                  bgcolor: `${taxiMonterricoColors.green}25`,
-                                },
                               },
                             }}
                           >
@@ -748,16 +684,10 @@ const Users: React.FC = () => {
                             sx={{ 
                               color: theme.palette.text.primary, 
                               fontSize: { xs: '0.75rem', md: '0.875rem' },
-                              '&:hover': {
-                                bgcolor: `${taxiMonterricoColors.green}15`,
-                              },
                               '&.Mui-selected': {
                                 bgcolor: `${taxiMonterricoColors.green}20`,
                                 color: taxiMonterricoColors.green,
                                 fontWeight: 600,
-                                '&:hover': {
-                                  bgcolor: `${taxiMonterricoColors.green}25`,
-                                },
                               },
                             }}
                           >
@@ -768,16 +698,10 @@ const Users: React.FC = () => {
                             sx={{ 
                               color: theme.palette.text.primary, 
                               fontSize: { xs: '0.75rem', md: '0.875rem' },
-                              '&:hover': {
-                                bgcolor: `${taxiMonterricoColors.green}15`,
-                              },
                               '&.Mui-selected': {
                                 bgcolor: `${taxiMonterricoColors.green}20`,
                                 color: taxiMonterricoColors.green,
                                 fontWeight: 600,
-                                '&:hover': {
-                                  bgcolor: `${taxiMonterricoColors.green}25`,
-                                },
                               },
                             }}
                           >
@@ -787,7 +711,7 @@ const Users: React.FC = () => {
                       </FormControl>
                     )}
                   </TableCell>
-                  <TableCell sx={{ py: { xs: 1.5, md: 2 } }}>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, width: '17%' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       {updating === userItem.id ? (
                         <CircularProgress size={20} sx={{ color: taxiMonterricoColors.green }} />
@@ -804,9 +728,6 @@ const Users: React.FC = () => {
                             sx={{
                               '& .MuiSwitch-switchBase.Mui-checked': {
                                 color: taxiMonterricoColors.green,
-                                '&:hover': {
-                                  bgcolor: `${taxiMonterricoColors.green}20`,
-                                },
                               },
                               '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
                                 bgcolor: taxiMonterricoColors.green,
@@ -831,45 +752,14 @@ const Users: React.FC = () => {
                               border: userItem.isActive 
                                 ? `1px solid ${taxiMonterricoColors.green}40` 
                                 : `1px solid ${theme.palette.divider}`,
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                transform: 'scale(1.05)',
-                                boxShadow: userItem.isActive 
-                                  ? `0 2px 8px ${taxiMonterricoColors.green}30` 
-                                  : 'none',
-                              },
                             }}
                           />
                         </>
                       )}
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pr: { xs: 2, md: 3 } }}>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pr: { xs: 2, md: 3 }, width: '15%' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Tooltip title={userItem.isActive ? 'Usuario activo' : 'Usuario inactivo'}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderRadius: '50%',
-                            p: 0.5,
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: userItem.isActive 
-                                ? 'rgba(16, 185, 129, 0.1)' 
-                                : 'rgba(239, 68, 68, 0.1)',
-                              transform: 'scale(1.2)',
-                            },
-                          }}
-                        >
-                          {userItem.isActive ? (
-                            <CheckCircle sx={{ color: '#10B981', fontSize: { xs: 18, md: 20 }, transition: 'all 0.2s ease' }} />
-                          ) : (
-                            <Cancel sx={{ color: '#EF4444', fontSize: { xs: 18, md: 20 }, transition: 'all 0.2s ease' }} />
-                          )}
-                        </Box>
-                      </Tooltip>
                       <Tooltip title="Eliminar usuario">
                         <span>
                           <IconButton
@@ -881,15 +771,7 @@ const Users: React.FC = () => {
                             disabled={userItem.id === user?.id}
                             sx={{
                               color: '#EF4444',
-                              transition: 'all 0.3s ease',
                               borderRadius: 1.5,
-                              '&:hover': {
-                                bgcolor: theme.palette.mode === 'dark' 
-                                  ? 'rgba(211, 47, 47, 0.2)' 
-                                  : '#ffebee',
-                                transform: 'scale(1.15) rotate(5deg)',
-                                boxShadow: '0 2px 8px rgba(211, 47, 47, 0.3)',
-                              },
                               '&.Mui-disabled': {
                                 color: theme.palette.text.disabled,
                                 opacity: 0.5,
@@ -909,6 +791,35 @@ const Users: React.FC = () => {
               </Table>
             </TableContainer>
           </Box>
+        }
+        rows={null}
+        pagination={
+          totalUsers > 0 ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={(_, value) => setCurrentPage(value)}
+                color="primary"
+                sx={{
+                  '& .MuiPaginationItem-root': {
+                    color: theme.palette.text.primary,
+                    '&.Mui-selected': {
+                      bgcolor: taxiMonterricoColors.green,
+                      color: 'white',
+                      fontWeight: 600,
+                      '&:hover': {
+                        bgcolor: taxiMonterricoColors.greenDark,
+                      },
+                    },
+                    '&:hover': {
+                      bgcolor: `${taxiMonterricoColors.green}20`,
+                    },
+                  },
+                }}
+              />
+            </Box>
+          ) : undefined
         }
       />
 

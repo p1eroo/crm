@@ -29,12 +29,13 @@ import {
   Search,
   Business,
   Phone,
-  LocationOn,
-  FilterList,
   ChevronLeft,
   ChevronRight,
   Description,
   Person,
+  ExpandMore,
+  ExpandLess,
+  FormatListBulleted,
 } from "@mui/icons-material";
 import { PencilLine, Eye, Trash } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -205,7 +206,7 @@ const Contacts: React.FC = () => {
     propietario: '',
   });
   const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
-  const [showColumnFilters, setShowColumnFilters] = useState(false);
+  const [filterPanelCollapsed, setFilterPanelCollapsed] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
 
   // Opciones de columnas disponibles
@@ -1313,380 +1314,498 @@ const Contacts: React.FC = () => {
         bgcolor: theme.palette.background.default,
       }}
     >
-      {/* Contenedor principal */}
-      <UnifiedTable
-        title="Contactos"
-        actions={
-          <>
-            <Box
-              sx={{
-                display: "flex",
-                gap: { xs: 0.5, sm: 0.75 },
-                order: { xs: 3, sm: 0 },
-                alignItems: 'center',
-                flexWrap: 'wrap',
-              }}
-            >
-              <Button
-                size="small"
-                startIcon={<Description sx={{ fontSize: { xs: 16, sm: 18 } }} />}
-                onClick={handleDownloadTemplate}
-                sx={{
-                  border: 'none',
-                  borderRadius: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.12)' : 'rgba(33, 150, 243, 0.08)',
-                  color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976D2',
-                  px: { xs: 1.25, sm: 1.5 },
-                  py: { xs: 0.75, sm: 0.875 },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: '#1976D2',
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.14)',
-                    color: theme.palette.mode === 'dark' ? '#90CAF9' : '#1565C0',
-                  },
-                }}
-              >
-                Plantilla
-              </Button>
-              <Button
-                size="small"
-                startIcon={<FontAwesomeIcon icon={faFileImport} style={{ fontSize: 16 }} />}
-                onClick={handleImportFromExcel}
-                disabled={importing}
-                sx={{
-                  border: 'none',
-                  borderRadius: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.12)' : 'rgba(156, 39, 176, 0.08)',
-                  color: theme.palette.mode === 'dark' ? '#CE93D8' : '#7B1FA2',
-                  px: { xs: 1.25, sm: 1.5 },
-                  py: { xs: 0.75, sm: 0.875 },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: '#7B1FA2',
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.2)' : 'rgba(156, 39, 176, 0.14)',
-                    color: theme.palette.mode === 'dark' ? '#E1BEE7' : '#6A1B9A',
-                  },
-                  '&:disabled': { opacity: 0.5 },
-                }}
-              >
-                {importing ? 'Importando...' : 'Importar'}
-              </Button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".xlsx,.xls"
-                style={{ display: "none" }}
-              />
-              <Button
-                size="small"
-                startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
-                onClick={handleExportToExcel}
-                sx={{
-                  border: 'none',
-                  borderRadius: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.12)' : 'rgba(0, 150, 136, 0.08)',
-                  color: theme.palette.mode === 'dark' ? '#4DB6AC' : '#00897B',
-                  px: { xs: 1.25, sm: 1.5 },
-                  py: { xs: 0.75, sm: 0.875 },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: '#00897B',
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
-                    color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
-                  },
-                }}
-              >
-                Exportar
-              </Button>
-              <Button
-                size="small"
-                startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
-                onClick={() => setShowColumnFilters(!showColumnFilters)}
-                sx={{
-                  border: 'none',
-                  borderRadius: 1.5,
-                  bgcolor: showColumnFilters 
-                    ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
-                    : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.12)' : 'rgba(255, 152, 0, 0.08)'),
-                  color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFB74D' : '#E65100'),
-                  px: { xs: 1.25, sm: 1.5 },
-                  py: { xs: 0.75, sm: 0.875 },
-                  order: { xs: 5, sm: 0 },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: showColumnFilters ? taxiMonterricoColors.green : '#FF9800',
-                    bgcolor: showColumnFilters 
-                      ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}33` : `${taxiMonterricoColors.green}1A`)
-                      : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.14)'),
-                    color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFCC80' : '#EF6C00'),
-                  },
-                }}
-              >
-                Filtro
-              </Button>
-              <Button
-                size="small"
-                startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
-                onClick={() => handleOpen()}
-                sx={{
-                  bgcolor: '#13944C',
-                  color: "white",
-                  borderRadius: 1.5,
-                  px: { xs: 1.25, sm: 1.5 },
-                  py: { xs: 0.75, sm: 0.875 },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    bgcolor: '#0f7039',
-                  },
-                }}
-              >
-                Nuevo Contacto
-              </Button>
-            </Box>
-          </>
-        }
-        header={
-          <Box
-            component="div"
+      {/* Barra de título y acciones - mismo diseño que Negocios y Empresas */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+          px: { xs: 2, md: 3 },
+          py: { xs: 1.25, md: 1.5 },
+          mb: 4,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
+          borderRadius: 3,
+        }}
+      >
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 400,
+            fontSize: { xs: '1rem', md: '1.1375rem' },
+            color: '#828690',
+          }}
+        >
+          Contactos
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Button
+            size="small"
+            startIcon={<Description sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+            onClick={handleDownloadTemplate}
             sx={{
-              bgcolor: theme.palette.mode === 'dark'
-                ? `${taxiMonterricoColors.green}05`
-                : `${taxiMonterricoColors.green}03`,
-              overflow: 'hidden',
-              display: 'grid',
-              gridTemplateColumns: {
-                sm: "repeat(8, minmax(0, 1fr))",
-                md: "1.5fr 1fr 0.9fr 1fr 0.7fr 1.2fr 0.6fr 0.7fr",
+              border: 'none',
+              borderRadius: 1.5,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.12)' : 'rgba(33, 150, 243, 0.08)',
+              color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976D2',
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: '#1976D2',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.14)',
+                color: theme.palette.mode === 'dark' ? '#90CAF9' : '#1565C0',
               },
-              columnGap: { sm: 1, md: 1.5 },
-              minWidth: { xs: 800, md: 'auto' },
-              maxWidth: '100%',
-              width: '100%',
-              px: { xs: 1.5, md: 2 },
-              py: { xs: 1.25, md: 1.5 },
-              borderBottom: `2px solid ${theme.palette.divider}`,
             }}
           >
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Nombre del Cliente</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))} sx={{ p: 0.25, opacity: columnFilters.nombre ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.nombre}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, nombre: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
-            </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Empresa</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, empresa: '' }))} sx={{ p: 0.25, opacity: columnFilters.empresa ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.empresa}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, empresa: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
-            </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Teléfono</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, telefono: '' }))} sx={{ p: 0.25, opacity: columnFilters.telefono ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.telefono}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, telefono: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
-            </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Correo</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, correo: '' }))} sx={{ p: 0.25, opacity: columnFilters.correo ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.correo}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, correo: e.target.value }))}
-                  sx={{
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': {
-                      height: 28,
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
-            </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>País</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, pais: '' }))} sx={{ p: 0.25, opacity: columnFilters.pais ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.pais}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, pais: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
-            </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Etapa</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))} sx={{ p: 0.25, opacity: columnFilters.etapa ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.etapa}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, etapa: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
-            </Box>
-            <Box
-              sx={{
-                ...pageStyles.tableHeaderCell,
-                px: { xs: 0.75, md: 1 },
-                justifyContent: "flex-start",
-                alignItems: "center",
-                flexDirection: 'column',
-                gap: 0.5,
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Propietario</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, propietario: '' }))} sx={{ p: 0.25, opacity: columnFilters.propietario ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  select
-                  size="small"
-                  placeholder="Todos"
-                  value={columnFilters.propietario}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, propietario: e.target.value }))}
-                  sx={{
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': {
-                      height: 28,
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                  SelectProps={{
-                    displayEmpty: true,
-                    renderValue: (v: unknown): React.ReactNode => {
+            Plantilla
+          </Button>
+          <Button
+            size="small"
+            startIcon={<FontAwesomeIcon icon={faFileImport} style={{ fontSize: 16 }} />}
+            onClick={handleImportFromExcel}
+            disabled={importing}
+            sx={{
+              border: 'none',
+              borderRadius: 1.5,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.12)' : 'rgba(156, 39, 176, 0.08)',
+              color: theme.palette.mode === 'dark' ? '#CE93D8' : '#7B1FA2',
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: '#7B1FA2',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.2)' : 'rgba(156, 39, 176, 0.14)',
+                color: theme.palette.mode === 'dark' ? '#E1BEE7' : '#6A1B9A',
+              },
+              '&:disabled': { opacity: 0.5 },
+            }}
+          >
+            {importing ? 'Importando...' : 'Importar'}
+          </Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".xlsx,.xls"
+            style={{ display: 'none' }}
+          />
+          <Button
+            size="small"
+            startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
+            onClick={handleExportToExcel}
+            sx={{
+              border: 'none',
+              borderRadius: 1.5,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.12)' : 'rgba(0, 150, 136, 0.08)',
+              color: theme.palette.mode === 'dark' ? '#4DB6AC' : '#00897B',
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: '#00897B',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
+                color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
+              },
+            }}
+          >
+            Exportar
+          </Button>
+          <Button
+            size="small"
+            startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+            onClick={() => handleOpen()}
+            sx={{
+              bgcolor: '#13944C',
+              color: 'white',
+              borderRadius: 1.5,
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                bgcolor: '#0f7039',
+              },
+            }}
+          >
+            Nuevo Contacto
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Panel de filtros - siempre visible y abierto */}
+      <Box
+        sx={{
+          mb: 3,
+          bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
+          borderRadius: 2,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header del panel - clickeable para colapsar/expandir */}
+        <Box
+          onClick={() => setFilterPanelCollapsed(!filterPanelCollapsed)}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 2,
+            py: 1.5,
+            cursor: 'pointer',
+            borderBottom: filterPanelCollapsed ? 'none' : `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FontAwesomeIcon icon={faFilter} style={{ fontSize: 18, color: theme.palette.text.secondary }} />
+            <Typography sx={{ fontWeight: 600, fontSize: '0.9375rem', color: theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.primary }}>
+              Filtro
+            </Typography>
+          </Box>
+          <IconButton size="small" sx={{ p: 0.5, '&:hover': { bgcolor: 'transparent' } }} disableRipple>
+            {filterPanelCollapsed ? <ExpandMore /> : <ExpandLess />}
+          </IconButton>
+        </Box>
+
+        {/* Contenido del panel - campos de filtro */}
+        {!filterPanelCollapsed && (
+        <Box sx={{ px: 2, py: 2 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 2,
+                  alignItems: 'flex-end',
+                  mb: 2,
+                }}
+              >
+                <Box sx={{ minWidth: 140, flex: '1 1 120px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Nombre
+                  </Typography>
+                  <TextField
+                    size="small"
+                    placeholder="Nombre"
+                    value={columnFilters.nombre}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, nombre: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'transparent',
+                        fontSize: '0.875rem',
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: 'transparent' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                          borderWidth: '1px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderRadius: 2,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 140, flex: '1 1 120px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Empresa
+                  </Typography>
+                  <TextField
+                    size="small"
+                    placeholder="Empresa"
+                    value={columnFilters.empresa}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, empresa: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'transparent',
+                        fontSize: '0.875rem',
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: 'transparent' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                          borderWidth: '1px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderRadius: 2,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 120, flex: '1 1 100px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Teléfono
+                  </Typography>
+                  <TextField
+                    size="small"
+                    placeholder="Teléfono"
+                    value={columnFilters.telefono}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, telefono: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'transparent',
+                        fontSize: '0.875rem',
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: 'transparent' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                          borderWidth: '1px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderRadius: 2,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 160, flex: '1 1 140px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Correo
+                  </Typography>
+                  <TextField
+                    size="small"
+                    placeholder="Correo"
+                    value={columnFilters.correo}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, correo: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'transparent',
+                        fontSize: '0.875rem',
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: 'transparent' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                          borderWidth: '1px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderRadius: 2,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 120, flex: '1 1 100px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    País
+                  </Typography>
+                  <TextField
+                    size="small"
+                    placeholder="País"
+                    value={columnFilters.pais}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, pais: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'transparent',
+                        fontSize: '0.875rem',
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: 'transparent' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                          borderWidth: '1px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderRadius: 2,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 160, flex: '1 1 140px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Etapa
+                  </Typography>
+                  <Select
+                    size="small"
+                    displayEmpty
+                    value={columnFilters.etapa}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, etapa: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      bgcolor: 'transparent',
+                      fontSize: '0.875rem',
+                      borderRadius: 2,
+                      '& .MuiSelect-select': { py: 1 },
+                      '&:hover': { bgcolor: 'transparent' },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                        borderWidth: '1px',
+                      },
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderRadius: 2,
+                      },
+                    }}
+                    renderValue={(v) => v ? getStageLabel(v) : 'Seleccionar etapa'}
+                  >
+                    <MenuItem value="">Todas</MenuItem>
+                    {stageOptions.map((opt) => (
+                      <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                    ))}
+                  </Select>
+                </Box>
+                <Box sx={{ minWidth: 160, flex: '1 1 140px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Propietario
+                  </Typography>
+                  <Select
+                    size="small"
+                    displayEmpty
+                    value={columnFilters.propietario}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, propietario: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      bgcolor: 'transparent',
+                      fontSize: '0.875rem',
+                      borderRadius: 2,
+                      '& .MuiSelect-select': { py: 1 },
+                      '&:hover': { bgcolor: 'transparent' },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                        borderWidth: '1px',
+                      },
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderRadius: 2,
+                      },
+                    }}
+                    MenuProps={{ sx: { zIndex: 1700 } }}
+                    renderValue={(v) => {
                       if (!v) return 'Todos';
                       if (v === 'unassigned') return 'Sin asignar';
                       if (v === 'me') return 'Yo';
                       const u = _users.find((x: any) => String(x.id) === v);
                       return u ? `${u.firstName} ${u.lastName}` : String(v);
-                    },
-                    MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } },
+                    }}
+                  >
+                    <MenuItem value="">Todos</MenuItem>
+                    <MenuItem value="unassigned">Sin asignar</MenuItem>
+                    <MenuItem value="me">Yo</MenuItem>
+                    {_users.filter((u: any) => u.role === 'user').map((u: any) => (
+                      <MenuItem key={u.id} value={String(u.id)}>{u.firstName} {u.lastName}</MenuItem>
+                    ))}
+                  </Select>
+                </Box>
+              </Box>
+
+              {/* Botones Filter y Limpiar */}
+              <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end' }}>
+                <Button
+                  size="small"
+                  startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
+                  sx={{
+                    bgcolor: '#1976D2',
+                    color: 'white',
+                    borderRadius: 1.5,
+                    px: 2,
+                    py: 1,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': { bgcolor: '#1976D2' },
                   }}
                 >
-                  <MenuItem value="">Todos</MenuItem>
-                  <MenuItem value="unassigned">Sin asignar</MenuItem>
-                  <MenuItem value="me">Yo</MenuItem>
-                  {_users.filter((u: any) => u.role === 'user').map((u: any) => (
-                    <MenuItem key={u.id} value={String(u.id)}>{u.firstName} {u.lastName}</MenuItem>
-                  ))}
-                </TextField>
-              )}
+                  Filtrar
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setColumnFilters({
+                      nombre: '',
+                      empresa: '',
+                      telefono: '',
+                      correo: '',
+                      pais: '',
+                      etapa: '',
+                      propietario: '',
+                    });
+                  }}
+                  sx={{
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.12)',
+                    color: theme.palette.mode === 'dark' ? '#EF5350' : '#D32F2F',
+                    borderRadius: 1.5,
+                    px: 2,
+                    py: 1,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.12)',
+                    },
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+              </Box>
+            </Box>
+        )}
+      </Box>
+
+      {/* Contenedor principal */}
+      <UnifiedTable
+        title="Lista de contactos"
+        titleIcon={<FormatListBulleted sx={{ fontSize: 20 }} />}
+        collapsible
+        header={
+          <Box sx={{ width: '100%', px: { xs: 2.5, md: 3 } }}>
+            <Box
+              component="div"
+              sx={{
+                bgcolor: theme.palette.mode === 'dark'
+                  ? theme.palette.background.paper
+                  : '#fafafa',
+                overflow: 'hidden',
+                display: 'grid',
+                gridTemplateColumns: {
+                  sm: "repeat(7, minmax(0, 1fr))",
+                  md: "1.5fr 1fr 0.75fr 1.2fr 1.1fr 0.65fr 0.7fr",
+                },
+                columnGap: { sm: 1, md: 1.5 },
+                minWidth: 800,
+                maxWidth: '100%',
+                width: '100%',
+                py: { xs: 1.25, md: 1.5 },
+                borderBottom: `1px solid ${theme.palette.divider}`,
+              }}
+            >
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Nombre del Cliente</Typography>
+            </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Empresa</Typography>
+            </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Teléfono</Typography>
+            </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Correo</Typography>
+            </Box>
+            <Box
+              sx={{
+                ...pageStyles.tableHeaderCell,
+                px: { xs: 1, md: 1.5 },
+                flexDirection: 'column',
+                alignItems: "flex-start",
+                justifyContent: "flex-start",
+                gap: 0.5,
+              }}
+            >
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Etapa</Typography>
+            </Box>
+            <Box
+              sx={{
+                ...pageStyles.tableHeaderCell,
+                px: { xs: 0.5, md: 0.75 },
+                width: '100%',
+                justifyContent: "center",
+                alignItems: "center",
+                flexDirection: 'column',
+                gap: 0.5,
+              }}
+            >
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' }, textAlign: 'center', width: '100%' }}>Propietario</Typography>
             </Box>
             <Box
               sx={{
@@ -1696,41 +1815,41 @@ const Contacts: React.FC = () => {
                 alignItems: "center",
               }}
             >
-              <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Acciones</Typography>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' }, textAlign: 'center' }}>Acciones</Typography>
             </Box>
+          </Box>
           </Box>
         }
         rows={
           <>
           {contacts.map((contact) => (
-              <Box
-                key={contact.id}
-                component="div"
-                onClick={() => navigate(`/contacts/${contact.id}`)}
-                sx={{
-                  bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  display: "grid",
-                  gridTemplateColumns: {
-                    sm: "repeat(8, minmax(0, 1fr))",
-                    md: "1.5fr 1fr 0.9fr 1fr 0.7fr 1.2fr 0.6fr 0.7fr",
-                  },
-                  columnGap: { sm: 1, md: 1.5 },
-                  minWidth: { xs: 800, md: 'auto' },
-                  maxWidth: '100%',
-                  width: "100%",
-                  overflow: 'hidden',
-                  px: { xs: 1.5, md: 2 },
-                  py: { xs: 1.25, md: 1.5 },
-                  borderBottom: `1px solid ${theme.palette.divider}`,
-                  '&:hover': {
-                    boxShadow: theme.palette.mode === 'dark'
-                      ? 'inset 0 0 0 9999px rgba(255, 255, 255, 0.015)'
-                      : 'inset 0 0 0 9999px rgba(0, 0, 0, 0.012)',
-                  },
-                }}
-              >
+              <Box key={contact.id} sx={{ width: '100%', px: { xs: 2.5, md: 3 } }}>
+                <Box
+                  component="div"
+                  onClick={() => navigate(`/contacts/${contact.id}`)}
+                  sx={{
+                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    display: "grid",
+                    gridTemplateColumns: {
+                      sm: "repeat(7, minmax(0, 1fr))",
+                      md: "1.5fr 1fr 0.75fr 1.2fr 1.1fr 0.65fr 0.7fr",
+                    },
+                    columnGap: { sm: 1, md: 1.5 },
+                    minWidth: 800,
+                    maxWidth: '100%',
+                    width: "100%",
+                    overflow: 'hidden',
+                    py: { xs: 1.25, md: 1.5 },
+                    borderBottom: `1px solid ${theme.palette.divider}`,
+                    '&:hover': {
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? 'inset 0 0 0 9999px rgba(255, 255, 255, 0.015)'
+                        : 'inset 0 0 0 9999px rgba(0, 0, 0, 0.012)',
+                    },
+                  }}
+                >
                 {/* Celda 1: Nombre (móvil = card, desktop = columna) */}
                 <Box sx={{ minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gridColumn: { xs: '1 / -1', sm: 'auto' } }}>
                 {/* Vista móvil: Card con información principal */}
@@ -1745,12 +1864,11 @@ const Contacts: React.FC = () => {
                   <Box
                     sx={{
                       display: "flex",
-                      alignItems: "center",
-                      gap: 1.5,
-                      width: "100%",
-                      pb: 1.5,
-                      borderBottom: `1px solid ${theme.palette.divider}`,
-                    }}
+                    alignItems: "center",
+                    gap: 1.5,
+                    width: "100%",
+                    pb: 1.5,
+                  }}
                   >
                     <Avatar
                       src={contact?.avatar || undefined}
@@ -1775,8 +1893,8 @@ const Contacts: React.FC = () => {
                         variant="body1"
                         sx={{
                           fontWeight: 600,
-                          color: theme.palette.text.primary,
-                          fontSize: "0.9375rem",
+                          color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                          fontSize: "1rem",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -1789,7 +1907,7 @@ const Contacts: React.FC = () => {
                         variant="caption"
                         sx={{
                           color: theme.palette.text.secondary,
-                          fontSize: "0.75rem",
+                          fontSize: "0.8125rem",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -1843,8 +1961,8 @@ const Contacts: React.FC = () => {
                         <Typography
                           variant="body2"
                           sx={{
-                            color: theme.palette.text.primary,
-                            fontSize: "0.8125rem",
+                            color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                            fontSize: "0.9375rem",
                           }}
                         >
                           {contact.Company.name}
@@ -1864,48 +1982,28 @@ const Contacts: React.FC = () => {
                         <Typography
                           variant="body2"
                           sx={{
-                            color: theme.palette.text.primary,
-                            fontSize: "0.8125rem",
+                            color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                            fontSize: "0.9375rem",
                           }}
                         >
                           {contact.phone || contact.mobile}
                         </Typography>
                       </Box>
                     )}
-                    {contact.country && (
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <LocationOn
-                          sx={{
-                            fontSize: 16,
-                            color: theme.palette.text.secondary,
-                          }}
-                        />
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: theme.palette.text.primary,
-                            fontSize: "0.8125rem",
-                          }}
-                        >
-                          {contact.country}
-                        </Typography>
-                      </Box>
-                    )}
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }} onClick={(e) => e.stopPropagation()}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
                       <StageChipWithProgress
                         stage={contact.lifecycleStage || "lead"}
                         label={getStageLabel(contact.lifecycleStage || "lead")}
                         chipBg={getStageColor(contact.lifecycleStage || "lead").bg}
                         chipColor={getStageColor(contact.lifecycleStage || "lead").color}
+                        progressBarColor={getStageColor(contact.lifecycleStage || "lead").progressBar}
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
                           handleStatusMenuOpen(e, contact.id);
                         }}
                         disabled={updatingStatus[contact.id]}
-                        barWidth={120}
+                        barWidth="100%"
                       />
                       <Menu
                         anchorEl={statusMenuAnchor[contact.id]}
@@ -2000,8 +2098,8 @@ const Contacts: React.FC = () => {
                         variant="body2"
                         sx={{
                           fontWeight: 500,
-                          color: theme.palette.text.primary,
-                          fontSize: { sm: "0.6875rem", md: "0.8125rem" },
+                          color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                          fontSize: { sm: "0.8125rem", md: "0.9375rem" },
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -2015,7 +2113,7 @@ const Contacts: React.FC = () => {
                         variant="caption"
                         sx={{
                           color: theme.palette.text.secondary,
-                          fontSize: { sm: "0.5625rem", md: "0.75rem" },
+                          fontSize: { sm: "0.75rem", md: "0.8125rem" },
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -2044,8 +2142,8 @@ const Contacts: React.FC = () => {
                     <Typography
                       variant="body2"
                       sx={{
-                        color: theme.palette.text.primary,
-                        fontSize: { sm: "0.625rem", md: "0.8125rem" },
+                        color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                        fontSize: { sm: "0.8125rem", md: "0.9375rem" },
                         fontWeight: 400,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -2059,8 +2157,8 @@ const Contacts: React.FC = () => {
                     <Typography
                       variant="body2"
                       sx={{
-                        color: theme.palette.text.disabled,
-                        fontSize: { sm: "0.625rem", md: "0.8125rem" },
+                        color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.disabled,
+                        fontSize: { sm: "0.8125rem", md: "0.9375rem" },
                         fontWeight: 400,
                       }}
                     >
@@ -2080,8 +2178,8 @@ const Contacts: React.FC = () => {
                   <Typography
                     variant="body2"
                     sx={{
-                      color: theme.palette.text.primary,
-                      fontSize: { sm: "0.625rem", md: "0.8125rem" },
+                      color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                      fontSize: { sm: "0.8125rem", md: "0.9375rem" },
                       fontWeight: 400,
                     }}
                   >
@@ -2102,8 +2200,8 @@ const Contacts: React.FC = () => {
                   <Typography
                     variant="body2"
                     sx={{
-                      color: theme.palette.text.primary,
-                      fontSize: { sm: "0.625rem", md: "0.8125rem" },
+                      color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                      fontSize: { sm: "0.8125rem", md: "0.9375rem" },
                       fontWeight: 400,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -2116,30 +2214,12 @@ const Contacts: React.FC = () => {
                 <Box
                   sx={{
                     display: { xs: "none", sm: "flex" },
-                    px: { sm: 0.75, md: 1 },
-                    py: 0,
-                    alignItems: "center",
-                    justifyContent: "flex-start",
-                  }}
-                >
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: theme.palette.text.primary,
-                      fontSize: { sm: "0.625rem", md: "0.8125rem" },
-                      fontWeight: 400,
-                    }}
-                  >
-                    {contact.country || "--"}
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    display: { xs: "none", sm: "flex" },
                     px: { xs: 1, md: 1.5 },
                     py: 0,
                     alignItems: "center",
                     justifyContent: "flex-start",
+                    minWidth: 0,
+                    overflow: 'hidden',
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -2148,13 +2228,14 @@ const Contacts: React.FC = () => {
                     label={getStageLabel(contact.lifecycleStage || "lead")}
                     chipBg={getStageColor(contact.lifecycleStage || "lead").bg}
                     chipColor={getStageColor(contact.lifecycleStage || "lead").color}
+                    progressBarColor={getStageColor(contact.lifecycleStage || "lead").progressBar}
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
                       handleStatusMenuOpen(e, contact.id);
                     }}
                     disabled={updatingStatus[contact.id]}
-                    barWidth={120}
+                    barWidth="100%"
                   />
                   <Menu
                     anchorEl={statusMenuAnchor[contact.id]}
@@ -2204,7 +2285,7 @@ const Contacts: React.FC = () => {
                     ))}
                   </Menu>
                 </Box>
-                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: { xs: 'none', sm: 'flex' }, alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: { xs: 'none', sm: 'flex' }, alignItems: 'center', justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
                   {contact.Owner ? (
                     <Tooltip title={`${contact.Owner.firstName} ${contact.Owner.lastName}`} arrow>
                       <UserAvatar
@@ -2215,7 +2296,7 @@ const Contacts: React.FC = () => {
                       />
                     </Tooltip>
                   ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.disabled, fontSize: { xs: '0.9375rem', md: '1rem' } }}>
                       --
                     </Typography>
                   )}
@@ -2268,6 +2349,7 @@ const Contacts: React.FC = () => {
                     </Tooltip>
                   </Box>
                 </Box>
+              </Box>
               </Box>
             ))}
             </>

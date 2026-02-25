@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { IconButton, Tooltip } from '@mui/material';
-import { DarkMode, LightMode } from '@mui/icons-material';
+import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { taxiMonterricoColors } from '../theme/colors';
 
@@ -138,12 +138,13 @@ const ThemeToggleButton: React.FC = () => {
               transform: 'scale(1.05)',
             },
             transition: 'all 0.2s ease-in-out',
-            '& .MuiSvgIcon-root': {
-              fontSize: '1.35rem',
+            '& svg': {
+              width: '1.35rem',
+              height: '1.35rem',
             },
           }}
         >
-          {mode === 'light' ? <DarkMode /> : <LightMode />}
+          {mode === 'light' ? <Moon size={22} color="currentColor" /> : <Sun size={22} color="currentColor" />}
         </IconButton>
       </div>
     </Tooltip>

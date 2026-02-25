@@ -9,10 +9,9 @@ import {
 } from '@mui/material';
 import {
   Close,
-  DarkMode,
-  LightMode,
   SettingsBrightness,
 } from '@mui/icons-material';
+import { Moon, Sun } from 'lucide-react';
 import { HugeiconsIcon } from '@hugeicons/react';
 // @ts-ignore - TypeScript module resolution issue with @hugeicons/core-free-icons
 import { Maximize01Icon, Minimize01Icon } from '@hugeicons/core-free-icons';
@@ -316,15 +315,13 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
                     },
                   }}
                 >
-                  <LightMode
-                    sx={{
-                      fontSize: 28,
-                      color:
-                        mode === 'light'
-                          ? taxiMonterricoColors.green
-                          : theme.palette.text.secondary,
-                      transition: 'all 0.2s ease',
-                    }}
+                  <Sun
+                    size={28}
+                    color={
+                      mode === 'light'
+                        ? taxiMonterricoColors.green
+                        : theme.palette.text.secondary
+                    }
                   />
                   <Typography
                     variant="body2"
@@ -388,15 +385,13 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
                     },
                   }}
                 >
-                  <DarkMode
-                    sx={{
-                      fontSize: 28,
-                      color:
-                        mode === 'dark'
-                          ? taxiMonterricoColors.green
-                          : theme.palette.text.secondary,
-                      transition: 'all 0.2s ease',
-                    }}
+                  <Moon
+                    size={28}
+                    color={
+                      mode === 'dark'
+                        ? taxiMonterricoColors.green
+                        : theme.palette.text.secondary
+                    }
                   />
                   <Typography
                     variant="body2"

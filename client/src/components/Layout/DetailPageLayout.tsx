@@ -171,12 +171,14 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
         flexDirection: "column",
       }}
     >
-      {/* Título de la página */}
+      {/* Título de la página (breadcrumb) - mismo fondo y alineado con el contenido */}
       <Box
         sx={{
-          pt: { xs: 2, sm: 1 },
-          pb: 2,
-          px: { xs: 2, sm: 3, md: 4 },
+          p: { xs: 2, md: 2 },
+          mb: 3,
+          mx: { xs: 2, sm: 3, md: 4 },
+          bgcolor: theme.palette.mode === "light" ? "#fafafa" : "#1c252e",
+          borderRadius: 3,
           display: "flex",
           flexDirection: "column",
           gap: 1,

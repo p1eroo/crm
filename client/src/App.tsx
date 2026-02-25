@@ -208,7 +208,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     MuiDrawer: {
       styleOverrides: {
         paper: ({ theme }: { theme: Theme }) => ({
-          backgroundColor: theme.palette.background.default,
+          backgroundColor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.default,
           borderRight: `1px solid ${theme.palette.divider}`,
           transition: 'transform 225ms cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }),

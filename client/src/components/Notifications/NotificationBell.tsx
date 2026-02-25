@@ -101,9 +101,11 @@ export const NotificationBell: React.FC = () => {
           size="small"
           onClick={handleTogglePanel}
           sx={{
-            bgcolor: 'transparent',
-            width: 40,
-            height: 40,
+            width: 48,
+            height: 48,
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+            borderRadius: 2.5,
+            bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
             position: 'relative',
             transition: 'all 0.2s ease',
           }}
@@ -136,8 +138,9 @@ export const NotificationBell: React.FC = () => {
             }}
           >
             <Bell
-              size={24}
-              color={panelOpen ? taxiMonterricoColors.green : theme.palette.text.secondary}
+              size={22}
+              strokeWidth={1}
+              color={panelOpen ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary)}
               style={{
                 transition: 'all 0.2s ease',
                 ...(panelOpen && { transform: 'rotate(10deg)' }),

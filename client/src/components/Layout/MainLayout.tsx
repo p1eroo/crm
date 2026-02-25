@@ -19,7 +19,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { open, collapsed, layoutMode } = useSidebar();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isHorizontal = layoutMode === "horizontal";
-  const drawerWidth = collapsed ? (isMobile ? 0 : 90) : 300;
+  const drawerWidth = collapsed ? (isMobile ? 0 : 96) : 270;
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -127,7 +127,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             minWidth: 0,
             boxSizing: "border-box",
             overflowY: "auto",
-            paddingTop: { xs: "56px", sm: 2 },
+            paddingTop: { xs: "78px", sm: 2 },
             transition: "margin-left 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         >

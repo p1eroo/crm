@@ -27,7 +27,7 @@ import {
   Checkbox,
   Popover,
 } from '@mui/material';
-import { Add, FilterList, Close, ExpandMore, Remove, Bolt, ChevronLeft, ChevronRight, MoreVert, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered, Description, Business } from '@mui/icons-material';
+import { Add, Close, ExpandMore, ExpandLess, Remove, Bolt, ChevronLeft, ChevronRight, MoreVert, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered, Description, Business } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { getStageColor as getStageColorUtil, normalizeStageFromExcel } from '../utils/stageColors';
@@ -178,7 +178,7 @@ const Companies: React.FC = () => {
   
   // Estado para filtros de columna con debounce (espera 500ms después de que el usuario deje de escribir)
   const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
-  const [showColumnFilters, setShowColumnFilters] = useState(false);
+  const [filterPanelCollapsed, setFilterPanelCollapsed] = useState(false);
 
   // Función para obtener el label del origen de lead
   const getLeadSourceLabel = (source?: string) => {
@@ -1735,241 +1735,463 @@ const Companies: React.FC = () => {
       minWidth: 0,
     }}>
 
-      {/* Indicador de filtros por columna activos */}
-      {Object.values(columnFilters).some(v => v) && (
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 1, 
-          flexWrap: 'wrap', 
-          mb: 1.5,
+      {/* Barra de título y acciones - mismo diseño que Contactos */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          px: { xs: 1, sm: 2 },
-        }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
-            Filtros por columna:
-          </Typography>
-          {columnFilters.nombre && (
-            <Chip
-              size="small"
-              label={`Nombre: "${columnFilters.nombre}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.tipo && (
-            <Chip
-              size="small"
-              label={`Tipo: "${columnFilters.tipo}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, tipo: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.propietario && (
-            <Chip
-              size="small"
-              label={`Propietario: "${columnFilters.propietario}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, propietario: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.telefono && (
-            <Chip
-              size="small"
-              label={`Teléfono: "${columnFilters.telefono}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, telefono: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.correo && (
-            <Chip
-              size="small"
-              label={`Correo: "${columnFilters.correo}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, correo: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.origenLead && (
-            <Chip
-              size="small"
-              label={`Origen Lead: "${columnFilters.origenLead}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, origenLead: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.etapa && (
-            <Chip
-              size="small"
-              label={`Etapa: "${columnFilters.etapa}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.cr && (
-            <Chip
-              size="small"
-              label={`C.R.: "${columnFilters.cr}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, cr: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
+          flexWrap: 'wrap',
+          gap: 2,
+          px: { xs: 2, md: 3 },
+          py: { xs: 1.25, md: 1.5 },
+          mb: 4,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
+          borderRadius: 3,
+        }}
+      >
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 400,
+            fontSize: { xs: '1rem', md: '1.1375rem' },
+            color: '#828690',
+          }}
+        >
+          Empresas
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
           <Button
             size="small"
-            onClick={() => setColumnFilters({ nombre: '', tipo: '', propietario: '', telefono: '', correo: '', origenLead: '', etapa: '', cr: '' })}
-            sx={{ 
-              fontSize: '0.7rem', 
+            startIcon={<Description sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+            onClick={handleDownloadTemplate}
+            sx={{
+              border: 'none',
+              borderRadius: 1.5,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.12)' : 'rgba(33, 150, 243, 0.08)',
+              color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976D2',
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
               textTransform: 'none',
-              color: theme.palette.error.main,
-              minWidth: 'auto',
-              p: 0.5,
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: '#1976D2',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.14)',
+                color: theme.palette.mode === 'dark' ? '#90CAF9' : '#1565C0',
+              },
             }}
           >
-            Limpiar todos
+            Plantilla
+          </Button>
+          <Button
+            size="small"
+            startIcon={<FontAwesomeIcon icon={faFileImport} style={{ fontSize: 16 }} />}
+            onClick={handleImportFromExcel}
+            disabled={importing}
+            sx={{
+              border: 'none',
+              borderRadius: 1.5,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.12)' : 'rgba(156, 39, 176, 0.08)',
+              color: theme.palette.mode === 'dark' ? '#CE93D8' : '#7B1FA2',
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: '#7B1FA2',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.2)' : 'rgba(156, 39, 176, 0.14)',
+                color: theme.palette.mode === 'dark' ? '#E1BEE7' : '#6A1B9A',
+              },
+              '&:disabled': { opacity: 0.5 },
+            }}
+          >
+            {importing ? 'Importando...' : 'Importar'}
+          </Button>
+          <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+          <Button
+            size="small"
+            startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
+            onClick={handleExportToExcel}
+            sx={{
+              border: 'none',
+              borderRadius: 1.5,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.12)' : 'rgba(0, 150, 136, 0.08)',
+              color: theme.palette.mode === 'dark' ? '#4DB6AC' : '#00897B',
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: '#00897B',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
+                color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
+              },
+            }}
+          >
+            Exportar
+          </Button>
+          <Button
+            size="small"
+            startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+            onClick={() => handleOpen()}
+            sx={{
+              bgcolor: '#13944C',
+              color: 'white',
+              borderRadius: 1.5,
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                bgcolor: '#0f7039',
+              },
+            }}
+          >
+            Nueva Empresa
           </Button>
         </Box>
-      )}
+      </Box>
+
+      {/* Panel de filtros - siempre visible y abierto */}
+      <Box
+        sx={{
+          mb: 3,
+          bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
+          borderRadius: 2,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header del panel - clickeable para colapsar/expandir */}
+        <Box
+          onClick={() => setFilterPanelCollapsed(!filterPanelCollapsed)}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 2,
+            py: 1.5,
+            cursor: 'pointer',
+            borderBottom: filterPanelCollapsed ? 'none' : `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FontAwesomeIcon icon={faFilter} style={{ fontSize: 18, color: theme.palette.text.secondary }} />
+            <Typography sx={{ fontWeight: 600, fontSize: '0.9375rem', color: theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.primary }}>
+              Filtro
+            </Typography>
+          </Box>
+          <IconButton size="small" sx={{ p: 0.5, '&:hover': { bgcolor: 'transparent' } }} disableRipple>
+            {filterPanelCollapsed ? <ExpandMore /> : <ExpandLess />}
+          </IconButton>
+        </Box>
+
+        {/* Contenido del panel - campos de filtro */}
+        {!filterPanelCollapsed && (
+        <Box sx={{ px: 2, py: 2 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 2,
+                  alignItems: 'flex-end',
+                  mb: 2,
+                }}
+              >
+                <Box sx={{ minWidth: 140, flex: '1 1 120px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Nombre
+                  </Typography>
+                  <TextField
+                    size="small"
+                    placeholder="Nombre"
+                    value={columnFilters.nombre}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, nombre: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'transparent',
+                        fontSize: '0.875rem',
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: 'transparent' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                          borderWidth: '1px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 120, flex: '1 1 100px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Tipo
+                  </Typography>
+                  <TextField
+                    size="small"
+                    placeholder="Tipo (A/B/C)"
+                    value={columnFilters.tipo}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, tipo: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'transparent',
+                        fontSize: '0.875rem',
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: 'transparent' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                          borderWidth: '1px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 120, flex: '1 1 100px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Teléfono
+                  </Typography>
+                  <TextField
+                    size="small"
+                    placeholder="Teléfono"
+                    value={columnFilters.telefono}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, telefono: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'transparent',
+                        fontSize: '0.875rem',
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: 'transparent' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                          borderWidth: '1px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 160, flex: '1 1 140px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Correo
+                  </Typography>
+                  <TextField
+                    size="small"
+                    placeholder="Correo"
+                    value={columnFilters.correo}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, correo: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'transparent',
+                        fontSize: '0.875rem',
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: 'transparent' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                          borderWidth: '1px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 160, flex: '1 1 140px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Origen Lead
+                  </Typography>
+                  <Select
+                    size="small"
+                    displayEmpty
+                    value={columnFilters.origenLead}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, origenLead: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      bgcolor: 'transparent',
+                      fontSize: '0.875rem',
+                      borderRadius: 2,
+                      '& .MuiSelect-select': { py: 1 },
+                      '&:hover': { bgcolor: 'transparent' },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                        borderWidth: '1px',
+                      },
+                      '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                    }}
+                    renderValue={(v) => v ? getLeadSourceLabel(v) : 'Todos'}
+                  >
+                    <MenuItem value="">Todos</MenuItem>
+                    <MenuItem value="referido">Referido</MenuItem>
+                    <MenuItem value="base">Base</MenuItem>
+                    <MenuItem value="entorno">Entorno</MenuItem>
+                    <MenuItem value="feria">Feria</MenuItem>
+                    <MenuItem value="masivo">Masivo</MenuItem>
+                  </Select>
+                </Box>
+                <Box sx={{ minWidth: 160, flex: '1 1 140px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Etapa
+                  </Typography>
+                  <Select
+                    size="small"
+                    displayEmpty
+                    value={columnFilters.etapa}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, etapa: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      bgcolor: 'transparent',
+                      fontSize: '0.875rem',
+                      borderRadius: 2,
+                      '& .MuiSelect-select': { py: 1 },
+                      '&:hover': { bgcolor: 'transparent' },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                        borderWidth: '1px',
+                      },
+                      '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                    }}
+                    renderValue={(v) => v ? getStageLabelWithoutPercentage(v) : 'Seleccionar etapa'}
+                  >
+                    <MenuItem value="">Todas</MenuItem>
+                    {stageOptions.map((opt) => (
+                      <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                    ))}
+                  </Select>
+                </Box>
+                <Box sx={{ minWidth: 160, flex: '1 1 140px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    Propietario
+                  </Typography>
+                  <Select
+                    size="small"
+                    displayEmpty
+                    value={columnFilters.propietario}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, propietario: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      bgcolor: 'transparent',
+                      fontSize: '0.875rem',
+                      borderRadius: 2,
+                      '& .MuiSelect-select': { py: 1 },
+                      '&:hover': { bgcolor: 'transparent' },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                        borderWidth: '1px',
+                      },
+                      '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                    }}
+                    MenuProps={{ sx: { zIndex: 1700 } }}
+                    renderValue={(v) => {
+                      if (!v) return 'Todos';
+                      if (v === 'unassigned') return 'Sin asignar';
+                      if (v === 'me') return 'Yo';
+                      const u = users.find((x: any) => String(x.id) === v);
+                      return u ? `${u.firstName} ${u.lastName}` : String(v);
+                    }}
+                  >
+                    <MenuItem value="">Todos</MenuItem>
+                    <MenuItem value="unassigned">Sin asignar</MenuItem>
+                    <MenuItem value="me">Yo</MenuItem>
+                    {users.filter((u: any) => u.role === 'user').map((u: any) => (
+                      <MenuItem key={u.id} value={String(u.id)}>{u.firstName} {u.lastName}</MenuItem>
+                    ))}
+                  </Select>
+                </Box>
+                <Box sx={{ minWidth: 120, flex: '1 1 100px' }}>
+                  <Typography sx={{ fontSize: '0.85rem', mb: 0.5, color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000' }}>
+                    C.R.
+                  </Typography>
+                  <TextField
+                    size="small"
+                    placeholder="Sí/No"
+                    value={columnFilters.cr}
+                    onChange={(e) => setColumnFilters(prev => ({ ...prev, cr: e.target.value }))}
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'transparent',
+                        fontSize: '0.875rem',
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: 'transparent' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                          borderWidth: '1px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': { borderRadius: 2 },
+                      },
+                    }}
+                  />
+                </Box>
+              </Box>
+
+              {/* Botones Filter y Limpiar */}
+              <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end' }}>
+                <Button
+                  size="small"
+                  startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
+                  sx={{
+                    bgcolor: '#1976D2',
+                    color: 'white',
+                    borderRadius: 1.5,
+                    px: 2,
+                    py: 1,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': { bgcolor: '#1976D2' },
+                  }}
+                >
+                  Filtrar
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setColumnFilters({
+                      nombre: '',
+                      tipo: '',
+                      propietario: '',
+                      telefono: '',
+                      correo: '',
+                      origenLead: '',
+                      etapa: '',
+                      cr: '',
+                    });
+                  }}
+                  sx={{
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.12)',
+                    color: theme.palette.mode === 'dark' ? '#EF5350' : '#D32F2F',
+                    borderRadius: 1.5,
+                    px: 2,
+                    py: 1,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.12)',
+                    },
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+              </Box>
+            </Box>
+        )}
+      </Box>
 
       {/* Contenedor principal con layout flex para tabla y panel de filtros */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' }, minWidth: 0, overflow: 'hidden' }}>
         {/* Contenido principal (tabla completa con header y filas) */}
         <UnifiedTable
-          title="Empresas"
-          actions={
-            <>
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: { xs: 0.5, sm: 0.75 },
-                    order: { xs: 3, sm: 0 },
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <Button
-                    size="small"
-                    startIcon={<Description sx={{ fontSize: { xs: 16, sm: 18 } }} />}
-                    onClick={handleDownloadTemplate}
-                    sx={{
-                      border: 'none',
-                      borderRadius: 1.5,
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.12)' : 'rgba(33, 150, 243, 0.08)',
-                      color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976D2',
-                      px: { xs: 1.25, sm: 1.5 },
-                      py: { xs: 0.75, sm: 0.875 },
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      '&:hover': {
-                        borderColor: '#1976D2',
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.14)',
-                        color: theme.palette.mode === 'dark' ? '#90CAF9' : '#1565C0',
-                      },
-                    }}
-                  >
-                    Plantilla
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<FontAwesomeIcon icon={faFileImport} style={{ fontSize: 16 }} />}
-                    onClick={handleImportFromExcel}
-                    disabled={importing}
-                    sx={{
-                      border: 'none',
-                      borderRadius: 1.5,
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.12)' : 'rgba(156, 39, 176, 0.08)',
-                      color: theme.palette.mode === 'dark' ? '#CE93D8' : '#7B1FA2',
-                      px: { xs: 1.25, sm: 1.5 },
-                      py: { xs: 0.75, sm: 0.875 },
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      '&:hover': {
-                        borderColor: '#7B1FA2',
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.2)' : 'rgba(156, 39, 176, 0.14)',
-                        color: theme.palette.mode === 'dark' ? '#E1BEE7' : '#6A1B9A',
-                      },
-                      '&:disabled': { opacity: 0.5 },
-                    }}
-                  >
-                    {importing ? 'Importando...' : 'Importar'}
-                  </Button>
-                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
-                  <Button
-                    size="small"
-                    startIcon={<FontAwesomeIcon icon={faFileExport} style={{ fontSize: 16 }} />}
-                    onClick={handleExportToExcel}
-                    sx={{
-                      border: 'none',
-                      borderRadius: 1.5,
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.12)' : 'rgba(0, 150, 136, 0.08)',
-                      color: theme.palette.mode === 'dark' ? '#4DB6AC' : '#00897B',
-                      px: { xs: 1.25, sm: 1.5 },
-                      py: { xs: 0.75, sm: 0.875 },
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      '&:hover': {
-                        borderColor: '#00897B',
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 150, 136, 0.2)' : 'rgba(0, 150, 136, 0.14)',
-                        color: theme.palette.mode === 'dark' ? '#80CBC4' : '#00695C',
-                      },
-                    }}
-                  >
-                    Exportar
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<FontAwesomeIcon icon={faFilter} style={{ fontSize: 16 }} />}
-                    onClick={() => setShowColumnFilters(!showColumnFilters)}
-                    sx={{
-                      border: 'none',
-                      borderRadius: 1.5,
-                      bgcolor: showColumnFilters 
-                        ? (theme.palette.mode === 'dark' ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.15) : hexToRgba(taxiMonterricoColors.greenEmerald, 0.08))
-                        : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.12)' : 'rgba(255, 152, 0, 0.08)'),
-                      color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFB74D' : '#E65100'),
-                      px: { xs: 1.25, sm: 1.5 },
-                      py: { xs: 0.75, sm: 0.875 },
-                      order: { xs: 5, sm: 0 },
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      '&:hover': {
-                        borderColor: showColumnFilters ? taxiMonterricoColors.green : '#FF9800',
-                        bgcolor: showColumnFilters 
-                          ? (theme.palette.mode === 'dark' ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.2) : hexToRgba(taxiMonterricoColors.greenEmerald, 0.1))
-                          : (theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.14)'),
-                        color: showColumnFilters ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#FFCC80' : '#EF6C00'),
-                      },
-                    }}
-                  >
-                    Filtro
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
-                    onClick={() => handleOpen()}
-                    sx={{
-                      bgcolor: '#13944C',
-                      color: "white",
-                      borderRadius: 1.5,
-                      px: { xs: 1.25, sm: 1.5 },
-                      py: { xs: 0.75, sm: 0.875 },
-                      order: { xs: 2, sm: 0 },
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      '&:hover': {
-                        bgcolor: '#0f7039',
-                      },
-                    }}
-                  >
-                    Nueva Empresa
-                  </Button>
-                </Box>
-            </>
-          }
+          title="Lista de empresas"
+          titleIcon={<FormatListBulleted sx={{ fontSize: 20 }} />}
+          collapsible
           header={
+            <Box sx={{ width: '100%', px: { xs: 2.5, md: 3 } }}>
             <Box
               component="div"
-              sx={{ 
+              sx={{
                 bgcolor: theme.palette.mode === 'dark'
-                  ? '#1c252e'
-                  : hexToRgba(taxiMonterricoColors.greenEmerald, 0.01),
+                  ? theme.palette.background.paper
+                  : '#fafafa',
                 overflow: 'hidden',
                 display: 'grid',
                 gridTemplateColumns: { 
@@ -1977,253 +2199,53 @@ const Companies: React.FC = () => {
                   md: '50px 2fr 0.5fr 1.4fr 1.4fr 1.2fr 1.5fr 1.25fr 1.5fr 1.55fr 100px' 
                 },
                 columnGap: { xs: 0.5, md: 1 },
-                minWidth: { xs: 800, md: 'auto' },
+                minWidth: 800,
                 maxWidth: '100%',
                 width: '100%',
-                px: { xs: 1.5, md: 2 },
                 py: { xs: 1.25, md: 1.5 },
-                borderBottom: `2px solid ${theme.palette.divider}`,
+                borderBottom: `1px solid ${theme.palette.divider}`,
               }}
             >
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.25, md: 0.5 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>C.R.</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, cr: '' }))} sx={{ p: 0.25, opacity: columnFilters.cr ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar... (Sí/No)"
-                  value={columnFilters.cr}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, cr: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>C.R.</Typography>
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Nombre de Empresa</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))} sx={{ p: 0.25, opacity: columnFilters.nombre ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.nombre}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, nombre: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Nombre de Empresa</Typography>
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Tipo</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, tipo: '' }))} sx={{ p: 0.25, opacity: columnFilters.tipo ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.tipo}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, tipo: e.target.value }))}
-                  sx={{
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': {
-                      height: 28,
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Tipo</Typography>
             </Box>
-            <Box sx={{ 
-              ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.5, md: 0.75 },
-              justifyContent: 'flex-start',
-              alignItems: 'center'
-            }}>
-                  Última Actividad
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Última Actividad</Typography>
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Propietario</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, propietario: '' }))} sx={{ p: 0.25, opacity: columnFilters.propietario ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.propietario}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, propietario: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Propietario</Typography>
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Teléfono</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, telefono: '' }))} sx={{ p: 0.25, opacity: columnFilters.telefono ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.telefono}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, telefono: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Teléfono</Typography>
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Correo</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, correo: '' }))} sx={{ p: 0.25, opacity: columnFilters.correo ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.correo}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, correo: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Correo</Typography>
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Etapa</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))} sx={{ p: 0.25, opacity: columnFilters.etapa ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.etapa}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, etapa: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Etapa</Typography>
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 }, pl: { xs: 2, md: 2.5 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Origen de lead</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, origenLead: '' }))} sx={{ p: 0.25, opacity: columnFilters.origenLead ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.origenLead}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, origenLead: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Origen de lead</Typography>
             </Box>
-            <Box sx={{ 
-              ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.5, md: 0.75 },
-              pl: { xs: 2, md: 2.5 },
-              justifyContent: 'flex-start',
-              alignItems: 'center'
-            }}>
-                  Facturación
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Facturación</Typography>
             </Box>
-            <Box sx={{ 
-              ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.5, md: 0.75 },
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-                  Acciones
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' }, textAlign: 'center' }}>Acciones</Typography>
             </Box>
-            </Box>
+          </Box>
+          </Box>
           }
           rows={
             <>
-            {paginatedCompanies.map((company, index) => (
-              <React.Fragment key={company.id}>
+            {paginatedCompanies.map((company) => (
+              <Box key={company.id} sx={{ width: '100%', px: { xs: 2.5, md: 3 } }}>
                 <Box
                   component="div"
                   onClick={() => navigate(`/companies/${company.id}`)}
@@ -2237,21 +2259,16 @@ const Companies: React.FC = () => {
                       md: '50px 2fr 0.5fr 1.4fr 1.4fr 1.2fr 1.5fr 1.25fr 1.5fr 1.55fr 100px' 
                     },
                     columnGap: { xs: 0.5, md: 1 },
-                    minWidth: { xs: 800, md: 'auto' },
+                    minWidth: 800,
                     maxWidth: '100%',
                     width: '100%',
                     overflow: 'hidden',
-                    px: { xs: 1.5, md: 2 },
                     py: { xs: 1.25, md: 1.5 },
-                    borderBottom: index < paginatedCompanies.length - 1
-                      ? (theme.palette.mode === 'light' 
-                        ? '1px solid rgba(0, 0, 0, 0.08)' 
-                        : '1px solid rgba(255, 255, 255, 0.1)')
-                      : 'none',
+                    borderBottom: `1px solid ${theme.palette.divider}`,
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.02)' 
-                        : 'rgba(0, 0, 0, 0.02)',
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? 'inset 0 0 0 9999px rgba(255, 255, 255, 0.015)'
+                        : 'inset 0 0 0 9999px rgba(0, 0, 0, 0.012)',
                     },
                   }}
                 >
@@ -2293,8 +2310,8 @@ const Companies: React.FC = () => {
                         variant="body2" 
                         sx={{ 
                           fontWeight: 500, 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '0.8125rem', md: '0.875rem' },
+                          color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                          fontSize: { xs: '0.8125rem', md: '0.9375rem' },
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -2317,12 +2334,12 @@ const Companies: React.FC = () => {
                             }}
                             sx={{ 
                               color: theme.palette.text.secondary,
-                            fontSize: { xs: '0.6875rem', md: '0.75rem' },
+                              fontSize: { xs: '0.75rem', md: '0.8125rem' },
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
-                            display: 'block',
-                            cursor: 'pointer',
+                              display: 'block',
+                              cursor: 'pointer',
                               '&:hover': {
                                 textDecoration: 'underline',
                               },
@@ -2335,7 +2352,7 @@ const Companies: React.FC = () => {
                             variant="caption" 
                             sx={{ 
                               color: theme.palette.text.secondary,
-                            fontSize: { xs: '0.6875rem', md: '0.75rem' },
+                              fontSize: { xs: '0.75rem', md: '0.8125rem' },
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -2350,7 +2367,7 @@ const Companies: React.FC = () => {
                 </Box>
                 {/* Columna Tipo */}
                 <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
-                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary, fontSize: { xs: '0.8125rem', md: '0.9375rem' }, fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {((company as any).companyType === 'a' ? 'A' : (company as any).companyType === 'b' ? 'B' : (company as any).companyType === 'c' ? 'C' : (company as any).companyType) || '--'}
                   </Typography>
                 </Box>
@@ -2364,7 +2381,7 @@ const Companies: React.FC = () => {
                       fontWeight: 400,
                     }}
                   >
-                    {company.updatedAt 
+                    {company.updatedAt
                       ? new Date(company.updatedAt).toLocaleDateString('es-ES', { 
                           day: '2-digit', 
                           month: 'short', 
@@ -2388,8 +2405,8 @@ const Companies: React.FC = () => {
                     <Typography 
                       variant="body2" 
                       sx={{ 
-                        color: theme.palette.text.disabled,
-                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                        color: theme.palette.text.secondary,
+                        fontSize: { xs: '0.8125rem', md: '0.9375rem' },
                         fontWeight: 400,
                       }}
                     >
@@ -2401,9 +2418,9 @@ const Companies: React.FC = () => {
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          color: theme.palette.text.primary,
-                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                      fontWeight: 400,
+                          color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                          fontSize: { xs: '0.8125rem', md: '0.9375rem' },
+                          fontWeight: 400,
                         }}
                       >
                     {company.phone || '--'}
@@ -2413,8 +2430,8 @@ const Companies: React.FC = () => {
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: theme.palette.text.primary,
-                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                      color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                      fontSize: { xs: '0.8125rem', md: '0.9375rem' },
                       fontWeight: 400,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -2433,6 +2450,7 @@ const Companies: React.FC = () => {
                       label={getStageLabel(company.lifecycleStage || 'lead')}
                       chipBg={getStageColor(company.lifecycleStage || 'lead').bg}
                       chipColor={getStageColor(company.lifecycleStage || 'lead').color}
+                      progressBarColor={getStageColor(company.lifecycleStage || 'lead').progressBar}
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -2493,8 +2511,8 @@ const Companies: React.FC = () => {
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: theme.palette.text.primary,
-                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                      color: theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary,
+                      fontSize: { xs: '0.8125rem', md: '0.9375rem' },
                       fontWeight: 400,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -2511,8 +2529,8 @@ const Companies: React.FC = () => {
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: company.estimatedRevenue != null ? (theme.palette.mode === 'dark' ? '#4ade80' : '#15803d') : theme.palette.text.primary,
-                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                      color: company.estimatedRevenue != null ? (theme.palette.mode === 'dark' ? '#4ade80' : '#15803d') : (theme.palette.mode === 'light' ? '#666666' : theme.palette.text.primary),
+                      fontSize: { xs: '0.8125rem', md: '0.9375rem' },
                       fontWeight: 600,
                     }}
                   >
@@ -2654,7 +2672,7 @@ const Companies: React.FC = () => {
                   )}
                 </Box>
             </Box>
-          </React.Fragment>
+          </Box>
           ))}
             </>
           }
@@ -2785,6 +2803,56 @@ const Companies: React.FC = () => {
             ) : undefined
           }
         />
+
+      {/* Indicador de filtros activos */}
+      {Object.values(columnFilters).some(v => v) && (
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          flexWrap: 'wrap', 
+          mb: 2,
+          alignItems: 'center',
+          width: '100%',
+          flexBasis: '100%',
+        }}>
+          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
+            Filtros activos:
+          </Typography>
+          {Object.entries(columnFilters).map(([key, value]) => {
+            if (!value) return null;
+            let label: string;
+            if (key === 'propietario') {
+              if (value === 'me') label = 'Propietario: Yo';
+              else if (value === 'unassigned') label = 'Propietario: Sin asignar';
+              else {
+                const u = users.find((x: any) => String(x.id) === value) as any;
+                label = u ? `Propietario: ${u.firstName} ${u.lastName}` : `Propietario: ${value}`;
+              }
+            } else {
+              const keyLabel: { [key: string]: string } = {
+                nombre: 'Nombre',
+                tipo: 'Tipo',
+                propietario: 'Propietario',
+                telefono: 'Teléfono',
+                correo: 'Correo',
+                origenLead: 'Origen Lead',
+                etapa: 'Etapa',
+                cr: 'C.R.',
+              };
+              label = `${keyLabel[key] || key}: ${key === 'etapa' && value ? getStageLabelWithoutPercentage(value) : key === 'origenLead' && value ? getLeadSourceLabel(value) : value}`;
+            }
+            return (
+              <Chip
+                key={key}
+                label={label}
+                size="small"
+                onDelete={() => setColumnFilters(prev => ({ ...prev, [key]: '' }))}
+                sx={{ fontSize: '0.6875rem', height: 20 }}
+              />
+            );
+          })}
+        </Box>
+      )}
 
         {/* Panel de Filtros Lateral */}
         {filterDrawerOpen && (
