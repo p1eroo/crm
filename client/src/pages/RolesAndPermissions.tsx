@@ -4,22 +4,17 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  Card,
-  CardContent,
+  Checkbox,
   Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
+  Tooltip,
+  TextField,
+  InputAdornment,
+  useTheme,
 } from '@mui/material';
-import { CheckCircle, Cancel } from '@mui/icons-material';
+import { Info, Search } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
-import { useTheme } from '@mui/material/styles';
-import { UnifiedTable } from '../components/UnifiedTable';
 
 interface Permission {
   key: string;
@@ -35,12 +30,84 @@ interface Role {
   permissions: Permission[];
 }
 
+const ROLE_DISPLAY_NAMES: Record<string, string> = {
+  admin: 'Administrador',
+  jefe_comercial: 'Jefe Comercial',
+  manager: 'Gerente',
+  user: 'Usuario',
+};
+
+const PERMISSION_DESCRIPTIONS: Record<string, string> = {
+  view_all_data: 'Permite ver todos los datos del sistema incluyendo los de otros usuarios',
+  edit_all_data: 'Permite editar cualquier registro del sistema',
+  delete_data: 'Permite eliminar registros del sistema',
+  manage_users: 'Permite crear, editar y desactivar usuarios',
+  view_reports: 'Permite acceder a la sección de reportes',
+  manage_settings: 'Permite modificar la configuración del sistema',
+  view_system_logs: 'Permite ver los logs de actividad del sistema',
+};
+
+interface ModulePermission {
+  key: string;
+  label: string;
+}
+
+interface ModuleSection {
+  module: string;
+  perms: ModulePermission[];
+}
+
+const MODULE_SECTIONS: ModuleSection[] = [
+  { module: 'Dashboard', perms: [
+    { key: 'view_all_data', label: 'Ver dashboard' },
+  ]},
+  { module: 'Contactos', perms: [
+    { key: 'view_all_data', label: 'Ver contactos' },
+    { key: 'edit_all_data', label: 'Editar contactos' },
+    { key: 'delete_data', label: 'Eliminar contactos' },
+  ]},
+  { module: 'Empresas', perms: [
+    { key: 'view_all_data', label: 'Ver empresas' },
+    { key: 'edit_all_data', label: 'Editar empresas' },
+    { key: 'delete_data', label: 'Eliminar empresas' },
+  ]},
+  { module: 'Negocios', perms: [
+    { key: 'view_all_data', label: 'Ver negocios' },
+    { key: 'edit_all_data', label: 'Editar negocios' },
+    { key: 'delete_data', label: 'Eliminar negocios' },
+  ]},
+  { module: 'Tareas', perms: [
+    { key: 'view_all_data', label: 'Ver tareas' },
+    { key: 'edit_all_data', label: 'Editar tareas' },
+    { key: 'delete_data', label: 'Eliminar tareas' },
+  ]},
+  { module: 'Calendario', perms: [
+    { key: 'view_all_data', label: 'Ver calendario' },
+  ]},
+  { module: 'Correo', perms: [
+    { key: 'view_all_data', label: 'Ver correos' },
+  ]},
+  { module: 'Reportes', perms: [
+    { key: 'view_reports', label: 'Ver reportes' },
+  ]},
+  { module: 'Usuarios', perms: [
+    { key: 'manage_users', label: 'Gestionar usuarios' },
+  ]},
+  { module: 'Configuración', perms: [
+    { key: 'manage_settings', label: 'Gestionar configuración' },
+  ]},
+  { module: 'Logs del Sistema', perms: [
+    { key: 'view_system_logs', label: 'Ver logs del sistema' },
+  ]},
+];
+
 const RolesAndPermissions: React.FC = () => {
   const theme = useTheme();
   const { user } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -60,15 +127,16 @@ const RolesAndPermissions: React.FC = () => {
     }
   };
 
-  const getRoleDisplayName = (roleName: string) => {
-    const names: { [key: string]: string } = {
-      'user': 'Usuario',
-      'manager': 'Gerente',
-      'jefe_comercial': 'Jefe Comercial',
-      'admin': 'Administrador',
-    };
-    return names[roleName] || roleName;
-  };
+  const filteredSections = searchTerm.trim()
+    ? MODULE_SECTIONS.map((section) => {
+        const term = searchTerm.toLowerCase();
+        const moduleMatches = section.module.toLowerCase().includes(term);
+        if (moduleMatches) return section;
+        const matchedPerms = section.perms.filter((p) => p.label.toLowerCase().includes(term));
+        if (matchedPerms.length > 0) return { ...section, perms: matchedPerms };
+        return null;
+      }).filter(Boolean) as ModuleSection[]
+    : MODULE_SECTIONS;
 
   if (user?.role !== 'admin') {
     return (
@@ -81,11 +149,7 @@ const RolesAndPermissions: React.FC = () => {
       }}>
         <Alert 
           severity="error" 
-          sx={{ 
-            borderRadius: 2,
-            maxWidth: '600px',
-            width: '100%',
-          }}
+          sx={{ borderRadius: 2, maxWidth: '600px', width: '100%' }}
         >
           No tienes permisos para ver roles y permisos
         </Alert>
@@ -93,227 +157,242 @@ const RolesAndPermissions: React.FC = () => {
     );
   }
 
+  const isDark = theme.palette.mode === 'dark';
+  const cardBg = isDark ? '#1c252e' : '#fafafa';
+  const headerBg = cardBg;
+  const rowHoverBg = isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)';
+  const stickyColBg = cardBg;
+
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ bgcolor: theme.palette.background.default, pb: { xs: 2, sm: 3, md: 4 } }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+          px: { xs: 2, md: 3 },
+          py: { xs: 1.25, md: 1.5 },
+          mb: 4,
+          bgcolor: cardBg,
+          borderRadius: 3,
+        }}
+      >
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 400,
+            fontSize: { xs: '1rem', md: '1.1375rem' },
+            color: '#828690',
+          }}
+        >
+          Roles y Permisos
+        </Typography>
+      </Box>
+
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
           <CircularProgress sx={{ color: taxiMonterricoColors.green }} />
         </Box>
       ) : error ? (
-        <Box sx={{ 
-          borderRadius: 3, 
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0,0,0,0.3)' 
-            : '0 4px 12px rgba(46, 125, 50, 0.08)',
-          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-          border: `1px solid ${theme.palette.divider}`,
-          p: 3,
-        }}>
-          <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>
-        </Box>
+        <Alert severity="error" sx={{ borderRadius: 2, mx: { xs: 2, md: 3 } }}>{error}</Alert>
       ) : (
-        <UnifiedTable
-          title="Roles y Permisos"
-          actions={null}
-          header={null}
-          rows={
-            roles.length === 0 ? (
-              <Box />
-            ) : (
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    md: 'repeat(2, 1fr)',
-                  },
-                  gap: 3,
-                  p: { xs: 2, md: 3 },
-                }}
-              >
-          {roles.map((role) => (
-            <Card 
-              key={role.id} 
-              sx={{ 
-                height: '100%',
-                borderRadius: 3, 
-                boxShadow: theme.palette.mode === 'dark' 
-                  ? '0 4px 12px rgba(0,0,0,0.3)' 
-                  : '0 4px 12px rgba(46, 125, 50, 0.08)',
-                bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                border: `1px solid ${theme.palette.divider}`,
+        <Box
+          sx={{
+            mx: 0,
+            borderRadius: 3,
+            overflow: 'hidden',
+            bgcolor: cardBg,
+          }}
+        >
+          <Box sx={{ overflowX: 'auto', px: { xs: 2.5, md: 3 }, py: { xs: 2, md: 2.5 } }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: `300px repeat(${roles.length}, minmax(160px, 1fr))`,
+                minWidth: `${300 + roles.length * 160}px`,
               }}
             >
-              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 700,
-                        fontSize: { xs: '1rem', md: '1.25rem' },
-                        color: theme.palette.text.primary,
-                        mb: 0.5,
-                      }}
-                    >
-                      {getRoleDisplayName(role.name)}
-                    </Typography>
-                    {role.description && (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: theme.palette.text.secondary, 
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
-                        }}
-                      >
-                        {role.description}
-                      </Typography>
-                    )}
-                  </Box>
-                  <Chip 
-                    label={`${role.userCount} ${role.userCount === 1 ? 'usuario' : 'usuarios'}`} 
-                    size="small" 
-                    sx={{
-                      bgcolor: `${taxiMonterricoColors.green}20`,
-                      color: taxiMonterricoColors.green,
-                      borderColor: taxiMonterricoColors.green,
-                      fontWeight: 600,
-                      fontSize: { xs: '0.7rem', md: '0.75rem' },
-                      height: { xs: 24, md: 28 },
-                    }}
-                    variant="outlined"
-                  />
-                </Box>
-
-                <Typography 
-                  variant="subtitle2" 
-                  sx={{ 
-                    fontWeight: 700, 
-                    mb: 1.5, 
-                    mt: 2,
-                    fontSize: { xs: '0.875rem', md: '1rem' },
-                    color: theme.palette.text.primary,
+              {/* Header row with search */}
+              <Box
+                sx={{
+                  position: 'sticky',
+                  left: 0,
+                  zIndex: 3,
+                  bgcolor: headerBg,
+                  pl: { xs: 2, md: 2.5 },
+                  pr: 2,
+                  py: 1.25,
+                  display: 'flex',
+                  alignItems: 'center',
+                  borderBottom: `1px solid ${theme.palette.divider}`,
+                }}
+              >
+                <TextField
+                  size="small"
+                  placeholder="Buscar módulo o permiso..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  variant="outlined"
+                  fullWidth
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search sx={{ fontSize: 18, color: theme.palette.text.disabled }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      fontSize: '0.875rem',
+                      borderRadius: 2,
+                      bgcolor: 'transparent',
+                      '& fieldset': { border: 'none' },
+                      '& input::placeholder': {
+                        color: theme.palette.text.secondary,
+                        opacity: 0.7,
+                      },
+                    },
+                  }}
+                />
+              </Box>
+              {roles.map((role) => (
+                <Box
+                  key={role.id}
+                  sx={{
+                    bgcolor: headerBg,
+                    px: 2,
+                    py: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    borderBottom: `1px solid ${theme.palette.divider}`,
+                    borderLeft: `1px solid ${theme.palette.divider}`,
                   }}
                 >
-                  Permisos:
-                </Typography>
-
-                <TableContainer sx={{ borderRadius: 1.5, overflow: 'hidden' }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow sx={{
-                        background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
-                        borderBottom: `2px solid ${taxiMonterricoColors.greenLight}`,
-                        '& .MuiTableCell-head': {
-                          borderBottom: 'none',
-                          fontWeight: 700,
-                        },
-                      }}>
-                        <TableCell sx={{ fontWeight: 600, width: '70%', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1, md: 1.5 } }}>Permiso</TableCell>
-                        <TableCell sx={{ fontWeight: 600, textAlign: 'center', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1, md: 1.5 } }}>Estado</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {role.permissions.map((permission) => (
-                        <TableRow key={permission.key}>
-                          <TableCell sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1, md: 1.5 } }}>
-                            {permission.name}
-                          </TableCell>
-                          <TableCell align="center" sx={{ py: { xs: 1, md: 1.5 } }}>
-                            {permission.granted ? (
-                              <Chip
-                                icon={<CheckCircle sx={{ fontSize: 16 }} />}
-                                label="Concedido"
-                                size="small"
-                                sx={{
-                                  bgcolor: `${taxiMonterricoColors.green}20`,
-                                  color: taxiMonterricoColors.green,
-                                  borderColor: taxiMonterricoColors.green,
-                                  fontWeight: 600,
-                                  fontSize: { xs: '0.7rem', md: '0.75rem' },
-                                  height: { xs: 24, md: 28 },
-                                }}
-                                variant="outlined"
-                              />
-                            ) : (
-                              <Chip
-                                icon={<Cancel sx={{ fontSize: 16 }} />}
-                                label="Denegado"
-                                size="small"
-                                sx={{
-                                  bgcolor: theme.palette.mode === 'dark' 
-                                    ? 'rgba(255, 255, 255, 0.05)' 
-                                    : 'rgba(0, 0, 0, 0.02)',
-                                  color: theme.palette.text.secondary,
-                                  borderColor: theme.palette.divider,
-                                  fontWeight: 600,
-                                  fontSize: { xs: '0.7rem', md: '0.75rem' },
-                                  height: { xs: 24, md: 28 },
-                                }}
-                                variant="outlined"
-                              />
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </CardContent>
-            </Card>
+                  <Typography sx={{ fontWeight: 400, fontSize: '0.9375rem', color: theme.palette.text.primary, textAlign: 'center' }}>
+                    {ROLE_DISPLAY_NAMES[role.name] || role.name}
+                  </Typography>
+                  <Chip
+                    label={`${role.userCount} ${role.userCount === 1 ? 'usuario' : 'usuarios'}`}
+                    size="small"
+                    sx={{
+                      bgcolor: `${taxiMonterricoColors.green}15`,
+                      color: taxiMonterricoColors.green,
+                      fontWeight: 500,
+                      fontSize: '0.7rem',
+                      height: 22,
+                    }}
+                  />
+                </Box>
               ))}
-              </Box>
-            )
-          }
-          emptyState={
-            roles.length === 0 ? (
-              <Box sx={{ py: 8, textAlign: 'center' }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+
+              {/* Module sections with permission rows */}
+              {filteredSections.map((section) => (
+                <React.Fragment key={section.module}>
+                  {/* Module header row */}
                   <Box
                     sx={{
-                      width: 120,
-                      height: 120,
-                      borderRadius: '50%',
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.05)' 
-                        : '#F3F4F6',
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 2,
+                      bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                      pl: { xs: 3, md: 4 },
+                      pr: 2,
+                      py: 1.5,
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '64px',
-                      lineHeight: 1,
+                      borderBottom: `1px solid ${theme.palette.divider}`,
                     }}
                   >
-                    🔒
-                  </Box>
-                  <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontWeight: 600,
-                        color: theme.palette.text.primary,
-                        mb: 1,
-                        fontSize: { xs: '1rem', md: '1.125rem' },
-                      }}
-                    >
-                      No hay roles registrados
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        color: theme.palette.text.secondary,
-                        lineHeight: 1.6,
-                        fontSize: { xs: '0.875rem', md: '0.9375rem' },
-                      }}
-                    >
-                      No se encontraron roles en el sistema.
+                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: isDark ? theme.palette.text.primary : '#333' }}>
+                      {section.module}
                     </Typography>
                   </Box>
-                </Box>
-              </Box>
-            ) : null
-          }
-        />
+                  {roles.map((role, idx) => (
+                    <Box
+                      key={`${section.module}-header-${role.id}`}
+                      sx={{
+                        bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                        borderBottom: `1px solid ${theme.palette.divider}`,
+                        ...(idx === 0 && { borderLeft: `1px solid ${theme.palette.divider}` }),
+                      }}
+                    />
+                  ))}
+
+                  {/* Permission rows under this module */}
+                  {section.perms.map((perm) => (
+                    <React.Fragment key={`${section.module}-${perm.key}`}>
+                      <Box
+                        sx={{
+                          position: 'sticky',
+                          left: 0,
+                          zIndex: 2,
+                          bgcolor: stickyColBg,
+                          pl: { xs: 5, md: 6 },
+                          pr: 2,
+                          py: 1.75,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          borderBottom: `1px solid ${theme.palette.divider}`,
+                          '&:hover': { bgcolor: rowHoverBg },
+                          transition: 'background-color 0.15s ease',
+                        }}
+                      >
+                        <Typography sx={{ fontSize: '0.875rem', color: isDark ? theme.palette.text.primary : '#444', fontWeight: 400 }}>
+                          {perm.label}
+                        </Typography>
+                        {PERMISSION_DESCRIPTIONS[perm.key] && (
+                          <Tooltip title={PERMISSION_DESCRIPTIONS[perm.key]} arrow placement="right">
+                            <Info sx={{ fontSize: 15, color: theme.palette.text.disabled, cursor: 'help', flexShrink: 0 }} />
+                          </Tooltip>
+                        )}
+                      </Box>
+                      {roles.map((role) => {
+                        const granted = role.permissions.find(p => p.key === perm.key)?.granted || false;
+                        return (
+                          <Box
+                            key={`${role.id}-${section.module}-${perm.key}`}
+                            sx={{
+                              px: 2,
+                              py: 1.75,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderBottom: `1px solid ${theme.palette.divider}`,
+                              borderLeft: `1px solid ${theme.palette.divider}`,
+                              '&:hover': { bgcolor: rowHoverBg },
+                              transition: 'background-color 0.15s ease',
+                            }}
+                          >
+                            <Checkbox
+                              checked={granted}
+                              disabled
+                              size="small"
+                              sx={{
+                                p: 0,
+                                color: theme.palette.divider,
+                                '&.Mui-checked': {
+                                  color: taxiMonterricoColors.green,
+                                },
+                                '&.Mui-disabled': {
+                                  color: granted ? taxiMonterricoColors.green : theme.palette.divider,
+                                },
+                              }}
+                            />
+                          </Box>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </React.Fragment>
+              ))}
+            </Box>
+          </Box>
+        </Box>
       )}
     </Box>
   );
