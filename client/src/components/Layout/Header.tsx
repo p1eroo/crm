@@ -270,7 +270,7 @@ const Header: React.FC = () => {
                 bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
                 }}
               >
-                <Tag size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />
+                <Tag size={22} color={theme.palette.text.secondary} strokeWidth={1.5} />
               </IconButton>
             </Tooltip>
 
@@ -287,7 +287,7 @@ const Header: React.FC = () => {
                   bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
                 }}
               >
-                {mode === 'light' ? <Moon size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} /> : <Sun size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />}
+                {mode === 'light' ? <Moon size={22} color={theme.palette.text.secondary} strokeWidth={1.5} /> : <Sun size={22} color={theme.palette.text.secondary} strokeWidth={1.5} />}
               </IconButton>
             </Tooltip>
 
@@ -307,7 +307,7 @@ const Header: React.FC = () => {
                 bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
                 }}
               >
-                <Settings size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />
+                <Settings size={22} color={theme.palette.text.secondary} strokeWidth={1.5} />
               </IconButton>
             </Tooltip>
 
@@ -484,9 +484,9 @@ const Header: React.FC = () => {
             }}
           >
             {sidebarOpen && !sidebarCollapsed ? (
-              <ArrowLeft size={24} color={theme.palette.mode === 'dark' ? '#ffffff' : taxiMonterricoColors.green} strokeWidth={1} />
+              <ArrowLeft size={24} color={theme.palette.text.secondary} strokeWidth={1.5} />
             ) : (
-              <ArrowRight size={24} color={theme.palette.mode === 'dark' ? '#ffffff' : taxiMonterricoColors.green} strokeWidth={1} />
+              <ArrowRight size={24} color={theme.palette.text.secondary} strokeWidth={1.5} />
             )}
           </IconButton>
         </Box>
@@ -522,9 +522,9 @@ const Header: React.FC = () => {
             }}
           >
             {sidebarOpen && !sidebarCollapsed ? (
-              <ArrowLeft size={32} color={theme.palette.mode === 'dark' ? '#ffffff' : taxiMonterricoColors.green} strokeWidth={1} />
+              <ArrowLeft size={32} color={theme.palette.text.secondary} strokeWidth={1.5} />
             ) : (
-              <ArrowRight size={32} color={theme.palette.mode === 'dark' ? '#ffffff' : taxiMonterricoColors.green} strokeWidth={1} />
+              <ArrowRight size={32} color={theme.palette.text.secondary} strokeWidth={1.5} />
             )}
           </IconButton>
         </Box>
@@ -546,7 +546,7 @@ const Header: React.FC = () => {
               bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
             }}
           >
-            <Tag size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />
+            <Tag size={22} color={theme.palette.text.secondary} strokeWidth={1.5} />
           </IconButton>
         </Tooltip>
 
@@ -563,7 +563,7 @@ const Header: React.FC = () => {
               bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
             }}
           >
-            {mode === 'light' ? <Moon size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} /> : <Sun size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />}
+            {mode === 'light' ? <Moon size={22} color={theme.palette.text.secondary} strokeWidth={1.5} /> : <Sun size={22} color={theme.palette.text.secondary} strokeWidth={1.5} />}
           </IconButton>
         </Tooltip>
 
@@ -583,7 +583,7 @@ const Header: React.FC = () => {
               bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
             }}
           >
-            <Settings size={22} color={theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary} strokeWidth={1} />
+            <Settings size={22} color={theme.palette.text.secondary} strokeWidth={1.5} />
           </IconButton>
         </Tooltip>
 

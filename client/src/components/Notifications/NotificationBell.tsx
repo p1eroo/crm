@@ -139,8 +139,8 @@ export const NotificationBell: React.FC = () => {
           >
             <Bell
               size={22}
-              strokeWidth={1}
-              color={panelOpen ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary)}
+              strokeWidth={1.5}
+              color={panelOpen ? taxiMonterricoColors.green : theme.palette.text.secondary}
               style={{
                 transition: 'all 0.2s ease',
                 ...(panelOpen && { transform: 'rotate(10deg)' }),

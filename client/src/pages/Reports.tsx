@@ -877,7 +877,7 @@ const Reports: React.FC = () => {
           mt: 0,
           mb: 4,
           bgcolor: reportsCardBg,
-          borderRadius: 3,
+          borderRadius: 2,
         }}
       >
         <Typography

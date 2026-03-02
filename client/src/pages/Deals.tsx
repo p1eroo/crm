@@ -673,7 +673,7 @@ const Deals: React.FC = () => {
           py: { xs: 1.25, md: 1.5 },
           mb: 4,
           bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-          borderRadius: 3,
+          borderRadius: 2,
         }}
       >
         <Typography 

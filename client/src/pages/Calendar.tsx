@@ -693,7 +693,7 @@ const Calendar: React.FC = () => {
           p: { xs: 2, md: 3 },
           mb: 4,
           bgcolor: theme.palette.mode === "light" ? "#fafafa" : "#1c252e",
-          borderRadius: 3,
+          borderRadius: 2,
         }}
       >
         <Typography

@@ -148,7 +148,7 @@ const adminMenuItems = [
             }}
             aria-label="Cerrar menú"
           >
-            <X size={20} strokeWidth={1} />
+            <X size={20} strokeWidth={1.5} />
           </IconButton>
         )}
         {collapsed ? (
@@ -245,17 +245,17 @@ const adminMenuItems = [
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                       <ListItemIcon sx={{ minWidth: collapsed ? 'auto' : 36, justifyContent: 'center', margin: collapsed ? '0 0 4px 0' : 0, display: 'flex', alignItems: 'center', color: isSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : theme.palette.text.secondary }}>
-                        <Mail size={24} strokeWidth={1} />
+                        <Mail size={24} strokeWidth={1.5} />
                       </ListItemIcon>
                       {!collapsed && (
-                        <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 600, color: isSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : theme.palette.text.secondary, ml: 0.8 }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 500, color: isSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : theme.palette.text.secondary, ml: 0.8 }}>
                           Correo
                         </Typography>
                       )}
                     </Box>
-                    {!collapsed && (correoExpanded ? <ChevronDown size={18} strokeWidth={1} style={{ color: theme.palette.text.secondary }} /> : <ChevronRight size={18} strokeWidth={1} style={{ color: theme.palette.text.secondary }} />)}
+                    {!collapsed && (correoExpanded ? <ChevronDown size={18} strokeWidth={1.5} style={{ color: theme.palette.text.secondary }} /> : <ChevronRight size={18} strokeWidth={1.5} style={{ color: theme.palette.text.secondary }} />)}
                     {collapsed && (
-                      <Typography variant="caption" sx={{ fontSize: '0.625rem', fontWeight: 600, color: isSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : theme.palette.text.secondary, textAlign: 'center', mt: 0.25 }}>Correo</Typography>
+                      <Typography variant="caption" sx={{ fontSize: '0.625rem', fontWeight: 500, color: isSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : theme.palette.text.secondary, textAlign: 'center', mt: 0.25 }}>Correo</Typography>
                     )}
                   </ListItemButton>
                   {!collapsed && correoExpanded && item.subItems && item.subItems.map((sub: { text: string; path: string }, subIndex: number) => {
@@ -284,7 +284,7 @@ const adminMenuItems = [
                           '&:not(.Mui-selected)': { color: theme.palette.text.secondary, backgroundColor: 'transparent' },
                         }}
                       >
-                        <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 600, color: subSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : 'inherit' }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 500, color: subSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : 'inherit' }}>
                           {sub.text}
                         </Typography>
                       </ListItemButton>
@@ -345,9 +345,9 @@ const adminMenuItems = [
                     : theme.palette.text.secondary,
                 }}
               >
-                {item.text === 'Dashboard' ? <ChartPie size={24} strokeWidth={1} /> : item.text === 'Contactos' ? <ContactRound size={24} strokeWidth={1} /> : item.text === 'Empresas' ? <Building2 size={24} strokeWidth={1} /> : item.text === 'Negocios' ? <CircleDollarSign size={24} strokeWidth={1} /> : item.text === 'Tareas' ? <ClipboardList size={24} strokeWidth={1} /> : item.text === 'Calendario' ? <CalendarDays size={24} strokeWidth={1} /> : item.text === 'Reportes' ? <FileChartColumn size={24} strokeWidth={1} /> : React.createElement(item.icon as React.ComponentType<{ size?: number; strokeWidth?: number }>, {
+                {item.text === 'Dashboard' ? <ChartPie size={24} strokeWidth={1.5} /> : item.text === 'Contactos' ? <ContactRound size={24} strokeWidth={1.5} /> : item.text === 'Empresas' ? <Building2 size={24} strokeWidth={1.5} /> : item.text === 'Negocios' ? <CircleDollarSign size={24} strokeWidth={1.5} /> : item.text === 'Tareas' ? <ClipboardList size={24} strokeWidth={1.5} /> : item.text === 'Calendario' ? <CalendarDays size={24} strokeWidth={1.5} /> : item.text === 'Reportes' ? <FileChartColumn size={24} strokeWidth={1.5} /> : React.createElement(item.icon as React.ComponentType<{ size?: number; strokeWidth?: number }>, {
                   size: 24,
-                  strokeWidth: 1
+                  strokeWidth: 1.5
                 })}
               </ListItemIcon>
               {!collapsed && (
@@ -355,7 +355,7 @@ const adminMenuItems = [
                   variant="body2"
                   sx={{
                     fontSize: '0.875rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     color: isSelected 
                       ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                       : theme.palette.text.secondary,
@@ -370,7 +370,7 @@ const adminMenuItems = [
                   variant="caption"
                   sx={{
                     fontSize: '0.625rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     color: isSelected 
                       ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                       : theme.palette.text.secondary,
@@ -464,14 +464,14 @@ const adminMenuItems = [
                   : '#5a5c61',
               }}
             >
-              <UsersRound size={24} strokeWidth={1} />
+              <UsersRound size={24} strokeWidth={1.5} />
             </ListItemIcon>
             {!collapsed && (
               <Typography
                 variant="body2"
                 sx={{
                   fontSize: '0.875rem',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   color: location.pathname === '/users' 
                     ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                     : '#5a5c61',
@@ -486,7 +486,7 @@ const adminMenuItems = [
                 variant="caption"
                 sx={{
                   fontSize: '0.625rem',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   color: location.pathname === '/users' 
                     ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                     : '#5a5c61',
@@ -567,9 +567,9 @@ const adminMenuItems = [
                         : '#5a5c61',
                     }}
                   >
-                    {item.text === 'Dashboard' ? <ChartPie size={24} strokeWidth={1} /> : item.text === 'Contactos' ? <ContactRound size={24} strokeWidth={1} /> : item.text === 'Empresas' ? <Building2 size={24} strokeWidth={1} /> : item.text === 'Negocios' ? <CircleDollarSign size={24} strokeWidth={1} /> : item.text === 'Tareas' ? <ClipboardList size={24} strokeWidth={1} /> : item.text === 'Calendario' ? <CalendarDays size={24} strokeWidth={1} /> : item.text === 'Correos' ? <Mail size={24} strokeWidth={1} /> : item.text === 'Reportes' ? <FileChartColumn size={24} strokeWidth={1} /> : item.text === 'Logs del Sistema' ? <FileClock size={24} strokeWidth={1} /> : item.text === 'Roles y Permisos' ? <ShieldUser size={24} strokeWidth={1} /> : React.createElement(item.icon as React.ComponentType<{ size?: number; strokeWidth?: number }>, {
+                    {item.text === 'Dashboard' ? <ChartPie size={24} strokeWidth={1.5} /> : item.text === 'Contactos' ? <ContactRound size={24} strokeWidth={1.5} /> : item.text === 'Empresas' ? <Building2 size={24} strokeWidth={1.5} /> : item.text === 'Negocios' ? <CircleDollarSign size={24} strokeWidth={1.5} /> : item.text === 'Tareas' ? <ClipboardList size={24} strokeWidth={1.5} /> : item.text === 'Calendario' ? <CalendarDays size={24} strokeWidth={1.5} /> : item.text === 'Correos' ? <Mail size={24} strokeWidth={1.5} /> : item.text === 'Reportes' ? <FileChartColumn size={24} strokeWidth={1.5} /> : item.text === 'Logs del Sistema' ? <FileClock size={24} strokeWidth={1.5} /> : item.text === 'Roles y Permisos' ? <ShieldUser size={24} strokeWidth={1.5} /> : React.createElement(item.icon as React.ComponentType<{ size?: number; strokeWidth?: number }>, {
                       size: 24,
-                      strokeWidth: 1
+                      strokeWidth: 1.5
                     })}
                   </ListItemIcon>
                   {!collapsed && (
@@ -577,7 +577,7 @@ const adminMenuItems = [
                       variant="body2"
                       sx={{
                         fontSize: '0.875rem',
-                        fontWeight: 600,
+                        fontWeight: 500,
                         color: isSelected 
                           ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                           : '#5a5c61',
@@ -592,7 +592,7 @@ const adminMenuItems = [
                       variant="caption"
                       sx={{
                         fontSize: '0.625rem',
-                        fontWeight: 600,
+                        fontWeight: 500,
                         color: isSelected 
                           ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                           : '#5a5c61',

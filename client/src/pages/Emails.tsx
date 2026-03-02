@@ -462,10 +462,11 @@ const Emails: React.FC = () => {
   // Si no hay cuenta conectada, mostrar solo la vista de conexión
   if (isNoAccountError && !loading) {
     return (
-      <Box sx={{ flex: 1, pb: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <Box sx={{ flex: 1, pb: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: theme.palette.background.default }}>
         <Paper
+          elevation={0}
           sx={{
-            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent',
+            bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
             borderRadius: 2,
             px: 6,
             py: 8,
@@ -566,7 +567,32 @@ const Emails: React.FC = () => {
   }
 
   return (
-    <Box sx={{ flex: 1, pb: 1, display: 'flex' }}>
+    <Box sx={{ flex: 1, pb: 1, display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+          px: { xs: 2, md: 3 },
+          py: { xs: 1.25, md: 1.5 },
+          mb: 4,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
+          borderRadius: 2,
+        }}
+      >
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 400,
+            fontSize: { xs: '1rem', md: '1.1375rem' },
+            color: '#828690',
+          }}
+        >
+          Correo
+        </Typography>
+      </Box>
       <Paper
         elevation={0}
         sx={{
@@ -580,8 +606,8 @@ const Emails: React.FC = () => {
           gap: 0,
           overflow: 'hidden',
           width: '100%',
-          maxWidth: '1400px',
-          mx: 'auto',
+          bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
+          boxShadow: 'none',
           minHeight: 'calc(100vh - 200px)',
         }}
       >
@@ -604,15 +630,14 @@ const Emails: React.FC = () => {
           <Button
             variant="contained"
             onClick={() => setComposeOpen(true)}
-            startIcon={<Send />}
             sx={{
               bgcolor: taxiMonterricoColors.green,
               color: 'white',
               textTransform: 'none',
               px: 2,
-              py: 1.25,
+              py: 0.75,
               mt: 1,
-              borderRadius: 2,
+              borderRadius: 1.5,
               width: '85%',
               alignSelf: 'center',
               fontWeight: 600,
