@@ -16,20 +16,31 @@ import {
   Paper,
   Avatar,
   Dialog,
+  Checkbox,
+  Menu,
+  MenuItem,
 } from '@mui/material';
 import {
   Refresh,
   Search,
-  Close,
   ChevronLeft,
   ChevronRight,
   Star,
+  StarBorder,
   Send,
   ExpandMore,
   ExpandLess,
-  MarkEmailRead,
-  MarkEmailUnread,
   Email as EmailIcon,
+  LocalOffer,
+  Inbox,
+  ArrowDropDown,
+  MoreVert,
+  Add,
+  AttachFile,
+  InsertDriveFile,
+  PictureAsPdf,
+  Image as ImageIcon,
+  Download,
 } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
 import { Mail } from 'lucide-react';
@@ -37,7 +48,7 @@ import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 import api from '../config/api';
 import EmailComposer from '../components/EmailComposer';
-import RichTextEditor from '../components/RichTextEditor';
+import RichTextEditor, { AttachmentFile } from '../components/RichTextEditor';
 
 interface EmailMessage {
   id: string;
@@ -49,6 +60,8 @@ interface EmailMessage {
   subject: string;
   date: string;
   labelIds: string[];
+  hasAttachments?: boolean;
+  attachmentNames?: string[];
 }
 
 interface FolderCount {
@@ -59,6 +72,18 @@ interface FolderCount {
 const Emails: React.FC = () => {
   const theme = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectMenuAnchor, setSelectMenuAnchor] = useState<null | HTMLElement>(null);
+  const [labelMenuAnchor, setLabelMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
+  const [addLabelOpen, setAddLabelOpen] = useState(false);
+  const [newLabelName, setNewLabelName] = useState('');
+  const [newLabelColor, setNewLabelColor] = useState('#4285f4');
+  const LABEL_COLORS = ['#4285f4', '#ea4335', '#fbbc04', '#34a853', '#a142f4'];
+  const [customLabels, setCustomLabels] = useState<{ name: string; color: string }[]>([
+    { name: 'Personal', color: '#4285f4' },
+    { name: 'Trabajo', color: '#1a73e8' },
+  ]);
+  const emailsPerPage = 13;
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -70,17 +95,17 @@ const Emails: React.FC = () => {
   const [emailDetail, setEmailDetail] = useState<any>(null);
   const [searchDebounce, setSearchDebounce] = useState<NodeJS.Timeout | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [hasNextPage, setHasNextPage] = useState(false);
+
   const [isReplying, setIsReplying] = useState(false);
   const [replySubject, setReplySubject] = useState('');
   const [replyBody, setReplyBody] = useState('');
+  const [replyAttachments, setReplyAttachments] = useState<AttachmentFile[]>([]);
   const [sendingReply, setSendingReply] = useState(false);
   const [replyError, setReplyError] = useState('');
   const [threadMessages, setThreadMessages] = useState<any[]>([]);
   const [loadingThread, setLoadingThread] = useState(false);
   const [collapsedMessages, setCollapsedMessages] = useState<Set<string>>(new Set());
   const [connectingEmail, setConnectingEmail] = useState(false);
-  const emailsPerPage = 20;
 
   const fetchFolderCounts = useCallback(async () => {
     try {
@@ -120,8 +145,30 @@ const Emails: React.FC = () => {
           });
         }
         if (response) {
-          setEmails(response.data.messages || []);
-          setHasNextPage(!!response.data.nextPageToken);
+          const realEmails = response.data.messages || [];
+          const mockEmails: EmailMessage[] = [
+            { id: 'mock-1', threadId: 't1', from: 'María García <maria.garcia@empresa.com>', to: '', subject: 'Reunión de proyecto', snippet: 'Hola equipo, les confirmo la reunión del martes a las 10am para revisar los avances del proyecto', date: '2026-02-22T14:30:00Z', labelIds: ['INBOX', 'UNREAD'] },
+            { id: 'mock-2', threadId: 't2', from: 'Carlos López <carlos.lopez@ventas.com>', to: '', subject: 'Propuesta comercial Q1', snippet: 'Adjunto la propuesta comercial actualizada para el primer trimestre con los nuevos precios', date: '2026-02-22T11:15:00Z', labelIds: ['INBOX'] },
+            { id: 'mock-3', threadId: 't3', from: 'Ana Torres <ana.torres@rrhh.com>', to: '', subject: 'Actualización de políticas', snippet: 'Estimados, se han actualizado las políticas internas de la empresa. Por favor revisar el documento', date: '2026-02-21T16:45:00Z', labelIds: ['INBOX', 'UNREAD', 'STARRED'] },
+            { id: 'mock-4', threadId: 't4', from: 'Pedro Ramírez <pedro@logistica.com>', to: '', subject: 'Envío pendiente #4521', snippet: 'El envío número 4521 se encuentra en tránsito y llegará mañana por la tarde según tracking', date: '2026-02-21T09:20:00Z', labelIds: ['INBOX'] },
+            { id: 'mock-5', threadId: 't5', from: 'Sofía Mendoza <sofia.m@marketing.com>', to: '', subject: 'Campaña redes sociales', snippet: 'Los resultados de la campaña de febrero superaron las expectativas con un 35% más de engagement', date: '2026-02-20T18:00:00Z', labelIds: ['INBOX', 'UNREAD'] },
+            { id: 'mock-6', threadId: 't6', from: 'Roberto Díaz <roberto@finanzas.com>', to: '', subject: 'Reporte mensual de gastos', snippet: 'Aquí les comparto el reporte de gastos del mes de enero para su revisión y aprobación', date: '2026-02-20T10:30:00Z', labelIds: ['INBOX'] },
+            { id: 'mock-7', threadId: 't7', from: 'Laura Vega <laura.vega@soporte.com>', to: '', subject: 'Ticket #892 resuelto', snippet: 'El ticket de soporte #892 ha sido resuelto exitosamente. El cliente confirmó la solución', date: '2026-02-19T15:10:00Z', labelIds: ['INBOX', 'STARRED'] },
+            { id: 'mock-8', threadId: 't8', from: 'Diego Herrera <diego@desarrollo.com>', to: '', subject: 'Deploy v2.5 completado', snippet: 'El deployment de la versión 2.5 se completó sin errores. Todos los tests pasaron correctamente', date: '2026-02-19T08:45:00Z', labelIds: ['INBOX', 'UNREAD'] },
+            { id: 'mock-9', threadId: 't9', from: 'Valentina Cruz <vale@diseño.com>', to: '', subject: 'Mockups nueva landing', snippet: 'Les comparto los mockups de la nueva landing page para revisión del equipo de producto', date: '2026-02-18T13:20:00Z', labelIds: ['INBOX'] },
+            { id: 'mock-10', threadId: 't10', from: 'Andrés Morales <andres@partners.com>', to: '', subject: 'Alianza estratégica', snippet: 'Nos gustaría explorar una posible alianza estratégica entre nuestras empresas para el 2026', date: '2026-02-18T09:00:00Z', labelIds: ['INBOX', 'UNREAD'] },
+            { id: 'mock-11', threadId: 't11', from: 'Camila Rojas <camila@contabilidad.com>', to: '', subject: 'Facturas pendientes febrero', snippet: 'Les recuerdo que hay 3 facturas pendientes de aprobación que vencen esta semana', date: '2026-02-17T16:30:00Z', labelIds: ['INBOX'] },
+            { id: 'mock-12', threadId: 't12', from: 'Fernando Castillo <fer@tecnologia.com>', to: '', subject: 'Migración base de datos', snippet: 'La migración de la base de datos se programó para el sábado a las 2am con ventana de 4 horas', date: '2026-02-17T11:00:00Z', labelIds: ['INBOX', 'UNREAD', 'STARRED'] },
+            { id: 'mock-13', threadId: 't13', from: 'Isabella Vargas <isa@clientes.com>', to: '', subject: 'Feedback cliente VIP', snippet: 'El cliente Premium Solutions dejó un feedback muy positivo sobre el servicio recibido este mes', date: '2026-02-16T14:20:00Z', labelIds: ['INBOX'] },
+            { id: 'mock-14', threadId: 't14', from: 'Mateo Jiménez <mateo@legal.com>', to: '', subject: 'Contrato de renovación', snippet: 'Adjunto el borrador del contrato de renovación para revisión antes de enviarlo al cliente', date: '2026-02-16T09:45:00Z', labelIds: ['INBOX', 'UNREAD'] },
+            { id: 'mock-15', threadId: 't15', from: 'Luciana Peña <lu@eventos.com>', to: '', subject: 'Evento corporativo marzo', snippet: 'Confirmamos el evento corporativo para el 15 de marzo en el Hotel Central con capacidad para 200', date: '2026-02-15T17:10:00Z', labelIds: ['INBOX', 'STARRED'] },
+            { id: 'mock-16', threadId: 't16', from: 'Sebastián Ríos <seba@operaciones.com>', to: '', subject: 'Inventario actualizado', snippet: 'Se completó la actualización del inventario. Hay 12 productos con stock bajo que requieren reorden', date: '2026-02-15T10:30:00Z', labelIds: ['INBOX'] },
+            { id: 'mock-17', threadId: 't17', from: 'Daniela Ortiz <dani@capacitacion.com>', to: '', subject: 'Taller de liderazgo', snippet: 'Inscripciones abiertas para el taller de liderazgo del próximo viernes. Cupos limitados a 25', date: '2026-02-14T15:50:00Z', labelIds: ['INBOX', 'UNREAD'] },
+            { id: 'mock-18', threadId: 't18', from: 'Nicolás Salazar <nico@ventas.com>', to: '', subject: 'Meta de ventas superada', snippet: 'El equipo de ventas superó la meta mensual en un 18%. Felicitaciones a todo el equipo', date: '2026-02-14T08:15:00Z', labelIds: ['INBOX'] },
+            { id: 'mock-19', threadId: 't19', from: 'Paula Medina <paula@calidad.com>', to: '', subject: 'Auditoría interna Q1', snippet: 'Se programó la auditoría interna del primer trimestre para la segunda semana de marzo', date: '2026-02-13T13:40:00Z', labelIds: ['INBOX', 'UNREAD'] },
+            { id: 'mock-20', threadId: 't20', from: 'Gabriel Suárez <gabi@infraestructura.com>', to: '', subject: 'Mantenimiento servidores', snippet: 'Se realizará mantenimiento preventivo en los servidores principales el domingo de 1am a 5am', date: '2026-02-13T07:30:00Z', labelIds: ['INBOX', 'STARRED'] },
+          ];
+          setEmails([...realEmails, ...mockEmails]);
         }
       } catch (err: any) {
         console.error('Error fetching emails:', err);
@@ -140,18 +187,6 @@ const Emails: React.FC = () => {
     const interval = setInterval(fetchFolderCounts, 30000);
     return () => clearInterval(interval);
   }, [fetchFolderCounts]);
-
-  const handleNextPage = () => {
-    if (hasNextPage) {
-      setCurrentPage(prev => prev + 1);
-    }
-  };
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
-    }
-  };
 
   const handleRefresh = async () => {
     setLoading(true);
@@ -177,7 +212,6 @@ const Emails: React.FC = () => {
       }
       if (response) {
         setEmails(response.data.messages || []);
-        setHasNextPage(!!response.data.nextPageToken);
       }
     } catch (err: any) {
       console.error('Error fetching emails:', err);
@@ -207,15 +241,41 @@ const Emails: React.FC = () => {
   };
 
   const handleEmailClick = async (email: EmailMessage) => {
-    // Mostrar el diálogo de detalle
     setSelectedEmail(email);
     setIsReplying(false);
     setReplySubject('');
     setReplyBody('');
     setReplyError('');
+
+    if (email.id.startsWith('mock-')) {
+      const mockBody = `<p>Hola,</p><p>${email.snippet}</p><p>Saludos cordiales,<br/>${email.from.split(/[<>]/)[0].trim()}</p>`;
+      setEmailDetail({
+        id: email.id,
+        threadId: email.threadId,
+        from: email.from,
+        to: email.to,
+        subject: email.subject,
+        date: email.date,
+        body: mockBody,
+        snippet: email.snippet,
+        labelIds: email.labelIds,
+      });
+      setThreadMessages([{
+        id: email.id,
+        from: email.from,
+        to: email.to,
+        subject: email.subject,
+        date: email.date,
+        body: mockBody,
+        snippet: email.snippet,
+        labelIds: email.labelIds,
+      }]);
+      setLoadingThread(false);
+      return;
+    }
+
     setLoadingThread(true);
     try {
-      // Cargar el detalle del email y el thread completo
       const [detailResponse, threadResponse] = await Promise.all([
         api.get(`/emails/message/${email.id}`),
         api.get(`/emails/thread/${email.threadId}`),
@@ -241,19 +301,8 @@ const Emails: React.FC = () => {
     if (!selectedEmail || !emailDetail) return;
     const subject = emailDetail.subject || selectedEmail.subject || '';
     setReplySubject(subject.startsWith('Re: ') ? subject : `Re: ${subject}`);
-    
-    // Citar el mensaje original
-    const borderColor = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
-    const textColor = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)';
-    const quotedMessage = `
-      <div style="border-left: 3px solid ${borderColor}; padding-left: 10px; margin-top: 10px; color: ${textColor};">
-        <div style="margin-bottom: 5px;">
-          <strong>${extractEmail(emailDetail.from)}</strong> escribió:
-        </div>
-        <div style="white-space: pre-wrap;">${emailDetail.body || emailDetail.snippet}</div>
-      </div>
-    `;
-    setReplyBody(quotedMessage);
+    setReplyBody('');
+    setReplyAttachments([]);
     setIsReplying(true);
     setReplyError('');
   };
@@ -263,6 +312,7 @@ const Emails: React.FC = () => {
     setIsReplying(false);
     setReplySubject('');
     setReplyBody('');
+    setReplyAttachments([]);
     setReplyError('');
   };
 
@@ -290,6 +340,7 @@ const Emails: React.FC = () => {
         body: replyBody,
         threadId: selectedEmail.threadId,
         messageId: selectedEmail.id,
+        attachments: replyAttachments.map(a => ({ name: a.name, type: a.type, data: a.data })),
       };
 
       const emailResponse = await api.post('/emails/send', payload);
@@ -319,6 +370,7 @@ const Emails: React.FC = () => {
       setIsReplying(false);
       setReplySubject('');
       setReplyBody('');
+      setReplyAttachments([]);
       handleRefresh();
     } catch (err: any) {
       setReplyError(err.response?.data?.message || 'Error al enviar la respuesta');
@@ -398,64 +450,6 @@ const Emails: React.FC = () => {
       console.error("Error iniciando conexión con Google:", err);
       setError(err.response?.data?.message || "Error al conectar con Google. Por favor, intenta nuevamente.");
       setConnectingEmail(false);
-    }
-  };
-
-  const handleToggleRead = async (email: EmailMessage, e: React.MouseEvent) => {
-    e.stopPropagation(); // Evitar que se abra el email al hacer clic en el icono
-    
-    const isCurrentlyUnread = isUnread(email.labelIds);
-    const newReadState = !isCurrentlyUnread;
-
-    // Optimistic update: actualizar el estado local inmediatamente
-    setEmails(prevEmails =>
-      prevEmails.map(e =>
-        e.id === email.id
-          ? {
-              ...e,
-              labelIds: newReadState
-                ? e.labelIds.filter((id: string) => id !== 'UNREAD')
-                : [...e.labelIds, 'UNREAD'],
-            }
-          : e
-      )
-    );
-
-    try {
-      const response = await api.post(`/emails/message/${email.id}/read`, { read: newReadState });
-      
-      // Verificar que la respuesta sea exitosa
-      if (response.data && response.data.success !== false) {
-        // Actualizar el conteo si es necesario
-        if (selectedFolder === 'inbox') {
-          fetchFolderCounts();
-        }
-      } else {
-        // Si la respuesta indica error, revertir
-        throw new Error(response.data?.message || 'Error al cambiar estado');
-      }
-    } catch (error: any) {
-      console.error('Error al cambiar estado de lectura:', error);
-      
-      // Revertir el cambio si hay error
-      setEmails(prevEmails =>
-        prevEmails.map(e =>
-          e.id === email.id
-            ? {
-                ...e,
-                labelIds: isCurrentlyUnread
-                  ? e.labelIds.filter((id: string) => id !== 'UNREAD')
-                  : [...e.labelIds, 'UNREAD'],
-              }
-            : e
-        )
-      );
-      
-      // Solo mostrar error si es un error real (no un error de red menor)
-      const errorMessage = error.response?.data?.message || error.message;
-      if (errorMessage && !errorMessage.includes('Network Error')) {
-        setError('Error al cambiar el estado de lectura del correo');
-      }
     }
   };
 
@@ -567,32 +561,54 @@ const Emails: React.FC = () => {
   }
 
   return (
-    <Box sx={{ flex: 1, pb: 1, display: 'flex', flexDirection: 'column' }}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 2,
-          px: { xs: 2, md: 3 },
-          py: { xs: 1.25, md: 1.5 },
-          mb: 4,
-          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
-          borderRadius: 2,
-        }}
-      >
-        <Typography
-          variant="h5"
+    <Box sx={{ flex: 1, pb: 4, display: 'flex', flexDirection: 'column' }}>
+      {!selectedEmail && (
+        <Box
           sx={{
-            fontWeight: 400,
-            fontSize: { xs: '1rem', md: '1.1375rem' },
-            color: '#828690',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2,
+            px: { xs: 2, md: 3 },
+            py: { xs: 1.25, md: 1.5 },
+            mb: 4,
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : '#fafafa',
+            borderRadius: 2,
           }}
         >
-          Correo
-        </Typography>
-      </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 400,
+                fontSize: { xs: '1rem', md: '1.1375rem' },
+                color: '#828690',
+              }}
+            >
+              Correo
+            </Typography>
+            <Typography
+              sx={{
+                fontWeight: 400,
+                fontSize: { xs: '1rem', md: '1.1375rem' },
+                color: taxiMonterricoColors.green,
+              }}
+            >
+              /
+            </Typography>
+            <Typography
+              sx={{
+                fontWeight: 500,
+                fontSize: { xs: '1rem', md: '1.1375rem' },
+                color: taxiMonterricoColors.green,
+              }}
+            >
+              {selectedFolder === 'inbox' ? 'Buzón' : 'Favoritos'}
+            </Typography>
+          </Box>
+        </Box>
+      )}
       <Paper
         elevation={0}
         sx={{
@@ -608,7 +624,9 @@ const Emails: React.FC = () => {
           width: '100%',
           bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fafafa',
           boxShadow: 'none',
-          minHeight: 'calc(100vh - 200px)',
+          border: `1px solid ${theme.palette.divider}`,
+          maxHeight: selectedEmail ? 'calc(100vh - 120px)' : 'calc(100vh - 200px)',
+          minHeight: selectedEmail ? 'calc(100vh - 120px)' : 'calc(100vh - 200px)',
         }}
       >
       {/* Sidebar izquierdo */}
@@ -654,10 +672,10 @@ const Emails: React.FC = () => {
         </Tooltip>
 
         {/* Opciones de carpeta - estilo simple como Sidebar principal */}
-        <Box sx={{ mt: 2, mx: 1 }}>
+        <Box sx={{ mt: 2, mx: 2 }}>
           <ListItemButton
             selected={selectedFolder === 'inbox'}
-            onClick={() => { setSelectedFolder('inbox'); setCurrentPage(1); }}
+            onClick={() => { setSelectedFolder('inbox'); setCurrentPage(1); setSelectedEmail(null); setEmailDetail(null); setThreadMessages([]); }}
             sx={{
               minHeight: 44,
               borderRadius: 2,
@@ -671,22 +689,23 @@ const Emails: React.FC = () => {
                 bgcolor: theme.palette.action.hover,
               },
               '&:not(.Mui-selected)': {
-                color: theme.palette.text.secondary,
+                color: theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary,
               },
             }}
           >
-            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem', flex: 1 }}>
+            <Inbox sx={{ fontSize: 20, mr: 1, color: selectedFolder === 'inbox' ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary) }} />
+            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9375rem', flex: 1 }}>
               Inbox
             </Typography>
             {crmEmailCount > 0 && (
-              <Typography component="span" variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 600 }}>
+              <Box sx={{ bgcolor: taxiMonterricoColors.green, color: '#ffffff', borderRadius: 1, px: 0.75, py: 0.15, fontSize: '0.75rem', fontWeight: 600, minWidth: 20, textAlign: 'center' }}>
                 {crmEmailCount}
-              </Typography>
+              </Box>
             )}
           </ListItemButton>
           <ListItemButton
             selected={selectedFolder === 'starred'}
-            onClick={() => { setSelectedFolder('starred'); setCurrentPage(1); }}
+            onClick={() => { setSelectedFolder('starred'); setCurrentPage(1); setSelectedEmail(null); setEmailDetail(null); setThreadMessages([]); }}
             sx={{
               minHeight: 44,
               borderRadius: 2,
@@ -700,597 +719,954 @@ const Emails: React.FC = () => {
                 bgcolor: theme.palette.action.hover,
               },
               '&:not(.Mui-selected)': {
-                color: theme.palette.text.secondary,
+                color: theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary,
               },
             }}
           >
-            <Star sx={{ fontSize: 18, mr: 1, color: selectedFolder === 'starred' ? taxiMonterricoColors.green : theme.palette.text.secondary }} />
-            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem', flex: 1 }}>
+            <StarBorder sx={{ fontSize: 20, mr: 1, color: selectedFolder === 'starred' ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary) }} />
+            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9375rem', flex: 1 }}>
               Favoritos
             </Typography>
             {starredCount > 0 && (
-              <Typography component="span" variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 600 }}>
+              <Box sx={{ bgcolor: taxiMonterricoColors.green, color: '#ffffff', borderRadius: 1, px: 0.75, py: 0.15, fontSize: '0.75rem', fontWeight: 600, minWidth: 20, textAlign: 'center' }}>
                 {starredCount}
-              </Typography>
+              </Box>
             )}
           </ListItemButton>
+        </Box>
+
+        <Divider sx={{ my: 2, mx: 2.5 }} />
+
+        <Box sx={{ mx: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 600,
+                fontSize: '0.8125rem',
+                color: taxiMonterricoColors.green,
+                textTransform: 'uppercase',
+                letterSpacing: 1.2,
+              }}
+            >
+              Etiquetas
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => { setNewLabelName(''); setNewLabelColor('#4285f4'); setAddLabelOpen(true); }}
+              sx={{
+                p: 0.25,
+                color: taxiMonterricoColors.green,
+                '&:hover': { bgcolor: `${taxiMonterricoColors.green}15` },
+              }}
+            >
+              <Add sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1 }}>
+            {customLabels.map((label) => (
+              <Box key={label.name} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.75, px: 1, borderRadius: 1.5, cursor: 'pointer', '&:hover': { bgcolor: theme.palette.action.hover } }}>
+                <LocalOffer sx={{ fontSize: 20, color: label.color }} />
+                <Typography variant="body2" sx={{ fontSize: '0.9375rem', color: theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary }}>
+                  {label.name}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
         </Box>
       </Box>
 
       {/* Divider vertical */}
       <Divider orientation="vertical" flexItem />
 
-      {/* Área principal */}
-      <Box sx={{ 
-        flex: 1, 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: 2,
-        minWidth: 0,
-        overflow: 'hidden',
-      }}>
-        {/* Barra de búsqueda y acciones */}
-        <Box
-          sx={{
-            bgcolor: 'transparent',
-            borderRadius: 0,
-            pt: 1,
-            mb: -1,
-            px: 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0,
-          }}
-        >
-          <TextField
-            placeholder="Buscar correo"
-            value={searchTerm}
-            onChange={handleSearch}
-            size="small"
-            fullWidth
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
-                </InputAdornment>
-              ),
-            }}
+      {/* Área principal - Vista de lista (sin email seleccionado) */}
+      {!selectedEmail && (
+        <Box sx={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 0,
+          minWidth: 0,
+          overflow: 'hidden',
+        }}>
+          {/* Barra de búsqueda y acciones */}
+          <Box
             sx={{
-              '& .MuiOutlinedInput-root': {
-                fontSize: '0.875rem',
-                borderRadius: 1.5,
-                bgcolor: theme.palette.background.paper,
-                '& fieldset': {
-                  borderColor: theme.palette.divider,
-                },
-                '&:hover fieldset': {
-                  borderColor: theme.palette.text.secondary,
-                },
-                '&.Mui-focused fieldset': {
-                  borderWidth: 1,
-                  borderColor: theme.palette.primary.main,
-                },
-              },
+              bgcolor: 'transparent',
+              borderRadius: 0,
+              pt: 2.5,
+              pb: 1.5,
+              px: 2.5,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
             }}
-          />
-          <Tooltip title="Actualizar correos" arrow>
-            <IconButton
-              size="small"
-              onClick={handleRefresh}
-              disabled={loading}
-              sx={{
-                '&:hover': {
-                  bgcolor: theme.palette.action.hover,
-                },
-                '&:disabled': { opacity: 0.5 },
-              }}
-            >
-              <Refresh />
-            </IconButton>
-          </Tooltip>
-        </Box>
-
-        {/* Divider horizontal */}
-        <Divider />
-
-        {/* Lista de emails */}
-        <Box
-          sx={{
-            flex: 1,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            p: 1,
-          }}
-        >
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
-              <CircularProgress />
-            </Box>
-          ) : emails.length === 0 ? (
-            <Box sx={{ ...pageStyles.emptyState, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper, py: 8, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <Box
-                  sx={{
-                    width: 120,
-                    height: 120,
-                    borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark'
-                      ? 'rgba(255, 255, 255, 0.05)'
-                      : theme.palette.grey[100],
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    lineHeight: 1,
-                  }}
-                >
-                  <EmailIcon sx={{ fontSize: 64, color: theme.palette.text.secondary }} />
-                </Box>
-                <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 700,
-                      mb: 1,
-                      color: theme.palette.text.secondary,
-                      fontSize: { xs: '1.25rem', md: '1.5rem' },
-                    }}
-                  >
-                    No hay correos para mostrar
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: theme.palette.text.secondary,
-                      lineHeight: 1.6,
-                      fontSize: { xs: '0.875rem', md: '0.9375rem' },
-                    }}
-                  >
-                    No hay correos en esta carpeta. Usa el botón "Redactar" para crear un nuevo correo.
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-          ) : (
-            <List sx={{ 
-              p: 0, 
-              overflow: 'auto', 
-              flex: 1, 
-              minHeight: 0,
-              '& .MuiListItem-root': { px: 0 },
-            }}>
-              {emails.map((email) => {
-                const isSent = email.labelIds?.includes('SENT');
-                const displayEmail = isSent ? email.to : email.from;
-                const displayName = displayEmail.split(/[<>]/)[0].trim() || displayEmail;
-
-                return (
-                  <ListItem
-                    key={email.id}
-                    disablePadding
-                    sx={{
-                      borderBottom: `1px solid ${theme.palette.divider}`,
-                      '&:last-child': { borderBottom: 'none' },
-                      bgcolor: 'transparent',
-                      '&:hover': { bgcolor: theme.palette.action.hover },
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => handleEmailClick(email)}
-                  >
-                    <ListItemButton
-                      sx={{
-                        py: 1.25,
-                        px: 2,
-                        '&:hover': { bgcolor: 'transparent' },
-                      }}
-                    >
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 2, 
-                        width: '100%',
-                        py: 0.5,
-                      }}>
-                        <Avatar
-                          sx={{
-                            bgcolor: taxiMonterricoColors.green,
-                            width: 40,
-                            height: 40,
-                            fontSize: '0.875rem',
-                            color: 'white',
-                          }}
-                        >
-                          {getInitials(displayEmail)}
-                        </Avatar>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                fontWeight: isUnread(email.labelIds) ? 600 : 400,
-                                color: theme.palette.text.primary,
-                              }}
-                            >
-                              {displayName}
-                            </Typography>
-                            {isStarred(email.labelIds) && (
-                              <Star sx={{ fontSize: 16, color: taxiMonterricoColors.green }} />
-                            )}
-                          </Box>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: isUnread(email.labelIds) ? 600 : 400,
-                            color: theme.palette.text.primary,
-                            mb: 0.5,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {email.subject || '(Sin asunto)'}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            display: 'block',
-                          }}
-                        >
-                          {email.snippet}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-                        {/* Icono de leído/no leído */}
-                        <IconButton
-                          size="small"
-                          onClick={(e) => handleToggleRead(email, e)}
-                          sx={{
-                            position: 'relative',
-                            '&:hover': {
-                              bgcolor: theme.palette.action.hover,
-                            },
-                          }}
-                        >
-                          {isUnread(email.labelIds) ? (
-                            <MarkEmailUnread sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                          ) : (
-                            <MarkEmailRead sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                          )}
-                        </IconButton>
-                        
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {formatDate(email.date)}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </ListItemButton>
-                </ListItem>
-                );
-              })}
-            </List>
-          )}
-
-          {/* Controles de paginación */}
-          {emails.length > 0 && (
+          >
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                p: 2,
-                borderTop: `1px solid ${theme.palette.divider}`,
-                bgcolor: 'transparent',
-                flexShrink: 0,
-                mt: 'auto',
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                borderRadius: 1.5,
+                px: 0.25,
               }}
             >
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                Página {currentPage}
-                {hasNextPage && ' (más disponible)'}
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <IconButton
-                  onClick={handlePreviousPage}
-                  disabled={currentPage === 1}
-                  size="small"
-                  sx={{
-                    color: currentPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
-                    '&:hover': {
-                      bgcolor: currentPage === 1 ? 'transparent' : theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  <ChevronLeft />
-                </IconButton>
-                <IconButton
-                  onClick={handleNextPage}
-                  disabled={!hasNextPage}
-                  size="small"
-                  sx={{
-                    color: !hasNextPage ? theme.palette.action.disabled : theme.palette.text.secondary,
-                    '&:hover': {
-                      bgcolor: !hasNextPage ? 'transparent' : theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  <ChevronRight />
-                </IconButton>
-              </Box>
-            </Box>
-          )}
-        </Box>
-
-        {/* Dialog para ver detalles del email con thread completo */}
-        {selectedEmail && emailDetail && (
-          <Dialog
-            open={!!selectedEmail}
-            onClose={() => {
-              if (!isReplying) {
-                setSelectedEmail(null);
-                setEmailDetail(null);
-                setThreadMessages([]);
-                setIsReplying(false);
-                setReplySubject('');
-                setReplyBody('');
-                setCollapsedMessages(new Set());
-              }
-            }}
-            maxWidth="md"
-            fullWidth
-            PaperProps={{
-              sx: {
-                borderRadius: 2,
-                maxHeight: '90vh',
-                display: 'flex',
-                flexDirection: 'column',
-              },
-            }}
-          >
-            <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-              {/* Header del thread */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2, flexShrink: 0 }}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-                    {emailDetail.subject || '(Sin asunto)'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {threadMessages.length} {threadMessages.length === 1 ? 'mensaje' : 'mensajes'} en esta conversación
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                  {!isReplying && (
-                    <Button
-                      variant="contained"
-                      startIcon={<Send />}
-                      onClick={handleReply}
-                      sx={{
-                        bgcolor: taxiMonterricoColors.green,
-                        textTransform: 'none',
-                        '&:hover': {
-                          bgcolor: taxiMonterricoColors.green,
-                          opacity: 0.9,
-                        },
-                      }}
-                    >
-                      Responder
-                    </Button>
-                  )}
-                  <IconButton
-                    onClick={() => {
-                      if (!isReplying) {
-                        setSelectedEmail(null);
-                        setEmailDetail(null);
-                        setThreadMessages([]);
-                        setIsReplying(false);
-                        setReplySubject('');
-                        setReplyBody('');
-                        setCollapsedMessages(new Set());
-                      } else {
-                        handleCancelReply();
-                      }
-                    }}
-                  >
-                    <Close />
-                  </IconButton>
-                </Box>
-              </Box>
-              <Divider sx={{ mb: 2, flexShrink: 0 }} />
-              
-              {/* Área de scroll para los mensajes del thread */}
-              <Box
+              <Checkbox
+                size="small"
+                checked={emails.length > 0 && selectedEmails.size === emails.length}
+                indeterminate={selectedEmails.size > 0 && selectedEmails.size < emails.length}
+                onChange={() => {
+                  if (selectedEmails.size === emails.length) {
+                    setSelectedEmails(new Set());
+                  } else {
+                    setSelectedEmails(new Set(emails.map((e) => e.id)));
+                  }
+                }}
                 sx={{
-                  flex: 1,
-                  overflow: 'auto',
-                  mb: isReplying ? 2 : 0,
-                  minHeight: 0,
+                  p: 0.5,
+                  color: taxiMonterricoColors.green,
+                  '&.Mui-checked': { color: taxiMonterricoColors.green },
+                  '&.MuiCheckbox-indeterminate': { color: taxiMonterricoColors.green },
+                  '& .MuiSvgIcon-root': { fontSize: 25 },
+                }}
+              />
+              <IconButton
+                size="small"
+                onClick={(e) => setSelectMenuAnchor(e.currentTarget)}
+                sx={{
+                  p: 0.25,
+                  color: taxiMonterricoColors.green,
+                  '&:hover': { bgcolor: 'transparent' },
                 }}
               >
-                {loadingThread ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : (
-                  threadMessages.map((msg: any, index: number) => {
-                    const isCollapsed = collapsedMessages.has(msg.id);
-                    const isLastMessage = index === threadMessages.length - 1;
-                    const senderName = msg.from.split(/[<>]/)[0].trim() || extractEmail(msg.from);
-                    const senderInitials = getInitials(msg.from);
+                <ArrowDropDown sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Box>
+            <Menu
+              anchorEl={selectMenuAnchor}
+              open={Boolean(selectMenuAnchor)}
+              onClose={() => setSelectMenuAnchor(null)}
+              PaperProps={{
+                sx: {
+                  borderRadius: 2,
+                  minWidth: 140,
+                  mt: 0.5,
+                },
+              }}
+            >
+              <MenuItem onClick={() => setSelectMenuAnchor(null)} sx={{ fontSize: '0.875rem' }}>
+                Todos
+              </MenuItem>
+              <MenuItem onClick={() => setSelectMenuAnchor(null)} sx={{ fontSize: '0.875rem' }}>
+                Leídos
+              </MenuItem>
+              <MenuItem onClick={() => setSelectMenuAnchor(null)} sx={{ fontSize: '0.875rem' }}>
+                No leídos
+              </MenuItem>
+            </Menu>
+            <Tooltip title="Actualizar correos" arrow>
+              <IconButton
+                size="small"
+                onClick={handleRefresh}
+                disabled={loading}
+                sx={{
+                  bgcolor: `${taxiMonterricoColors.green}15`,
+                  borderRadius: 1.5,
+                  p: 0.75,
+                  color: taxiMonterricoColors.green,
+                  '&:hover': {
+                    bgcolor: `${taxiMonterricoColors.green}25`,
+                  },
+                  '&:disabled': { opacity: 0.5 },
+                }}
+              >
+                <Refresh sx={{ fontSize: 22 }} />
+              </IconButton>
+            </Tooltip>
+            <IconButton
+              size="small"
+              onClick={(e) => setLabelMenuAnchor(e.currentTarget)}
+              disabled={selectedEmails.size === 0}
+              sx={{
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                borderRadius: 1.5,
+                p: 0.75,
+                color: taxiMonterricoColors.green,
+                '&:hover': {
+                  bgcolor: `${taxiMonterricoColors.green}25`,
+                },
+                '&:disabled': { opacity: 0.4 },
+              }}
+            >
+              <MoreVert sx={{ fontSize: 22 }} />
+            </IconButton>
+            <Menu
+              anchorEl={labelMenuAnchor}
+              open={Boolean(labelMenuAnchor)}
+              onClose={() => setLabelMenuAnchor(null)}
+              PaperProps={{
+                sx: {
+                  borderRadius: 2,
+                  minWidth: 180,
+                  mt: 0.5,
+                },
+              }}
+            >
+              <MenuItem disabled sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary, opacity: '1 !important', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Etiquetar como
+              </MenuItem>
+              {customLabels.map((label) => (
+                <MenuItem key={label.name} onClick={() => setLabelMenuAnchor(null)} sx={{ fontSize: '0.875rem', gap: 1.5 }}>
+                  <LocalOffer sx={{ fontSize: 18, color: label.color }} />
+                  {label.name}
+                </MenuItem>
+              ))}
+            </Menu>
+            <Box sx={{ flex: 1 }} />
+            <TextField
+              placeholder="Buscar correo"
+              value={searchTerm}
+              onChange={handleSearch}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ color: theme.palette.text.secondary, fontSize: 22 }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                width: 320,
+                '& .MuiOutlinedInput-root': {
+                  fontSize: '0.875rem',
+                  borderRadius: 1.5,
+                  '& input': { py: '13px' },
+                  bgcolor: theme.palette.background.paper,
+                  '& fieldset': {
+                    borderColor: theme.palette.divider,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: theme.palette.text.secondary,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderWidth: 1,
+                    borderColor: theme.palette.primary.main,
+                  },
+                },
+              }}
+            />
+          </Box>
 
-                    return (
-                      <Box key={msg.id} sx={{ mb: 2 }}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            gap: 2,
-                            p: 2,
-                            borderRadius: 2,
-                            bgcolor: theme.palette.mode === 'dark' 
-                              ? 'rgba(255, 255, 255, 0.03)' 
-                              : 'rgba(0, 0, 0, 0.02)',
-                            border: `1px solid ${theme.palette.divider}`,
-                          }}
-                        >
-                          {/* Avatar */}
-                          <Avatar
+          {/* Lista de emails - vista de línea */}
+          <Box
+            sx={{
+              flex: 1,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              p: 1,
+            }}
+          >
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+                <CircularProgress />
+              </Box>
+            ) : emails.length === 0 ? (
+              <Box sx={{ ...pageStyles.emptyState, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper, py: 8, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <Box
+                    sx={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: '50%',
+                      bgcolor: theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.05)'
+                        : theme.palette.grey[100],
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      lineHeight: 1,
+                    }}
+                  >
+                    <EmailIcon sx={{ fontSize: 64, color: theme.palette.text.secondary }} />
+                  </Box>
+                  <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                        mb: 1,
+                        color: theme.palette.text.secondary,
+                        fontSize: { xs: '1.25rem', md: '1.5rem' },
+                      }}
+                    >
+                      No hay correos para mostrar
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        lineHeight: 1.6,
+                        fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                      }}
+                    >
+                      No hay correos en esta carpeta. Usa el botón "Redactar" para crear un nuevo correo.
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            ) : (
+              <List sx={{ 
+                p: 0, 
+                overflow: 'auto', 
+                flex: 1, 
+                minHeight: 0,
+                '& .MuiListItem-root': { px: 0 },
+              }}>
+                {emails.slice((currentPage - 1) * emailsPerPage, currentPage * emailsPerPage).map((email) => {
+                  const isSent = email.labelIds?.includes('SENT');
+                  const displayEmail = isSent ? email.to : email.from;
+                  const displayName = displayEmail.split(/[<>]/)[0].trim() || displayEmail;
+
+                  return (
+                    <ListItem
+                      key={email.id}
+                      disablePadding
+                      sx={{
+                        borderBottom: `1px solid ${theme.palette.divider}`,
+                        '&:last-child': { borderBottom: 'none' },
+                        bgcolor: 'transparent',
+                        '&:hover': { bgcolor: theme.palette.action.hover },
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => handleEmailClick(email)}
+                    >
+                      <ListItemButton
+                        sx={{
+                          py: 0.75,
+                          px: 1.5,
+                          '&:hover': { bgcolor: 'transparent' },
+                        }}
+                      >
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          width: '100%',
+                          gap: 0.5,
+                          minWidth: 0,
+                        }}>
+                          <Checkbox
+                            checked={selectedEmails.has(email.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={() => {
+                              setSelectedEmails((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(email.id)) {
+                                  next.delete(email.id);
+                                } else {
+                                  next.add(email.id);
+                                }
+                                return next;
+                              });
+                            }}
                             sx={{
-                              bgcolor: taxiMonterricoColors.green,
-                              width: 40,
-                              height: 40,
-                              color: 'white',
+                              p: 0.5,
+                              color: theme.palette.text.disabled,
+                              '&.Mui-checked': { color: taxiMonterricoColors.green },
+                              '& .MuiSvgIcon-root': { fontSize: 25 },
+                            }}
+                          />
+                          <IconButton
+                            size="small"
+                            onClick={(e) => { e.stopPropagation(); }}
+                            sx={{ p: 0.5 }}
+                          >
+                            {isStarred(email.labelIds) ? (
+                              <Star sx={{ fontSize: 25, color: '#f4b400' }} />
+                            ) : (
+                              <StarBorder sx={{ fontSize: 25, color: theme.palette.text.disabled }} />
+                            )}
+                          </IconButton>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: isUnread(email.labelIds) ? 600 : 400,
+                              color: theme.palette.mode === 'dark' ? '#ffffff' : '#333',
+                              whiteSpace: 'nowrap',
                               flexShrink: 0,
+                              fontSize: '0.9375rem',
+                              minWidth: 180,
+                              maxWidth: 250,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              ml: 0.5,
+                              mr: 8,
                             }}
                           >
-                            {senderInitials}
-                          </Avatar>
+                            {displayName}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            component="span"
+                            sx={{
+                              fontWeight: isUnread(email.labelIds) ? 600 : 400,
+                              color: '#828690',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              fontSize: '0.9375rem',
+                              flexShrink: 0,
+                              maxWidth: 300,
+                            }}
+                          >
+                            {email.subject || '(Sin asunto)'}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            component="span"
+                            sx={{
+                              color: '#828690',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              fontSize: '0.9375rem',
+                              flex: 1,
+                              minWidth: 0,
+                            }}
+                          >
+                            {' - '}{email.snippet}
+                          </Typography>
+                          {email.hasAttachments && (
+                            <AttachFile sx={{ fontSize: 16, color: '#828690', flexShrink: 0, ml: 0.5, transform: 'rotate(45deg)' }} />
+                          )}
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: '#828690',
+                              whiteSpace: 'nowrap',
+                              fontSize: '0.875rem',
+                              flexShrink: 0,
+                              ml: 1,
+                            }}
+                          >
+                            {formatDate(email.date)}
+                          </Typography>
+                        </Box>
+                      </ListItemButton>
+                  </ListItem>
+                  );
+                })}
+              </List>
+            )}
 
-                          {/* Contenido del mensaje */}
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            {/* Header del mensaje */}
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
-                              <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                  {senderName}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {new Date(msg.date).toLocaleString('es-ES', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </Typography>
-                              </Box>
+            {/* Controles de paginación */}
+            {emails.length > 0 && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  px: 2,
+                  py: 1.5,
+                  borderTop: `1px solid ${theme.palette.divider}`,
+                  bgcolor: 'transparent',
+                  flexShrink: 0,
+                  mt: 'auto',
+                  gap: 0.5,
+                }}
+              >
+                {(() => {
+                  const totalPages = Math.ceil(emails.length / emailsPerPage);
+                  const isFirstPage = currentPage === 1;
+                  const isLastPage = currentPage >= totalPages;
+                  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+                  return (
+                    <>
+                      <IconButton
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={isFirstPage}
+                        size="small"
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 1.5,
+                          bgcolor: isFirstPage ? 'transparent' : `${taxiMonterricoColors.green}15`,
+                          border: `1px solid ${isFirstPage ? theme.palette.divider : taxiMonterricoColors.green}`,
+                          color: isFirstPage ? theme.palette.action.disabled : taxiMonterricoColors.green,
+                          '&:hover': { bgcolor: `${taxiMonterricoColors.green}25` },
+                        }}
+                      >
+                        <ChevronLeft sx={{ fontSize: 20 }} />
+                      </IconButton>
+                      {pages.map((page) => (
+                        <Box
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 1.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: page === currentPage ? 600 : 400,
+                            bgcolor: page === currentPage ? taxiMonterricoColors.green : 'transparent',
+                            color: page === currentPage ? '#ffffff' : theme.palette.text.secondary,
+                            '&:hover': {
+                              bgcolor: page === currentPage ? taxiMonterricoColors.green : theme.palette.action.hover,
+                            },
+                          }}
+                        >
+                          {page}
+                        </Box>
+                      ))}
+                      <IconButton
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={isLastPage}
+                        size="small"
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 1.5,
+                          bgcolor: isLastPage ? 'transparent' : `${taxiMonterricoColors.green}15`,
+                          border: `1px solid ${isLastPage ? theme.palette.divider : taxiMonterricoColors.green}`,
+                          color: isLastPage ? theme.palette.action.disabled : taxiMonterricoColors.green,
+                          '&:hover': { bgcolor: `${taxiMonterricoColors.green}25` },
+                        }}
+                      >
+                        <ChevronRight sx={{ fontSize: 20 }} />
+                      </IconButton>
+                    </>
+                  );
+                })()}
+              </Box>
+            )}
+          </Box>
+        </Box>
+      )}
+
+      {/* Vista de detalle - columna central (lista card) + columna derecha (detalle) */}
+      {selectedEmail && (
+        <>
+          {/* Columna central - lista de emails en formato card */}
+          <Box sx={{
+            width: 340,
+            minWidth: 300,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            borderRight: `1px solid ${theme.palette.divider}`,
+          }}>
+            {/* Header con búsqueda */}
+            <Box sx={{ px: 2, pt: 2, pb: 1.5, flexShrink: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography sx={{ fontWeight: 600, fontSize: '1rem' }}>
+                  {selectedFolder === 'inbox' ? 'Inbox' : 'Favoritos'}
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setSelectedEmail(null);
+                    setEmailDetail(null);
+                    setThreadMessages([]);
+                    setIsReplying(false);
+                    setReplySubject('');
+                    setReplyBody('');
+                    setCollapsedMessages(new Set());
+                  }}
+                  sx={{ color: theme.palette.text.secondary }}
+                >
+                  <ChevronLeft sx={{ fontSize: 20 }} />
+                </IconButton>
+              </Box>
+              <TextField
+                placeholder="Buscar correo..."
+                value={searchTerm}
+                onChange={handleSearch}
+                size="small"
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search sx={{ color: theme.palette.text.secondary, fontSize: 18 }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '0.8125rem',
+                    borderRadius: 1.5,
+                    '& input': { py: '8px' },
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                    '& fieldset': { borderColor: 'transparent' },
+                    '&:hover fieldset': { borderColor: theme.palette.divider },
+                    '&.Mui-focused fieldset': { borderWidth: 1, borderColor: theme.palette.primary.main },
+                  },
+                }}
+              />
+            </Box>
+
+            {/* Lista de emails en card */}
+            <Box sx={{ flex: 1, overflow: 'auto', px: 1 }}>
+              {emails.slice((currentPage - 1) * emailsPerPage, currentPage * emailsPerPage).map((email) => {
+                const isSent = email.labelIds?.includes('SENT');
+                const displayEmail = isSent ? email.to : email.from;
+                const displayName = displayEmail.split(/[<>]/)[0].trim() || displayEmail;
+                const isActive = selectedEmail?.id === email.id;
+
+                return (
+                  <Box
+                    key={email.id}
+                    onClick={() => handleEmailClick(email)}
+                    sx={{
+                      px: 2,
+                      py: 1.5,
+                      cursor: 'pointer',
+                      borderRadius: 2,
+                      mb: 0.5,
+                      borderLeft: isActive ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                      bgcolor: isActive
+                        ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : `${taxiMonterricoColors.green}08`)
+                        : 'transparent',
+                      '&:hover': {
+                        bgcolor: isActive
+                          ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : `${taxiMonterricoColors.green}12`)
+                          : theme.palette.action.hover,
+                      },
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                      <Typography sx={{
+                        fontWeight: isUnread(email.labelIds) ? 600 : 500,
+                        fontSize: '0.875rem',
+                        color: theme.palette.mode === 'dark' ? '#ffffff' : '#333',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        flex: 1,
+                        mr: 1,
+                      }}>
+                        {displayName}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                        {email.hasAttachments && (
+                          <AttachFile sx={{ fontSize: 14, color: '#828690', transform: 'rotate(45deg)' }} />
+                        )}
+                        {isStarred(email.labelIds) && (
+                          <Star sx={{ fontSize: 16, color: '#f4b400' }} />
+                        )}
+                        <Typography sx={{ fontSize: '0.75rem', color: '#828690', whiteSpace: 'nowrap' }}>
+                          {formatDate(email.date)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Typography sx={{
+                      fontWeight: isUnread(email.labelIds) ? 600 : 400,
+                      fontSize: '0.8125rem',
+                      color: taxiMonterricoColors.green,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      mb: 0.25,
+                    }}>
+                      {email.subject || '(Sin asunto)'}
+                    </Typography>
+                    <Typography sx={{
+                      fontSize: '0.78125rem',
+                      color: '#828690',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      lineHeight: 1.4,
+                    }}>
+                      {email.snippet}
+                    </Typography>
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
+
+          {/* Columna derecha - detalle del email */}
+          <Box
+            sx={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              minWidth: 0,
+            }}
+          >
+            {emailDetail ? (
+              <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', flex: 1, overflow: 'auto' }}>
+                {/* Mensajes del thread */}
+                <Box
+                  sx={{
+                    overflow: 'auto',
+                    mb: isReplying ? 2 : 0,
+                  }}
+                >
+                  {loadingThread ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                      <CircularProgress size={24} />
+                    </Box>
+                  ) : (
+                    threadMessages.map((msg: any, index: number) => {
+                      const isCollapsed = collapsedMessages.has(msg.id);
+                      const isLastMessage = index === threadMessages.length - 1;
+                      const senderName = msg.from.split(/[<>]/)[0].trim() || extractEmail(msg.from);
+                      const senderInitials = getInitials(msg.from);
+
+                      return (
+                        <Box key={msg.id} sx={{ mb: 3 }}>
+                          {/* Fila: Avatar + Nombre (izq) | Botón Responder (der) */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                              <Avatar
+                                sx={{
+                                  bgcolor: taxiMonterricoColors.green,
+                                  width: 40,
+                                  height: 40,
+                                  fontSize: '0.9rem',
+                                  color: 'white',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {senderInitials}
+                              </Avatar>
+                              <Typography sx={{ fontWeight: 600, fontSize: '0.9375rem' }}>
+                                {senderName}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                              {!isReplying && (
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  startIcon={<Send sx={{ fontSize: 14 }} />}
+                                  onClick={handleReply}
+                                  sx={{
+                                    bgcolor: taxiMonterricoColors.green,
+                                    textTransform: 'none',
+                                    fontSize: '0.8125rem',
+                                    py: 0.5,
+                                    px: 1.5,
+                                    '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
+                                  }}
+                                >
+                                  Responder
+                                </Button>
+                              )}
                               {threadMessages.length > 3 && index < threadMessages.length - 3 && (
                                 <IconButton
                                   size="small"
                                   onClick={() => toggleMessageCollapse(msg.id)}
                                   sx={{ flexShrink: 0 }}
                                 >
-                                  {isCollapsed ? <ExpandMore /> : <ExpandLess />}
+                                  {isCollapsed ? <ExpandMore sx={{ fontSize: 18 }} /> : <ExpandLess sx={{ fontSize: 18 }} />}
                                 </IconButton>
                               )}
                             </Box>
-
-                            {/* Cuerpo del mensaje */}
-                            {!isCollapsed && (
-                              <Box
-                                sx={{
-                                  mt: 1,
-                                  '& p': {
-                                    marginBottom: 1,
-                                  },
-                                  '& *': {
-                                    maxWidth: '100%',
-                                  },
-                                }}
-                                dangerouslySetInnerHTML={{ __html: msg.body || msg.snippet }}
-                              />
-                            )}
-                            {isCollapsed && (
-                              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                Mensaje colapsado
-                              </Typography>
-                            )}
                           </Box>
+
+                          {/* Fecha debajo, alineada a la derecha */}
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
+                              {new Date(msg.date).toLocaleString('es-ES', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </Typography>
+                          </Box>
+
+                          {/* Contenido del mensaje */}
+                          {!isCollapsed && (
+                            <Box
+                              sx={{
+                                fontSize: '0.9375rem',
+                                lineHeight: 1.7,
+                                '& p': { marginBottom: 1 },
+                                '& *': { maxWidth: '100%' },
+                                wordBreak: 'break-word',
+                              }}
+                              dangerouslySetInnerHTML={{ __html: msg.body || msg.snippet }}
+                            />
+                          )}
+                          {isCollapsed && (
+                            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', fontSize: '0.8125rem' }}>
+                              Mensaje colapsado
+                            </Typography>
+                          )}
+
+                          {/* Adjuntos del mensaje */}
+                          {!isCollapsed && msg.attachments && msg.attachments.length > 0 && (
+                            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                              {msg.attachments.map((att: any, attIdx: number) => {
+                                const getAttIcon = () => {
+                                  if ((att.mimeType || '').startsWith('image/')) return <ImageIcon sx={{ fontSize: 20 }} />;
+                                  if (att.mimeType === 'application/pdf') return <PictureAsPdf sx={{ fontSize: 20, color: '#e53935' }} />;
+                                  return <InsertDriveFile sx={{ fontSize: 20 }} />;
+                                };
+                                const formatAttSize = (bytes: number) => {
+                                  if (!bytes || bytes === 0) return '';
+                                  if (bytes < 1024) return `${bytes} B`;
+                                  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+                                  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+                                };
+                                const handleDownload = async () => {
+                                  try {
+                                    const response = await api.get(`/emails/attachment/${msg.id}/${att.attachmentId}`);
+                                    const base64 = (response.data.data || '').replace(/-/g, '+').replace(/_/g, '/');
+                                    const byteCharacters = atob(base64);
+                                    const byteNumbers = new Array(byteCharacters.length);
+                                    for (let i = 0; i < byteCharacters.length; i++) {
+                                      byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                    }
+                                    const byteArray = new Uint8Array(byteNumbers);
+                                    const blob = new Blob([byteArray], { type: att.mimeType || 'application/octet-stream' });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = att.name || 'attachment';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                  } catch (err) {
+                                    console.error('Error descargando adjunto:', err);
+                                  }
+                                };
+                                return (
+                                  <Box
+                                    key={`${att.attachmentId}-${attIdx}`}
+                                    onClick={handleDownload}
+                                    sx={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 1,
+                                      border: `1px solid ${theme.palette.divider}`,
+                                      borderRadius: 2,
+                                      px: 1.5,
+                                      py: 1,
+                                      cursor: 'pointer',
+                                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : '#f5f5f5',
+                                      maxWidth: 260,
+                                      '&:hover': {
+                                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : '#eeeeee',
+                                      },
+                                      transition: 'background-color 0.15s',
+                                    }}
+                                  >
+                                    {getAttIcon()}
+                                    <Box sx={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
+                                      <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.3 }}>
+                                        {att.name}
+                                      </Typography>
+                                      {formatAttSize(att.size) && (
+                                        <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary, lineHeight: 1.2 }}>
+                                          {formatAttSize(att.size)}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                    <Download sx={{ fontSize: 18, color: theme.palette.text.secondary, flexShrink: 0 }} />
+                                  </Box>
+                                );
+                              })}
+                            </Box>
+                          )}
+
+                          {!isLastMessage && <Divider sx={{ mt: 3 }} />}
                         </Box>
-                        {!isLastMessage && <Divider sx={{ mt: 2 }} />}
-                      </Box>
-                    );
-                  })
-                )}
-              </Box>
+                      );
+                    })
+                  )}
+                </Box>
 
-              {/* Área de respuesta inline */}
-              {isReplying && (
-                <>
-                  <Divider sx={{ my: 2, flexShrink: 0 }} />
-                  <Box sx={{ flexShrink: 0 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                      Responder a {extractEmail(emailDetail.from)}
-                    </Typography>
-                    
-                    {/* Campo Asunto */}
-                    <TextField
-                      label="Asunto"
-                      value={replySubject}
-                      onChange={(e) => setReplySubject(e.target.value)}
-                      fullWidth
-                      size="small"
-                      sx={{ mb: 2 }}
-                    />
-
-                    {/* Editor de respuesta */}
-                    <Box
-                      sx={{
-                        border: `1px solid ${theme.palette.divider}`,
-                        borderRadius: 2,
-                        overflow: 'hidden',
-                        minHeight: '200px',
-                        maxHeight: '300px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        mb: 2,
-                      }}
-                    >
-                      <RichTextEditor
-                        value={replyBody}
-                        onChange={setReplyBody}
-                        placeholder="Escribe tu respuesta..."
+                {/* Área de respuesta inline */}
+                {isReplying && (
+                  <>
+                    <Divider sx={{ my: 2, flexShrink: 0 }} />
+                    <Box sx={{ flexShrink: 0 }}>
+                      <Typography sx={{ mb: 1, fontWeight: 600, fontSize: '0.9375rem' }}>
+                        Responder a {extractEmail(emailDetail.from)}
+                      </Typography>
+                      <TextField
+                        label="Asunto"
+                        value={replySubject}
+                        onChange={(e) => setReplySubject(e.target.value)}
+                        fullWidth
+                        size="small"
+                        sx={{ mb: 2 }}
                       />
-                    </Box>
-
-                    {/* Mensaje de error */}
-                    {replyError && (
-                      <Alert severity="error" sx={{ mb: 2 }} onClose={() => setReplyError('')}>
-                        {replyError}
-                      </Alert>
-                    )}
-
-                    {/* Botones de acción */}
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                      <Button
-                        onClick={handleCancelReply}
-                        disabled={sendingReply}
-                        variant="outlined"
-                        sx={{ textTransform: 'none' }}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        onClick={handleSendReply}
-                        variant="contained"
-                        startIcon={sendingReply ? <CircularProgress size={16} /> : <Send />}
-                        disabled={sendingReply || !replySubject.trim() || !replyBody.trim() || replyBody === '<p><br></p>' || replyBody === '<br>'}
+                      <Box
                         sx={{
-                          bgcolor: taxiMonterricoColors.green,
-                          textTransform: 'none',
-                          '&:hover': {
-                            bgcolor: taxiMonterricoColors.green,
-                            opacity: 0.9,
-                          },
+                          border: `1px solid ${theme.palette.divider}`,
+                          borderRadius: 2,
+                          overflow: 'hidden',
+                          minHeight: '180px',
+                          maxHeight: '300px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          mb: 2,
                         }}
                       >
-                        {sendingReply ? 'Enviando...' : 'Enviar'}
-                      </Button>
+                        <RichTextEditor
+                          value={replyBody}
+                          onChange={setReplyBody}
+                          placeholder="Escribe tu respuesta..."
+                          attachments={replyAttachments}
+                          onAttachmentsChange={setReplyAttachments}
+                        />
+                      </Box>
+                      {replyError && (
+                        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setReplyError('')}>
+                          {replyError}
+                        </Alert>
+                      )}
+                      <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end' }}>
+                        <Button
+                          onClick={handleCancelReply}
+                          disabled={sendingReply}
+                          size="small"
+                          variant="outlined"
+                          sx={{ textTransform: 'none' }}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          onClick={handleSendReply}
+                          size="small"
+                          variant="contained"
+                          startIcon={sendingReply ? <CircularProgress size={14} /> : <Send sx={{ fontSize: 16 }} />}
+                          disabled={sendingReply || !replySubject.trim() || !replyBody.trim() || replyBody === '<p><br></p>' || replyBody === '<br>'}
+                          sx={{
+                            bgcolor: taxiMonterricoColors.green,
+                            textTransform: 'none',
+                            '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
+                          }}
+                        >
+                          {sendingReply ? 'Enviando...' : 'Enviar'}
+                        </Button>
+                      </Box>
                     </Box>
-                  </Box>
-                </>
-              )}
-            </Box>
-          </Dialog>
-        )}
-      </Box>
+                  </>
+                )}
+              </Box>
+            ) : (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+                <CircularProgress size={24} />
+              </Box>
+            )}
+          </Box>
+        </>
+      )}
 
       {/* Email Composer - solo registra actividad (sin envío por Gmail) */}
       <EmailComposer
@@ -1303,6 +1679,89 @@ const Emails: React.FC = () => {
         }}
       />
       </Paper>
+
+      <Dialog
+        open={addLabelOpen}
+        onClose={() => setAddLabelOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            minWidth: 360,
+            p: 3,
+            bgcolor: theme.palette.background.paper,
+          },
+        }}
+      >
+        <Typography sx={{ fontWeight: 600, fontSize: '1.05rem', mb: 2.5 }}>
+          Nueva etiqueta
+        </Typography>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Nombre de la etiqueta"
+          value={newLabelName}
+          onChange={(e) => setNewLabelName(e.target.value)}
+          sx={{
+            mb: 2.5,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 1.5,
+            },
+          }}
+        />
+        <Typography sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary, mb: 1.5 }}>
+          Color
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
+          {LABEL_COLORS.map((color) => (
+            <Box
+              key={color}
+              onClick={() => setNewLabelColor(color)}
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                bgcolor: color,
+                cursor: 'pointer',
+                border: newLabelColor === color ? `3px solid ${theme.palette.mode === 'dark' ? '#ffffff' : '#333'}` : '3px solid transparent',
+                transition: 'border 0.15s ease',
+                '&:hover': { opacity: 0.85 },
+              }}
+            />
+          ))}
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+          <Button
+            onClick={() => setAddLabelOpen(false)}
+            sx={{
+              textTransform: 'none',
+              color: theme.palette.text.secondary,
+              fontWeight: 500,
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!newLabelName.trim()}
+            onClick={() => {
+              if (newLabelName.trim()) {
+                setCustomLabels((prev) => [...prev, { name: newLabelName.trim(), color: newLabelColor }]);
+                setAddLabelOpen(false);
+              }
+            }}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              bgcolor: taxiMonterricoColors.green,
+              '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
+              borderRadius: 1.5,
+              px: 2.5,
+            }}
+          >
+            Crear
+          </Button>
+        </Box>
+      </Dialog>
     </Box>
   );
 };

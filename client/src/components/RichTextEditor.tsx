@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Typography,
   useTheme
 } from '@mui/material';
 import {
@@ -27,16 +28,30 @@ import {
   FormatAlignCenter,
   FormatAlignRight,
   FormatAlignJustify,
+  Close,
+  InsertDriveFile,
+  Image as ImageIcon,
+  PictureAsPdf,
 } from '@mui/icons-material';
 import { pageStyles } from '../theme/styles';
+
+export interface AttachmentFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  data: string; // base64 data (without the data: prefix)
+}
 
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  attachments?: AttachmentFile[];
+  onAttachmentsChange?: (attachments: AttachmentFile[]) => void;
 }
 
-const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder = 'Empieza a escribir...' }) => {
+const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder = 'Empieza a escribir...', attachments = [], onAttachmentsChange }) => {
   const theme = useTheme();
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -323,86 +338,58 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Leer el archivo y convertirlo a data URL
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      if (dataUrl && editorRef.current) {
-        // Restaurar el foco al editor
-        editorRef.current.focus();
-        
-        // Obtener la selección actual o crear una nueva
-        const selection = window.getSelection();
-        let range: Range | null = null;
-        
-        if (selection && selection.rangeCount > 0) {
-          range = selection.getRangeAt(0);
-        } else if (editorRef.current) {
-          range = document.createRange();
-          range.selectNodeContents(editorRef.current);
-          range.collapse(false);
-          if (selection) {
-            selection.removeAllRanges();
-            selection.addRange(range);
+    if (file.type.startsWith('image/') && !onAttachmentsChange) {
+      // Legacy: insert images inline if no attachments handler
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        if (dataUrl && editorRef.current) {
+          editorRef.current.focus();
+          const selection = window.getSelection();
+          let range: Range | null = null;
+          if (selection && selection.rangeCount > 0) {
+            range = selection.getRangeAt(0);
+          } else if (editorRef.current) {
+            range = document.createRange();
+            range.selectNodeContents(editorRef.current);
+            range.collapse(false);
+            if (selection) { selection.removeAllRanges(); selection.addRange(range); }
+          }
+          if (range) {
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.alt = file.name;
+            range.insertNode(img);
+            range.setStartAfter(img);
+            range.collapse(true);
+            if (selection) { selection.removeAllRanges(); selection.addRange(range); }
+            onChange(editorRef.current.innerHTML);
           }
         }
+      };
+      reader.readAsDataURL(file);
+    } else if (onAttachmentsChange) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        if (dataUrl) {
+          const base64Data = dataUrl.split(',')[1] || '';
+          const newAttachment: AttachmentFile = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            name: file.name,
+            type: file.type || 'application/octet-stream',
+            size: file.size,
+            data: base64Data,
+          };
+          onAttachmentsChange([...attachments, newAttachment]);
+        }
+      };
+      reader.onerror = () => alert('Error al leer el archivo.');
+      reader.readAsDataURL(file);
+    }
 
-        if (range) {
-          try {
-            // Si es una imagen, insertarla como imagen
-            if (file.type.startsWith('image/')) {
-              const img = document.createElement('img');
-              img.src = dataUrl;
-              img.style.maxWidth = '100%';
-              img.style.height = 'auto';
-              img.alt = file.name;
-              range.insertNode(img);
-              range.setStartAfter(img);
-            } else {
-              // Si no es imagen, crear un enlace al archivo
-              const link = document.createElement('a');
-              link.href = dataUrl;
-              link.textContent = `📎 ${file.name}`;
-              link.download = file.name;
-              link.style.textDecoration = 'none';
-              link.style.color = theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2';
-              link.style.marginRight = '4px';
-              range.insertNode(link);
-              range.setStartAfter(link);
-            }
-            
-            range.collapse(true);
-            if (selection) {
-              selection.removeAllRanges();
-              selection.addRange(range);
-            }
-            
-            // Actualizar el contenido
-            onChange(editorRef.current.innerHTML);
-          } catch (error) {
-            console.error('Error inserting file:', error);
-            // Fallback: insertar texto con el nombre del archivo
-            const textNode = document.createTextNode(`📎 ${file.name} `);
-            range.insertNode(textNode);
-            range.setStartAfter(textNode);
-            range.collapse(true);
-            if (selection) {
-              selection.removeAllRanges();
-              selection.addRange(range);
-            }
-            onChange(editorRef.current.innerHTML);
-          }
-        }
-      }
-    };
-    
-    reader.onerror = () => {
-      alert('Error al leer el archivo.');
-    };
-    
-    reader.readAsDataURL(file);
-    
-    // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
     if (attachFileInputRef.current) {
       attachFileInputRef.current.value = '';
     }
@@ -1027,6 +1014,65 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
             </Box>
           </Box>
         </>
+      )}
+
+      {/* Sección de adjuntos (como Gmail) */}
+      {onAttachmentsChange && attachments.length > 0 && (
+        <Box
+          sx={{
+            borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+            p: 1,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 1,
+          }}
+        >
+          {attachments.map((att) => {
+            const getIcon = () => {
+              if (att.type.startsWith('image/')) return <ImageIcon sx={{ fontSize: 18 }} />;
+              if (att.type === 'application/pdf') return <PictureAsPdf sx={{ fontSize: 18, color: '#e53935' }} />;
+              return <InsertDriveFile sx={{ fontSize: 18 }} />;
+            };
+            const formatSize = (bytes: number) => {
+              if (bytes < 1024) return `${bytes} B`;
+              if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+              return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+            };
+            return (
+              <Box
+                key={att.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.75,
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 2,
+                  px: 1.5,
+                  py: 0.75,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : '#f5f5f5',
+                  maxWidth: 240,
+                }}
+              >
+                {getIcon()}
+                <Box sx={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
+                  <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.3 }}>
+                    {att.name}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary, lineHeight: 1.2 }}>
+                    {formatSize(att.size)}
+                  </Typography>
+                </Box>
+                <IconButton
+                  size="small"
+                  onClick={() => onAttachmentsChange(attachments.filter(a => a.id !== att.id))}
+                  sx={{ p: 0.25, color: theme.palette.text.secondary, '&:hover': { color: theme.palette.error.main } }}
+                >
+                  <Close sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Box>
+            );
+          })}
+        </Box>
       )}
 
       {/* Input oculto para seleccionar archivos de imagen */}

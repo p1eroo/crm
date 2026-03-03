@@ -179,7 +179,7 @@ const adminMenuItems = [
       {/* Lista de items del menú */}
       <List sx={{ 
         width: '100%', 
-        px: collapsed ? 1 : 0.8, 
+        px: collapsed ? 2.8 : 0.8, 
         pt: 0,
         pb: 0,
         display: 'flex',
@@ -215,24 +215,21 @@ const adminMenuItems = [
                       else setCorreoExpanded((v) => !v);
                     }}
                     sx={{
-                      minHeight: collapsed ? 64 : 44,
+                      minHeight: collapsed ? 45 : 44,
                       borderRadius: 3,
                       flexDirection: collapsed ? 'column' : 'row',
                       justifyContent: collapsed ? 'center' : 'space-between',
                       alignItems: 'center',
                       px: collapsed ? 1 : 2,
                       py: collapsed ? 1 : 0.875,
-                      mb: 0,
+                      mb: 0.5,
                       transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&.Mui-selected': {
                         background: 'transparent',
-                        color: taxiMonterricoColors.greenLight,
-                        boxShadow: 'none',
-                        border: `1px solid ${theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f'}`,
-                        ...(collapsed ? {} : { mx: 1, width: 'calc(100% - 16px)' }),
+                        color: theme.palette.text.secondary,
+                        boxShadow: `inset 0 0 0 1px ${collapsed ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#ffffff1a' : taxiMonterricoColors.green)}`,
                         '&:hover': {
                           background: 'transparent',
-                          boxShadow: 'none',
                         },
                       },
                       '&:hover': {
@@ -244,50 +241,53 @@ const adminMenuItems = [
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                      <ListItemIcon sx={{ minWidth: collapsed ? 'auto' : 36, justifyContent: 'center', margin: collapsed ? '0 0 4px 0' : 0, display: 'flex', alignItems: 'center', color: isSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : theme.palette.text.secondary }}>
+                      <ListItemIcon sx={{ minWidth: collapsed ? 'auto' : 36, justifyContent: 'center', margin: collapsed ? '0 0 4px 0' : 0, display: 'flex', alignItems: 'center', color: isSelected ? (taxiMonterricoColors.green) : theme.palette.text.secondary }}>
                         <Mail size={24} strokeWidth={1.5} />
                       </ListItemIcon>
                       {!collapsed && (
-                        <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 500, color: isSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : theme.palette.text.secondary, ml: 0.8 }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 500, color: theme.palette.text.secondary, ml: 0.8 }}>
                           Correo
                         </Typography>
                       )}
                     </Box>
                     {!collapsed && (correoExpanded ? <ChevronDown size={18} strokeWidth={1.5} style={{ color: theme.palette.text.secondary }} /> : <ChevronRight size={18} strokeWidth={1.5} style={{ color: theme.palette.text.secondary }} />)}
-                    {collapsed && (
-                      <Typography variant="caption" sx={{ fontSize: '0.625rem', fontWeight: 500, color: isSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : theme.palette.text.secondary, textAlign: 'center', mt: 0.25 }}>Correo</Typography>
-                    )}
+                    
                   </ListItemButton>
                   {!collapsed && correoExpanded && item.subItems && item.subItems.map((sub: { text: string; path: string }, subIndex: number) => {
                     const subSelected = location.pathname === sub.path || (sub.path !== '/emails' && location.pathname.startsWith(sub.path + '/'));
                     return (
-                      <ListItemButton
+                      <Box
                         key={sub.text}
-                        selected={subSelected}
                         onClick={() => navigate(sub.path)}
                         sx={{
-                          minHeight: 40,
-                          borderRadius: 2,
-                          pl: 2.5,
-                          py: 0.75,
-                          ml: 6,
-                          mr: 1,
-                          mt: subIndex === 0 ? 1 : 0.5,
-                          width: 'calc(100% - 56px)',
-                          '&.Mui-selected': {
-                            background: 'transparent',
-                            color: theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f',
-                            border: `1px solid ${theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f'}`,
-                            '&:hover': { background: 'transparent' },
-                          },
-                          '&:hover': { backgroundColor: theme.palette.action.hover },
-                          '&:not(.Mui-selected)': { color: theme.palette.text.secondary, backgroundColor: 'transparent' },
+                          display: 'flex',
+                          alignItems: 'center',
+                          pl: 7,
+                          py: 1,
+                          mt: subIndex === 0 ? 0.5 : 0,
+                          cursor: 'pointer',
                         }}
                       >
-                        <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 500, color: subSelected ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f') : 'inherit' }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontSize: '0.875rem',
+                            fontWeight: subSelected ? 500 : 400,
+                            color: subSelected
+                              ? (theme.palette.mode === 'dark' ? '#ffffff' : taxiMonterricoColors.green)
+                              : theme.palette.text.secondary,
+                            position: 'relative',
+                            '&::before': {
+                              content: '"–"',
+                              position: 'absolute',
+                              left: -16,
+                              color: taxiMonterricoColors.green,
+                            },
+                          }}
+                        >
                           {sub.text}
                         </Typography>
-                      </ListItemButton>
+                      </Box>
                     );
                   })}
                 </Box>
@@ -300,7 +300,7 @@ const adminMenuItems = [
               selected={isSelected}
               onClick={() => navigate(item.path)}
               sx={{
-              minHeight: collapsed ? 64 : 44,
+              minHeight: collapsed ? 52 : 44,
               borderRadius: 3,
               flexDirection: collapsed ? 'column' : 'row',
               justifyContent: collapsed ? 'center' : 'flex-start',
@@ -311,13 +311,10 @@ const adminMenuItems = [
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&.Mui-selected': {
                   background: 'transparent',
-                  color: taxiMonterricoColors.greenLight,
-                  boxShadow: 'none',
-                  border: `1px solid ${theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f'}`,
-                  ...(collapsed ? {} : { mx: 1, width: 'calc(100% - 16px)' }),
+                  color: theme.palette.text.secondary,
+                  boxShadow: `inset 0 0 0 1px ${collapsed ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#ffffff1a' : taxiMonterricoColors.green)}`,
                   '&:hover': {
                     background: 'transparent',
-                    boxShadow: 'none',
                   },
                 },
                 '&:hover': {
@@ -341,7 +338,7 @@ const adminMenuItems = [
                   display: 'flex',
                   alignItems: 'center',
                   color: isSelected 
-                    ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                    ? (taxiMonterricoColors.green)
                     : theme.palette.text.secondary,
                 }}
               >
@@ -356,30 +353,14 @@ const adminMenuItems = [
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 500,
-                    color: isSelected 
-                      ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
-                      : theme.palette.text.secondary,
+                    color: theme.palette.text.secondary,
                     ml: 0.8,
                   }}
                 >
                   {item.text}
                 </Typography>
               )}
-              {collapsed && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontSize: '0.625rem',
-                    fontWeight: 500,
-                    color: isSelected 
-                      ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
-                      : theme.palette.text.secondary,
-                    textAlign: 'center',
-                    mt: 0.25,
-                  }}
-                ><span>{item.text}</span>
-                </Typography>
-              )}
+              
             </ListItemButton>
           );
         })}
@@ -418,7 +399,7 @@ const adminMenuItems = [
             selected={location.pathname === '/users'}
             onClick={() => navigate('/users')}
             sx={{
-              minHeight: collapsed ? 64 : 44,
+              minHeight: collapsed ? 52 : 44,
               borderRadius: 3,
               flexDirection: collapsed ? 'column' : 'row',
               justifyContent: collapsed ? 'center' : 'flex-start',
@@ -430,13 +411,10 @@ const adminMenuItems = [
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
 '&.Mui-selected': {
                 background: 'transparent',
-                color: taxiMonterricoColors.greenLight,
-                boxShadow: 'none',
-                border: `1px solid ${theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f'}`,
-                ...(collapsed ? {} : { mx: 1, width: 'calc(100% - 16px)' }),
+                color: theme.palette.text.secondary,
+                boxShadow: `inset 0 0 0 1px ${collapsed ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#ffffff1a' : taxiMonterricoColors.green)}`,
                 '&:hover': {
                   background: 'transparent',
-                  boxShadow: 'none',
                 },
               },
               '&:hover': {
@@ -460,7 +438,7 @@ const adminMenuItems = [
                 display: 'flex',
                 alignItems: 'center',
                 color: location.pathname === '/users'
-                  ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                  ? (taxiMonterricoColors.green)
                   : '#5a5c61',
               }}
             >
@@ -472,31 +450,14 @@ const adminMenuItems = [
                 sx={{
                   fontSize: '0.875rem',
                   fontWeight: 500,
-                  color: location.pathname === '/users' 
-                    ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
-                    : '#5a5c61',
+                  color: '#5a5c61',
                   ml: 0.8,
                 }}
               >
                 Usuarios
               </Typography>
             )}
-            {collapsed && (
-              <Typography
-                variant="caption"
-                sx={{
-                  fontSize: '0.625rem',
-                  fontWeight: 500,
-                  color: location.pathname === '/users' 
-                    ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
-                    : '#5a5c61',
-                  textAlign: 'center',
-                  mt: 0.25,
-                }}
-              >
-                Usuarios
-              </Typography>
-            )}
+            
           </ListItemButton>
         )}
 
@@ -521,7 +482,7 @@ const adminMenuItems = [
                   selected={isSelected}
                   onClick={() => navigate(item.path)}
                   sx={{
-                    minHeight: collapsed ? 64 : 44,
+                    minHeight: collapsed ? 52 : 44,
                     borderRadius: 3,
                     flexDirection: collapsed ? 'column' : 'row',
                     justifyContent: collapsed ? 'center' : 'flex-start',
@@ -533,13 +494,10 @@ const adminMenuItems = [
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
 '&.Mui-selected': {
                       background: 'transparent',
-                      color: taxiMonterricoColors.greenLight,
-                      boxShadow: 'none',
-                      border: `1px solid ${theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f'}`,
-                      ...(collapsed ? {} : { mx: 1, width: 'calc(100% - 16px)' }),
+                      color: theme.palette.text.secondary,
+                      boxShadow: `inset 0 0 0 1px ${collapsed ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#ffffff1a' : taxiMonterricoColors.green)}`,
                       '&:hover': {
                         background: 'transparent',
-                        boxShadow: 'none',
                       },
                     },
                     '&:hover': {
@@ -563,7 +521,7 @@ const adminMenuItems = [
                       display: 'flex',
                       alignItems: 'center',
                       color: isSelected 
-                        ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                        ? (taxiMonterricoColors.green)
                         : '#5a5c61',
                     }}
                   >
@@ -578,31 +536,14 @@ const adminMenuItems = [
                       sx={{
                         fontSize: '0.875rem',
                         fontWeight: 500,
-                        color: isSelected 
-                          ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
-                          : '#5a5c61',
+                        color: '#5a5c61',
                         ml: 0.8,
                       }}
                     >
                       {item.text}
                     </Typography>
                   )}
-                  {collapsed && (
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontSize: '0.625rem',
-                        fontWeight: 500,
-                        color: isSelected 
-                          ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
-                          : '#5a5c61',
-                        textAlign: 'center',
-                        mt: 0.25,
-                      }}
-                    >
-                      {item.text}
-                    </Typography>
-                  )}
+                  
                 </ListItemButton>
               );
             })

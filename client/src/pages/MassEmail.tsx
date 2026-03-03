@@ -358,13 +358,50 @@ const MassEmail: React.FC = () => {
         mx: 'auto',
       }}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, p: 2, mb: 0 }}>
-        <Typography
-          variant="h5"
-          sx={{ fontWeight: 600, fontSize: { xs: '1rem', md: '1.1375rem' }, color: theme.palette.mode === 'dark' ? 'white' : theme.palette.text.primary }}
-        >
-          Masivo
-        </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+          px: { xs: 2, md: 3 },
+          py: { xs: 1.25, md: 1.5 },
+          mb: 4,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent',
+          borderRadius: 2,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 400,
+              fontSize: { xs: '1rem', md: '1.1375rem' },
+              color: '#828690',
+            }}
+          >
+            Correo
+          </Typography>
+          <Typography
+            sx={{
+              fontWeight: 400,
+              fontSize: { xs: '1rem', md: '1.1375rem' },
+              color: taxiMonterricoColors.green,
+            }}
+          >
+            /
+          </Typography>
+          <Typography
+            sx={{
+              fontWeight: 500,
+              fontSize: { xs: '1rem', md: '1.1375rem' },
+              color: taxiMonterricoColors.green,
+            }}
+          >
+            Masivo
+          </Typography>
+        </Box>
       </Box>
 
       <Card

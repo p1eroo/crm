@@ -111,6 +111,21 @@ router.get('/list', async (req: AuthRequest, res) => {
     const messages = response.data.messages || [];
     const nextPageToken = response.data.nextPageToken;
 
+    // Función para recolectar adjuntos de las partes MIME
+    const collectAttachmentNames = (part: any): string[] => {
+      const names: string[] = [];
+      if (!part) return names;
+      if (part.filename && part.filename.length > 0) {
+        names.push(part.filename);
+      }
+      if (part.parts) {
+        for (const p of part.parts) {
+          names.push(...collectAttachmentNames(p));
+        }
+      }
+      return names;
+    };
+
     // Obtener detalles de cada mensaje
     const messagesWithDetails = await Promise.all(
       messages.map(async (msg: any) => {
@@ -118,13 +133,14 @@ router.get('/list', async (req: AuthRequest, res) => {
           const messageDetail = await gmail.users.messages.get({
             userId: 'me',
             id: msg.id!,
-            format: 'metadata',
-            metadataHeaders: ['From', 'To', 'Subject', 'Date'],
+            format: 'full',
           });
 
           const headers = messageDetail.data.payload?.headers || [];
           const getHeader = (name: string) => 
             headers.find((h: any) => h.name === name)?.value || '';
+
+          const attachmentNames = collectAttachmentNames(messageDetail.data.payload);
 
           return {
             id: msg.id,
@@ -135,6 +151,8 @@ router.get('/list', async (req: AuthRequest, res) => {
             subject: getHeader('Subject'),
             date: getHeader('Date'),
             labelIds: messageDetail.data.labelIds || [],
+            hasAttachments: attachmentNames.length > 0,
+            attachmentNames,
           };
         } catch (error) {
           console.error(`Error obteniendo mensaje ${msg.id}:`, error);
@@ -201,37 +219,38 @@ router.get('/message/:id', async (req: AuthRequest, res) => {
     
     const extractBody = (part: any): string => {
       if (!part) return '';
-      
-      // Si tiene partes, buscar en ellas
+
+      const mime = (part.mimeType || '') as string;
+
+      if (mime.startsWith('application/') || mime.startsWith('image/') || mime.startsWith('audio/') || mime.startsWith('video/')) {
+        return '';
+      }
+
       if (part.parts && part.parts.length > 0) {
-        // Buscar primero la parte HTML, luego texto plano
         const htmlPart = part.parts.find((p: any) => p.mimeType === 'text/html');
         const textPart = part.parts.find((p: any) => p.mimeType === 'text/plain');
-        
+
         if (htmlPart?.body?.data) {
           return Buffer.from(htmlPart.body.data, 'base64').toString('utf-8');
         }
         if (textPart?.body?.data) {
           return Buffer.from(textPart.body.data, 'base64').toString('utf-8');
         }
-        
-        // Si no encuentra, buscar recursivamente
-        return part.parts.map((p: any) => extractBody(p)).join('');
+
+        const textParts = part.parts.filter((p: any) => {
+          const m = (p.mimeType || '') as string;
+          return m.startsWith('text/') || m.startsWith('multipart/');
+        });
+        return textParts.map((p: any) => extractBody(p)).join('');
       }
-      
-      // Si es HTML o texto plano directamente
-      if (part.mimeType === 'text/html' && part.body?.data) {
+
+      if (mime === 'text/html' && part.body?.data) {
         return Buffer.from(part.body.data, 'base64').toString('utf-8');
       }
-      if (part.mimeType === 'text/plain' && part.body?.data) {
+      if (mime === 'text/plain' && part.body?.data) {
         return Buffer.from(part.body.data, 'base64').toString('utf-8');
       }
-      
-      // Si tiene body.data directamente
-      if (part.body?.data) {
-        return Buffer.from(part.body.data, 'base64').toString('utf-8');
-      }
-      
+
       return '';
     };
 
@@ -379,33 +398,59 @@ router.get('/thread/:threadId', async (req: AuthRequest, res) => {
     // Función para extraer el cuerpo del mensaje
     const extractBody = (part: any): string => {
       if (!part) return '';
-      
+
+      const mime = (part.mimeType || '') as string;
+
+      if (mime.startsWith('application/') || mime.startsWith('image/') || mime.startsWith('audio/') || mime.startsWith('video/')) {
+        return '';
+      }
+
       if (part.parts && part.parts.length > 0) {
         const htmlPart = part.parts.find((p: any) => p.mimeType === 'text/html');
         const textPart = part.parts.find((p: any) => p.mimeType === 'text/plain');
-        
+
         if (htmlPart?.body?.data) {
           return Buffer.from(htmlPart.body.data, 'base64').toString('utf-8');
         }
         if (textPart?.body?.data) {
           return Buffer.from(textPart.body.data, 'base64').toString('utf-8');
         }
-        
-        return part.parts.map((p: any) => extractBody(p)).join('');
+
+        const textParts = part.parts.filter((p: any) => {
+          const m = (p.mimeType || '') as string;
+          return m.startsWith('text/') || m.startsWith('multipart/');
+        });
+        return textParts.map((p: any) => extractBody(p)).join('');
       }
-      
-      if (part.mimeType === 'text/html' && part.body?.data) {
+
+      if (mime === 'text/html' && part.body?.data) {
         return Buffer.from(part.body.data, 'base64').toString('utf-8');
       }
-      if (part.mimeType === 'text/plain' && part.body?.data) {
+      if (mime === 'text/plain' && part.body?.data) {
         return Buffer.from(part.body.data, 'base64').toString('utf-8');
       }
-      
-      if (part.body?.data) {
-        return Buffer.from(part.body.data, 'base64').toString('utf-8');
-      }
-      
+
       return '';
+    };
+
+    // Función para recolectar adjuntos con metadatos
+    const collectAttachments = (part: any): { attachmentId: string; name: string; mimeType: string; size: number }[] => {
+      const atts: { attachmentId: string; name: string; mimeType: string; size: number }[] = [];
+      if (!part) return atts;
+      if (part.filename && part.filename.length > 0 && part.body?.attachmentId) {
+        atts.push({
+          attachmentId: part.body.attachmentId,
+          name: part.filename,
+          mimeType: part.mimeType || 'application/octet-stream',
+          size: part.body.size || 0,
+        });
+      }
+      if (part.parts) {
+        for (const p of part.parts) {
+          atts.push(...collectAttachments(p));
+        }
+      }
+      return atts;
     };
 
     // Procesar cada mensaje del thread
@@ -421,6 +466,8 @@ router.get('/thread/:threadId', async (req: AuthRequest, res) => {
             body = extractBody(msg.payload);
           }
 
+          const attachments = collectAttachments(msg.payload);
+
           return {
             id: msg.id,
             threadId: msg.threadId,
@@ -431,6 +478,7 @@ router.get('/thread/:threadId', async (req: AuthRequest, res) => {
             date: getHeader('Date'),
             body,
             labelIds: msg.labelIds || [],
+            attachments,
           };
         } catch (error) {
           console.error(`Error procesando mensaje ${msg.id}:`, error);
@@ -474,6 +522,43 @@ router.get('/thread/:threadId', async (req: AuthRequest, res) => {
       message: 'Error al obtener el thread',
       error: error.message,
     });
+  }
+});
+
+// Endpoint para descargar un adjunto específico
+router.get('/attachment/:messageId/:attachmentId', async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Usuario no autenticado' });
+    }
+
+    const { messageId, attachmentId } = req.params;
+    const gmail = await getAuthenticatedGmailClient(userId);
+
+    const attachment = await gmail.users.messages.attachments.get({
+      userId: 'me',
+      messageId,
+      id: attachmentId,
+    });
+
+    const data = attachment.data.data;
+    if (!data) {
+      return res.status(404).json({ message: 'Adjunto no encontrado' });
+    }
+
+    res.json({ data });
+  } catch (error: any) {
+    console.error('Error al descargar adjunto:', error);
+
+    if (error.isNoGoogleAccount || error.message?.includes('No hay cuenta')) {
+      return res.status(400).json({ message: error.message, code: 'NO_GOOGLE_ACCOUNT' });
+    }
+    if (error.code === 401) {
+      return res.status(401).json({ message: 'Token de acceso inválido o expirado' });
+    }
+
+    res.status(500).json({ message: 'Error al descargar el adjunto', error: error.message });
   }
 });
 
@@ -928,7 +1013,7 @@ router.get('/folders/counts', async (req: AuthRequest, res) => {
 // Endpoint para enviar email usando Gmail API
 router.post('/send', async (req: AuthRequest, res) => {
   try {
-    const { to, subject, body, threadId: replyThreadId, messageId: replyMessageId } = req.body;
+    const { to, subject, body, threadId: replyThreadId, messageId: replyMessageId, attachments } = req.body;
     const userId = req.user?.id;
 
     if (!to || !subject || !body) {
@@ -963,26 +1048,72 @@ router.post('/send', async (req: AuthRequest, res) => {
       }
     }
 
-    // Crear el mensaje en formato RFC 2822
-    const messageHeaders = [
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      'Content-Type: text/html; charset=utf-8',
-    ];
+    let rawMessage: string;
+    const hasAttachments = attachments && Array.isArray(attachments) && attachments.length > 0;
 
-    // Agregar headers de respuesta si es una respuesta
-    if (inReplyTo) {
-      messageHeaders.push(`In-Reply-To: ${inReplyTo}`);
-      messageHeaders.push(`References: ${references}`);
+    if (hasAttachments) {
+      // Construir email MIME multipart con adjuntos reales
+      const boundary = `boundary_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+      const headerLines = [
+        `To: ${to}`,
+        `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+        'MIME-Version: 1.0',
+        `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      ];
+
+      if (inReplyTo) {
+        headerLines.push(`In-Reply-To: ${inReplyTo}`);
+        headerLines.push(`References: ${references}`);
+      }
+
+      const messageParts = [
+        headerLines.join('\r\n'),
+        '',
+        `--${boundary}`,
+        'Content-Type: text/html; charset=UTF-8',
+        'Content-Transfer-Encoding: base64',
+        '',
+        Buffer.from(body).toString('base64').match(/.{1,76}/g)!.join('\r\n'),
+      ];
+
+      for (const att of attachments) {
+        const filename = att.name || 'attachment';
+        const mimeType = att.type || 'application/octet-stream';
+        const encodedFilename = `=?UTF-8?B?${Buffer.from(filename).toString('base64')}?=`;
+
+        messageParts.push(
+          `--${boundary}`,
+          `Content-Type: ${mimeType}; name="${encodedFilename}"`,
+          `Content-Disposition: attachment; filename="${encodedFilename}"`,
+          'Content-Transfer-Encoding: base64',
+          '',
+          (att.data as string).match(/.{1,76}/g)!.join('\r\n'),
+        );
+      }
+
+      messageParts.push(`--${boundary}--`);
+      rawMessage = messageParts.join('\r\n');
+    } else {
+      // Email simple sin adjuntos
+      const headerLines = [
+        `To: ${to}`,
+        `Subject: ${subject}`,
+        'Content-Type: text/html; charset=utf-8',
+      ];
+
+      if (inReplyTo) {
+        headerLines.push(`In-Reply-To: ${inReplyTo}`);
+        headerLines.push(`References: ${references}`);
+      }
+
+      headerLines.push('');
+      headerLines.push(body);
+      rawMessage = headerLines.join('\n');
     }
 
-    messageHeaders.push(''); // Línea vacía antes del body
-    messageHeaders.push(body);
-
-    const message = messageHeaders.join('\n');
-
     // Codificar el mensaje en base64url
-    const encodedMessage = Buffer.from(message)
+    const encodedMessage = Buffer.from(rawMessage)
       .toString('base64')
       .replace(/\+/g, '-')
       .replace(/\//g, '_')

@@ -13,8 +13,8 @@ import {
   Alert,
   useTheme,
 } from "@mui/material";
-import { Close, Save, Send } from "@mui/icons-material";
-import RichTextEditor from "./RichTextEditor";
+import { Close, Send } from "@mui/icons-material";
+import RichTextEditor, { AttachmentFile } from "./RichTextEditor";
 import { taxiMonterricoColors } from "../theme/colors";
 import { pageStyles } from "../theme/styles";
 import api from "../config/api";
@@ -60,6 +60,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
   const [to, setTo] = useState(recipientEmail || "");
   const [subject, setSubject] = useState(initialSubject || "");
   const [body, setBody] = useState(initialBody || "");
+  const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -104,40 +105,117 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
 
     try {
       if (registerOnly) {
-        const description = body.replace(/<[^>]*>/g, "").trim() || undefined;
-        const ids = companyIds && companyIds.length > 0 ? companyIds : companyId != null ? [companyId] : [];
-        let newActivity: any = null;
+        // Enviar el correo por Gmail
+        if (to.trim()) {
+          try {
+            const emailResponse = await api.post("/emails/send", {
+              to: to.trim(),
+              subject: subject.trim(),
+              body,
+              attachments: attachments.map(a => ({ name: a.name, type: a.type, data: a.data })),
+            });
+            const { messageId, threadId } = emailResponse.data;
 
-        if (ids.length > 0) {
-          const responses = await Promise.all(
-            ids.map((cid) =>
-              api.post("/activities/emails", {
+            // Registrar como actividad con referencia al mensaje de Gmail
+            const description = body.replace(/<[^>]*>/g, "").trim() || undefined;
+            const ids = companyIds && companyIds.length > 0 ? companyIds : companyId != null ? [companyId] : [];
+
+            if (ids.length > 0) {
+              const responses = await Promise.all(
+                ids.map((cid) =>
+                  api.post("/activities/emails", {
+                    subject: subject.trim(),
+                    description,
+                    contactId,
+                    companyId: cid,
+                    gmailMessageId: messageId,
+                    gmailThreadId: threadId,
+                  })
+                )
+              );
+              const newActivities = responses.map((r) => r?.data).filter(Boolean);
+              if (onSave && newActivities.length > 0) {
+                await onSave(newActivities.length > 1 ? newActivities : newActivities[0]);
+              }
+            } else {
+              const res = await api.post("/activities/emails", {
                 subject: subject.trim(),
                 description,
                 contactId,
-                companyId: cid,
-              })
-            )
-          );
-          const newActivities = responses.map((r) => r?.data).filter(Boolean);
-          newActivity = newActivities[0];
-          setSuccess(true);
-          if (onSave && newActivities.length > 0) {
-            await onSave(newActivities.length > 1 ? newActivities : newActivity);
+                companyId,
+                gmailMessageId: messageId,
+                gmailThreadId: threadId,
+              });
+              if (onSave && res.data) {
+                await onSave(res.data);
+              }
+            }
+          } catch (sendErr: any) {
+            // Si falla el envío por Gmail, solo registrar la actividad
+            console.error("Error enviando por Gmail, registrando solo actividad:", sendErr);
+            const description = body.replace(/<[^>]*>/g, "").trim() || undefined;
+            const ids = companyIds && companyIds.length > 0 ? companyIds : companyId != null ? [companyId] : [];
+
+            if (ids.length > 0) {
+              const responses = await Promise.all(
+                ids.map((cid) =>
+                  api.post("/activities/emails", {
+                    subject: subject.trim(),
+                    description,
+                    contactId,
+                    companyId: cid,
+                  })
+                )
+              );
+              const newActivities = responses.map((r) => r?.data).filter(Boolean);
+              if (onSave && newActivities.length > 0) {
+                await onSave(newActivities.length > 1 ? newActivities : newActivities[0]);
+              }
+            } else {
+              const res = await api.post("/activities/emails", {
+                subject: subject.trim(),
+                description,
+                contactId,
+                companyId,
+              });
+              if (onSave && res.data) {
+                await onSave(res.data);
+              }
+            }
           }
         } else {
-          const res = await api.post("/activities/emails", {
-            subject: subject.trim(),
-            description,
-            contactId,
-            companyId,
-          });
-          newActivity = res.data;
-          setSuccess(true);
-          if (onSave && newActivity) {
-            await onSave(newActivity);
+          // Sin destinatario, solo registrar actividad
+          const description = body.replace(/<[^>]*>/g, "").trim() || undefined;
+          const ids = companyIds && companyIds.length > 0 ? companyIds : companyId != null ? [companyId] : [];
+
+          if (ids.length > 0) {
+            const responses = await Promise.all(
+              ids.map((cid) =>
+                api.post("/activities/emails", {
+                  subject: subject.trim(),
+                  description,
+                  contactId,
+                  companyId: cid,
+                })
+              )
+            );
+            const newActivities = responses.map((r) => r?.data).filter(Boolean);
+            if (onSave && newActivities.length > 0) {
+              await onSave(newActivities.length > 1 ? newActivities : newActivities[0]);
+            }
+          } else {
+            const res = await api.post("/activities/emails", {
+              subject: subject.trim(),
+              description,
+              contactId,
+              companyId,
+            });
+            if (onSave && res.data) {
+              await onSave(res.data);
+            }
           }
         }
+        setSuccess(true);
         setTimeout(() => {
           handleClose();
         }, 1500);
@@ -153,7 +231,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
         }, 1500);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Error al guardar la actividad");
+      setError(err.response?.data?.message || "Error al enviar el correo");
     } finally {
       setSending(false);
     }
@@ -163,6 +241,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
     setTo(recipientEmail || "");
     setSubject(initialSubject || "");
     setBody(initialBody || "");
+    setAttachments([]);
     setError("");
     setSuccess(false);
     onClose();
@@ -374,6 +453,8 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
                 value={body}
                 onChange={setBody}
                 placeholder="Escribe tu mensaje..."
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
               />
             </Box>
           </Box>
@@ -421,7 +502,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
                 },
               }}
             >
-              {registerOnly ? "Actividad registrada correctamente" : "Correo enviado exitosamente"}
+              Correo enviado exitosamente
             </Alert>
           )}
         </Box>
@@ -437,7 +518,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
         <Button
           onClick={handleSave}
           variant="contained"
-          startIcon={sending ? <CircularProgress size={16} /> : (registerOnly ? <Save /> : <Send />)}
+          startIcon={sending ? <CircularProgress size={16} /> : <Send />}
           disabled={
             sending ||
             !subject.trim() ||
@@ -448,7 +529,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
           }
           sx={pageStyles.saveButton}
         >
-          {sending ? (registerOnly ? "Guardando..." : "Enviando...") : (registerOnly ? "Guardar" : "Enviar")}
+          {sending ? "Enviando..." : "Enviar"}
         </Button>
       </DialogActions>
     </Dialog>
