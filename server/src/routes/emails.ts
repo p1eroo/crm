@@ -375,6 +375,59 @@ router.post('/message/:id/read', async (req: AuthRequest, res) => {
   }
 });
 
+// Endpoint para marcar email como favorito/no favorito
+router.post('/message/:id/star', async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Usuario no autenticado' });
+    }
+
+    const { id } = req.params;
+    const { starred } = req.body;
+
+    if (starred === undefined || starred === null) {
+      return res.status(400).json({ message: 'El parámetro "starred" es requerido' });
+    }
+
+    const gmail = await getAuthenticatedGmailClient(userId);
+
+    if (starred) {
+      await gmail.users.messages.modify({
+        userId: 'me',
+        id,
+        requestBody: { addLabelIds: ['STARRED'] },
+      });
+    } else {
+      await gmail.users.messages.modify({
+        userId: 'me',
+        id,
+        requestBody: { removeLabelIds: ['STARRED'] },
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Email ${starred ? 'marcado como favorito' : 'desmarcado de favoritos'}`,
+      starred,
+    });
+  } catch (error: any) {
+    console.error('Error al marcar favorito:', error);
+
+    if (error.isNoGoogleAccount || error.message?.includes('No hay cuenta')) {
+      return res.status(400).json({ message: error.message, code: 'NO_GOOGLE_ACCOUNT' });
+    }
+    if (error.code === 401) {
+      return res.status(401).json({ message: 'Token de acceso inválido o expirado' });
+    }
+    if (error.code === 404) {
+      return res.status(404).json({ message: 'Email no encontrado' });
+    }
+
+    return res.status(500).json({ message: 'Error al marcar favorito', error: error.message });
+  }
+});
+
 // Endpoint para obtener todo el thread (hilo completo) de un email
 router.get('/thread/:threadId', async (req: AuthRequest, res) => {
   try {
@@ -522,6 +575,102 @@ router.get('/thread/:threadId', async (req: AuthRequest, res) => {
       message: 'Error al obtener el thread',
       error: error.message,
     });
+  }
+});
+
+// Endpoint para listar emails que tienen adjuntos
+router.get('/attachments', async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Usuario no autenticado' });
+    }
+
+    const { search = '' } = req.query;
+    const gmail = await getAuthenticatedGmailClient(userId);
+
+    let query = 'has:attachment';
+    if (search) {
+      query += ` ${search}`;
+    }
+
+    const response = await gmail.users.messages.list({
+      userId: 'me',
+      q: query,
+      maxResults: 50,
+    });
+
+    const messages = response.data.messages || [];
+
+    const collectAttachments = (part: any): { attachmentId: string; name: string; mimeType: string; size: number }[] => {
+      const atts: { attachmentId: string; name: string; mimeType: string; size: number }[] = [];
+      if (!part) return atts;
+      if (part.filename && part.filename.length > 0 && part.body?.attachmentId) {
+        atts.push({
+          attachmentId: part.body.attachmentId,
+          name: part.filename,
+          mimeType: part.mimeType || 'application/octet-stream',
+          size: part.body.size || 0,
+        });
+      }
+      if (part.parts) {
+        for (const p of part.parts) {
+          atts.push(...collectAttachments(p));
+        }
+      }
+      return atts;
+    };
+
+    const allAttachments: any[] = [];
+
+    await Promise.all(
+      messages.map(async (msg: any) => {
+        try {
+          const messageDetail = await gmail.users.messages.get({
+            userId: 'me',
+            id: msg.id!,
+            format: 'full',
+          });
+
+          const headers = messageDetail.data.payload?.headers || [];
+          const getHeader = (name: string) => headers.find((h: any) => h.name === name)?.value || '';
+          const attachments = collectAttachments(messageDetail.data.payload);
+
+          for (const att of attachments) {
+            allAttachments.push({
+              messageId: msg.id,
+              threadId: msg.threadId,
+              from: getHeader('From'),
+              to: getHeader('To'),
+              subject: getHeader('Subject'),
+              date: getHeader('Date'),
+              labelIds: messageDetail.data.labelIds || [],
+              attachmentId: att.attachmentId,
+              name: att.name,
+              mimeType: att.mimeType,
+              size: att.size,
+            });
+          }
+        } catch (error) {
+          console.error(`Error procesando mensaje ${msg.id}:`, error);
+        }
+      })
+    );
+
+    allAttachments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    res.json({ attachments: allAttachments });
+  } catch (error: any) {
+    console.error('Error al listar adjuntos:', error);
+
+    if (error.isNoGoogleAccount || error.message?.includes('No hay cuenta')) {
+      return res.status(400).json({ message: error.message, code: 'NO_GOOGLE_ACCOUNT' });
+    }
+    if (error.code === 401) {
+      return res.status(401).json({ message: 'Token de acceso inválido o expirado' });
+    }
+
+    res.status(500).json({ message: 'Error al listar adjuntos', error: error.message });
   }
 });
 

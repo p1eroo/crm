@@ -89,7 +89,7 @@ const Emails: React.FC = () => {
   const [error, setError] = useState('');
   const [crmEmailCount, setCrmEmailCount] = useState(0);
   const [starredCount, setStarredCount] = useState(0);
-  const [selectedFolder, setSelectedFolder] = useState<'inbox' | 'starred'>('inbox');
+  const [selectedFolder, setSelectedFolder] = useState<'inbox' | 'starred' | 'attachments' | 'gmail'>('inbox');
   const [composeOpen, setComposeOpen] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
   const [emailDetail, setEmailDetail] = useState<any>(null);
@@ -106,6 +106,8 @@ const Emails: React.FC = () => {
   const [loadingThread, setLoadingThread] = useState(false);
   const [collapsedMessages, setCollapsedMessages] = useState<Set<string>>(new Set());
   const [connectingEmail, setConnectingEmail] = useState(false);
+  const [attachmentsList, setAttachmentsList] = useState<any[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
 
   const fetchFolderCounts = useCallback(async () => {
     try {
@@ -143,32 +145,33 @@ const Emails: React.FC = () => {
               search: searchTerm,
             },
           });
+        } else if (selectedFolder === 'gmail') {
+          response = await api.get('/emails/list', {
+            params: {
+              folder: 'inbox',
+              page: currentPage,
+              limit: emailsPerPage,
+              search: searchTerm,
+            },
+          });
+        } else if (selectedFolder === 'attachments') {
+          setLoadingAttachments(true);
+          try {
+            const attResponse = await api.get('/emails/attachments', {
+              params: { search: searchTerm },
+            });
+            setAttachmentsList(attResponse.data.attachments || []);
+          } catch (attErr) {
+            console.error('Error fetching attachments:', attErr);
+            setAttachmentsList([]);
+          } finally {
+            setLoadingAttachments(false);
+            setLoading(false);
+          }
+          return;
         }
         if (response) {
-          const realEmails = response.data.messages || [];
-          const mockEmails: EmailMessage[] = [
-            { id: 'mock-1', threadId: 't1', from: 'María García <maria.garcia@empresa.com>', to: '', subject: 'Reunión de proyecto', snippet: 'Hola equipo, les confirmo la reunión del martes a las 10am para revisar los avances del proyecto', date: '2026-02-22T14:30:00Z', labelIds: ['INBOX', 'UNREAD'] },
-            { id: 'mock-2', threadId: 't2', from: 'Carlos López <carlos.lopez@ventas.com>', to: '', subject: 'Propuesta comercial Q1', snippet: 'Adjunto la propuesta comercial actualizada para el primer trimestre con los nuevos precios', date: '2026-02-22T11:15:00Z', labelIds: ['INBOX'] },
-            { id: 'mock-3', threadId: 't3', from: 'Ana Torres <ana.torres@rrhh.com>', to: '', subject: 'Actualización de políticas', snippet: 'Estimados, se han actualizado las políticas internas de la empresa. Por favor revisar el documento', date: '2026-02-21T16:45:00Z', labelIds: ['INBOX', 'UNREAD', 'STARRED'] },
-            { id: 'mock-4', threadId: 't4', from: 'Pedro Ramírez <pedro@logistica.com>', to: '', subject: 'Envío pendiente #4521', snippet: 'El envío número 4521 se encuentra en tránsito y llegará mañana por la tarde según tracking', date: '2026-02-21T09:20:00Z', labelIds: ['INBOX'] },
-            { id: 'mock-5', threadId: 't5', from: 'Sofía Mendoza <sofia.m@marketing.com>', to: '', subject: 'Campaña redes sociales', snippet: 'Los resultados de la campaña de febrero superaron las expectativas con un 35% más de engagement', date: '2026-02-20T18:00:00Z', labelIds: ['INBOX', 'UNREAD'] },
-            { id: 'mock-6', threadId: 't6', from: 'Roberto Díaz <roberto@finanzas.com>', to: '', subject: 'Reporte mensual de gastos', snippet: 'Aquí les comparto el reporte de gastos del mes de enero para su revisión y aprobación', date: '2026-02-20T10:30:00Z', labelIds: ['INBOX'] },
-            { id: 'mock-7', threadId: 't7', from: 'Laura Vega <laura.vega@soporte.com>', to: '', subject: 'Ticket #892 resuelto', snippet: 'El ticket de soporte #892 ha sido resuelto exitosamente. El cliente confirmó la solución', date: '2026-02-19T15:10:00Z', labelIds: ['INBOX', 'STARRED'] },
-            { id: 'mock-8', threadId: 't8', from: 'Diego Herrera <diego@desarrollo.com>', to: '', subject: 'Deploy v2.5 completado', snippet: 'El deployment de la versión 2.5 se completó sin errores. Todos los tests pasaron correctamente', date: '2026-02-19T08:45:00Z', labelIds: ['INBOX', 'UNREAD'] },
-            { id: 'mock-9', threadId: 't9', from: 'Valentina Cruz <vale@diseño.com>', to: '', subject: 'Mockups nueva landing', snippet: 'Les comparto los mockups de la nueva landing page para revisión del equipo de producto', date: '2026-02-18T13:20:00Z', labelIds: ['INBOX'] },
-            { id: 'mock-10', threadId: 't10', from: 'Andrés Morales <andres@partners.com>', to: '', subject: 'Alianza estratégica', snippet: 'Nos gustaría explorar una posible alianza estratégica entre nuestras empresas para el 2026', date: '2026-02-18T09:00:00Z', labelIds: ['INBOX', 'UNREAD'] },
-            { id: 'mock-11', threadId: 't11', from: 'Camila Rojas <camila@contabilidad.com>', to: '', subject: 'Facturas pendientes febrero', snippet: 'Les recuerdo que hay 3 facturas pendientes de aprobación que vencen esta semana', date: '2026-02-17T16:30:00Z', labelIds: ['INBOX'] },
-            { id: 'mock-12', threadId: 't12', from: 'Fernando Castillo <fer@tecnologia.com>', to: '', subject: 'Migración base de datos', snippet: 'La migración de la base de datos se programó para el sábado a las 2am con ventana de 4 horas', date: '2026-02-17T11:00:00Z', labelIds: ['INBOX', 'UNREAD', 'STARRED'] },
-            { id: 'mock-13', threadId: 't13', from: 'Isabella Vargas <isa@clientes.com>', to: '', subject: 'Feedback cliente VIP', snippet: 'El cliente Premium Solutions dejó un feedback muy positivo sobre el servicio recibido este mes', date: '2026-02-16T14:20:00Z', labelIds: ['INBOX'] },
-            { id: 'mock-14', threadId: 't14', from: 'Mateo Jiménez <mateo@legal.com>', to: '', subject: 'Contrato de renovación', snippet: 'Adjunto el borrador del contrato de renovación para revisión antes de enviarlo al cliente', date: '2026-02-16T09:45:00Z', labelIds: ['INBOX', 'UNREAD'] },
-            { id: 'mock-15', threadId: 't15', from: 'Luciana Peña <lu@eventos.com>', to: '', subject: 'Evento corporativo marzo', snippet: 'Confirmamos el evento corporativo para el 15 de marzo en el Hotel Central con capacidad para 200', date: '2026-02-15T17:10:00Z', labelIds: ['INBOX', 'STARRED'] },
-            { id: 'mock-16', threadId: 't16', from: 'Sebastián Ríos <seba@operaciones.com>', to: '', subject: 'Inventario actualizado', snippet: 'Se completó la actualización del inventario. Hay 12 productos con stock bajo que requieren reorden', date: '2026-02-15T10:30:00Z', labelIds: ['INBOX'] },
-            { id: 'mock-17', threadId: 't17', from: 'Daniela Ortiz <dani@capacitacion.com>', to: '', subject: 'Taller de liderazgo', snippet: 'Inscripciones abiertas para el taller de liderazgo del próximo viernes. Cupos limitados a 25', date: '2026-02-14T15:50:00Z', labelIds: ['INBOX', 'UNREAD'] },
-            { id: 'mock-18', threadId: 't18', from: 'Nicolás Salazar <nico@ventas.com>', to: '', subject: 'Meta de ventas superada', snippet: 'El equipo de ventas superó la meta mensual en un 18%. Felicitaciones a todo el equipo', date: '2026-02-14T08:15:00Z', labelIds: ['INBOX'] },
-            { id: 'mock-19', threadId: 't19', from: 'Paula Medina <paula@calidad.com>', to: '', subject: 'Auditoría interna Q1', snippet: 'Se programó la auditoría interna del primer trimestre para la segunda semana de marzo', date: '2026-02-13T13:40:00Z', labelIds: ['INBOX', 'UNREAD'] },
-            { id: 'mock-20', threadId: 't20', from: 'Gabriel Suárez <gabi@infraestructura.com>', to: '', subject: 'Mantenimiento servidores', snippet: 'Se realizará mantenimiento preventivo en los servidores principales el domingo de 1am a 5am', date: '2026-02-13T07:30:00Z', labelIds: ['INBOX', 'STARRED'] },
-          ];
-          setEmails([...realEmails, ...mockEmails]);
+          setEmails(response.data.messages || []);
         }
       } catch (err: any) {
         console.error('Error fetching emails:', err);
@@ -209,6 +212,23 @@ const Emails: React.FC = () => {
             search: searchTerm,
           },
         });
+      } else if (selectedFolder === 'gmail') {
+        response = await api.get('/emails/list', {
+          params: {
+            folder: 'inbox',
+            page: currentPage,
+            limit: emailsPerPage,
+            search: searchTerm,
+          },
+        });
+      } else if (selectedFolder === 'attachments') {
+        const attResponse = await api.get('/emails/attachments', {
+          params: { search: searchTerm },
+        });
+        setAttachmentsList(attResponse.data.attachments || []);
+        setLoading(false);
+        fetchFolderCounts();
+        return;
       }
       if (response) {
         setEmails(response.data.messages || []);
@@ -246,33 +266,6 @@ const Emails: React.FC = () => {
     setReplySubject('');
     setReplyBody('');
     setReplyError('');
-
-    if (email.id.startsWith('mock-')) {
-      const mockBody = `<p>Hola,</p><p>${email.snippet}</p><p>Saludos cordiales,<br/>${email.from.split(/[<>]/)[0].trim()}</p>`;
-      setEmailDetail({
-        id: email.id,
-        threadId: email.threadId,
-        from: email.from,
-        to: email.to,
-        subject: email.subject,
-        date: email.date,
-        body: mockBody,
-        snippet: email.snippet,
-        labelIds: email.labelIds,
-      });
-      setThreadMessages([{
-        id: email.id,
-        from: email.from,
-        to: email.to,
-        subject: email.subject,
-        date: email.date,
-        body: mockBody,
-        snippet: email.snippet,
-        labelIds: email.labelIds,
-      }]);
-      setLoadingThread(false);
-      return;
-    }
 
     setLoadingThread(true);
     try {
@@ -334,8 +327,10 @@ const Emails: React.FC = () => {
     setSendingReply(true);
 
     try {
+      const isDetailSent = emailDetail.labelIds?.includes('SENT');
+      const replyTo = isDetailSent ? extractEmail(emailDetail.to) : extractEmail(emailDetail.from);
       const payload: any = {
-        to: extractEmail(emailDetail.from),
+        to: replyTo,
         subject: replySubject.trim(),
         body: replyBody,
         threadId: selectedEmail.threadId,
@@ -421,8 +416,23 @@ const Emails: React.FC = () => {
     return name.substring(0, 2).toUpperCase();
   };
 
-  const isUnread = (labelIds: string[]) => labelIds.includes('UNREAD'); // Si tiene UNREAD, no está leído
+  const isUnread = (labelIds: string[]) => labelIds.includes('UNREAD');
   const isStarred = (labelIds: string[]) => labelIds.includes('STARRED');
+
+  const handleToggleStar = async (emailId: string, currentlyStarred: boolean) => {
+    try {
+      await api.post(`/emails/message/${emailId}/star`, { starred: !currentlyStarred });
+      setEmails(prev => prev.map(e => {
+        if (e.id !== emailId) return e;
+        const newLabels = currentlyStarred
+          ? e.labelIds.filter(l => l !== 'STARRED')
+          : [...e.labelIds, 'STARRED'];
+        return { ...e, labelIds: newLabels };
+      }));
+    } catch (err) {
+      console.error('Error al cambiar favorito:', err);
+    }
+  };
 
   // Verificar si el error es de cuenta no conectada
   const isNoAccountError = error && (
@@ -604,7 +614,7 @@ const Emails: React.FC = () => {
                 color: taxiMonterricoColors.green,
               }}
             >
-              {selectedFolder === 'inbox' ? 'Buzón' : 'Favoritos'}
+              {selectedFolder === 'inbox' ? 'Buzón' : selectedFolder === 'starred' ? 'Favoritos' : selectedFolder === 'attachments' ? 'Adjuntos' : 'Gmail'}
             </Typography>
           </Box>
         </Box>
@@ -732,6 +742,56 @@ const Emails: React.FC = () => {
                 {starredCount}
               </Box>
             )}
+          </ListItemButton>
+          <ListItemButton
+            selected={selectedFolder === 'attachments'}
+            onClick={() => { setSelectedFolder('attachments'); setCurrentPage(1); setSelectedEmail(null); setEmailDetail(null); setThreadMessages([]); }}
+            sx={{
+              minHeight: 44,
+              borderRadius: 2,
+              mb: 0.5,
+              '&.Mui-selected': {
+                bgcolor: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924',
+                color: taxiMonterricoColors.green,
+                '&:hover': { bgcolor: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924' },
+              },
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+              '&:not(.Mui-selected)': {
+                color: theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary,
+              },
+            }}
+          >
+            <AttachFile sx={{ fontSize: 20, mr: 1, transform: 'rotate(45deg)', color: selectedFolder === 'attachments' ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary) }} />
+            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9375rem', flex: 1 }}>
+              Adjuntos
+            </Typography>
+          </ListItemButton>
+          <ListItemButton
+            selected={selectedFolder === 'gmail'}
+            onClick={() => { setSelectedFolder('gmail'); setCurrentPage(1); setSelectedEmail(null); setEmailDetail(null); setThreadMessages([]); }}
+            sx={{
+              minHeight: 44,
+              borderRadius: 2,
+              mb: 0.5,
+              '&.Mui-selected': {
+                bgcolor: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924',
+                color: taxiMonterricoColors.green,
+                '&:hover': { bgcolor: theme.palette.mode === 'dark' ? '#1a2e2a' : '#5cdf9924' },
+              },
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+              '&:not(.Mui-selected)': {
+                color: theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary,
+              },
+            }}
+          >
+            <EmailIcon sx={{ fontSize: 20, mr: 1, color: selectedFolder === 'gmail' ? taxiMonterricoColors.green : (theme.palette.mode === 'dark' ? '#ffffff' : theme.palette.text.secondary) }} />
+            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.9375rem', flex: 1 }}>
+              Gmail
+            </Typography>
           </ListItemButton>
         </Box>
 
@@ -956,7 +1016,111 @@ const Emails: React.FC = () => {
             />
           </Box>
 
-          {/* Lista de emails - vista de línea */}
+          {/* Vista de adjuntos */}
+          {selectedFolder === 'attachments' ? (
+            <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+              {loadingAttachments ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, py: 8 }}>
+                  <CircularProgress />
+                </Box>
+              ) : attachmentsList.length === 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 8, gap: 2 }}>
+                  <AttachFile sx={{ fontSize: 48, color: theme.palette.text.disabled, transform: 'rotate(45deg)' }} />
+                  <Typography sx={{ fontSize: '1.125rem', fontWeight: 600, color: theme.palette.text.secondary }}>
+                    No hay adjuntos
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.875rem', color: theme.palette.text.disabled }}>
+                    Los archivos adjuntos de tus correos aparecerán aquí
+                  </Typography>
+                </Box>
+              ) : (
+                <List disablePadding>
+                  {attachmentsList.map((att: any, idx: number) => {
+                    const isAttSent = att.labelIds?.includes('SENT');
+                    const attDisplayEmail = isAttSent ? att.to : att.from;
+                    const senderName = attDisplayEmail?.split(/[<>]/)[0]?.trim() || attDisplayEmail || '';
+                    const getAttIcon = () => {
+                      if ((att.mimeType || '').startsWith('image/')) return <ImageIcon sx={{ fontSize: 24, color: '#4caf50' }} />;
+                      if (att.mimeType === 'application/pdf') return <PictureAsPdf sx={{ fontSize: 24, color: '#e53935' }} />;
+                      return <InsertDriveFile sx={{ fontSize: 24, color: theme.palette.text.secondary }} />;
+                    };
+                    const formatSize = (bytes: number) => {
+                      if (!bytes || bytes === 0) return '';
+                      if (bytes < 1024) return `${bytes} B`;
+                      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+                      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+                    };
+                    const handleDownloadAtt = async () => {
+                      try {
+                        const response = await api.get(`/emails/attachment/${att.messageId}/${att.attachmentId}`);
+                        const base64 = (response.data.data || '').replace(/-/g, '+').replace(/_/g, '/');
+                        const byteCharacters = atob(base64);
+                        const byteNumbers = new Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {
+                          byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }
+                        const byteArray = new Uint8Array(byteNumbers);
+                        const blob = new Blob([byteArray], { type: att.mimeType || 'application/octet-stream' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = att.name || 'attachment';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      } catch (err) {
+                        console.error('Error descargando adjunto:', err);
+                      }
+                    };
+                    return (
+                      <ListItem
+                        key={`${att.attachmentId}-${idx}`}
+                        disablePadding
+                        sx={{
+                          borderBottom: `1px solid ${theme.palette.divider}`,
+                        }}
+                      >
+                        <ListItemButton
+                          onClick={handleDownloadAtt}
+                          sx={{
+                            py: 1.5,
+                            px: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            '&:hover': {
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : '#f5f5f5',
+                            },
+                          }}
+                        >
+                          {getAttIcon()}
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography noWrap sx={{ fontSize: '0.9375rem', fontWeight: 500 }}>
+                              {att.name}
+                            </Typography>
+                            <Typography noWrap sx={{ fontSize: '0.8125rem', color: theme.palette.text.secondary }}>
+                              {senderName}{att.subject ? ` — ${att.subject}` : ''}
+                            </Typography>
+                          </Box>
+                          {formatSize(att.size) && (
+                            <Typography sx={{ fontSize: '0.8125rem', color: theme.palette.text.secondary, flexShrink: 0, mr: 2 }}>
+                              {formatSize(att.size)}
+                            </Typography>
+                          )}
+                          <Typography sx={{ fontSize: '0.8125rem', color: '#828690', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            {formatDate(att.date)}
+                          </Typography>
+                          <Download sx={{ fontSize: 20, color: theme.palette.text.secondary, flexShrink: 0, ml: 1 }} />
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              )}
+            </Box>
+          ) : (
+          /* Lista de emails - vista de línea */
           <Box
             sx={{
               flex: 1,
@@ -1077,7 +1241,7 @@ const Emails: React.FC = () => {
                           />
                           <IconButton
                             size="small"
-                            onClick={(e) => { e.stopPropagation(); }}
+                            onClick={(e) => { e.stopPropagation(); handleToggleStar(email.id, isStarred(email.labelIds)); }}
                             sx={{ p: 0.5 }}
                           >
                             {isStarred(email.labelIds) ? (
@@ -1243,6 +1407,7 @@ const Emails: React.FC = () => {
               </Box>
             )}
           </Box>
+          )}
         </Box>
       )}
 
@@ -1354,9 +1519,17 @@ const Emails: React.FC = () => {
                         {email.hasAttachments && (
                           <AttachFile sx={{ fontSize: 14, color: '#828690', transform: 'rotate(45deg)' }} />
                         )}
-                        {isStarred(email.labelIds) && (
-                          <Star sx={{ fontSize: 16, color: '#f4b400' }} />
-                        )}
+                        <IconButton
+                          size="small"
+                          onClick={(e) => { e.stopPropagation(); handleToggleStar(email.id, isStarred(email.labelIds)); }}
+                          sx={{ p: 0.25 }}
+                        >
+                          {isStarred(email.labelIds) ? (
+                            <Star sx={{ fontSize: 16, color: '#f4b400' }} />
+                          ) : (
+                            <StarBorder sx={{ fontSize: 16, color: '#828690' }} />
+                          )}
+                        </IconButton>
                         <Typography sx={{ fontSize: '0.75rem', color: '#828690', whiteSpace: 'nowrap' }}>
                           {formatDate(email.date)}
                         </Typography>
@@ -1418,8 +1591,10 @@ const Emails: React.FC = () => {
                     threadMessages.map((msg: any, index: number) => {
                       const isCollapsed = collapsedMessages.has(msg.id);
                       const isLastMessage = index === threadMessages.length - 1;
-                      const senderName = msg.from.split(/[<>]/)[0].trim() || extractEmail(msg.from);
-                      const senderInitials = getInitials(msg.from);
+                      const isMsgSent = msg.labelIds?.includes('SENT');
+                      const displayFrom = isMsgSent ? msg.to : msg.from;
+                      const senderName = displayFrom.split(/[<>]/)[0].trim() || extractEmail(displayFrom);
+                      const senderInitials = getInitials(displayFrom);
 
                       return (
                         <Box key={msg.id} sx={{ mb: 3 }}>
@@ -1595,7 +1770,7 @@ const Emails: React.FC = () => {
                     <Divider sx={{ my: 2, flexShrink: 0 }} />
                     <Box sx={{ flexShrink: 0 }}>
                       <Typography sx={{ mb: 1, fontWeight: 600, fontSize: '0.9375rem' }}>
-                        Responder a {extractEmail(emailDetail.from)}
+                        Responder a {emailDetail.labelIds?.includes('SENT') ? extractEmail(emailDetail.to) : extractEmail(emailDetail.from)}
                       </Typography>
                       <TextField
                         label="Asunto"

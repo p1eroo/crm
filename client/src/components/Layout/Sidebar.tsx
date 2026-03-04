@@ -179,7 +179,7 @@ const adminMenuItems = [
       {/* Lista de items del menú */}
       <List sx={{ 
         width: '100%', 
-        px: collapsed ? 2.8 : 0.8, 
+        px: collapsed ? 2.8 : 1.8, 
         pt: 0,
         pb: 0,
         display: 'flex',
